@@ -1,5 +1,5 @@
 """
-Global test configuration and fixtures for MCP Server Templates.
+Global test configuration and fixtures for MCP Platform.
 
 This module provides shared fixtures and test utilities for comprehensive
 testing of the MCP template system with proper isolation and cleanup.

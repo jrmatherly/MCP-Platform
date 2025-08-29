@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Documentation builder for MCP Server Templates.
+Documentation builder for MCP Platform.
 
 This script:
 1. Uses the existing TemplateDiscovery utility to find usable templates
@@ -181,13 +181,13 @@ def generate_templates_index(template_docs: Dict[str, Dict], docs_dir: Path):
 
     # Generate the main index.md for the templates section
     index_md = templates_docs_dir / "index.md"
-    index_content = """# MCP Server Templates
+    index_content = """# MCP Platform Templates
 
-Welcome to the MCP Server Templates documentation! This section provides comprehensive information about available Model Context Protocol (MCP) server templates that you can use to quickly deploy MCP servers for various use cases.
+Welcome to the MCP Platform Templates documentation! This section provides comprehensive information about available Model Context Protocol (MCP) server templates that you can use to quickly deploy MCP servers for various use cases.
 
-## What are MCP Server Templates?
+## What are MCP Platform Templates?
 
-MCP Server Templates are pre-configured, production-ready templates that implement the Model Context Protocol specification. Each template is designed for specific use cases and comes with:
+MCP Platform Templates are pre-configured, production-ready templates that implement the Model Context Protocol specification. Each template is designed for specific use cases and comes with:
 
 - 🔧 **Complete configuration files**
 - 📖 **Comprehensive documentation**
@@ -238,7 +238,7 @@ Interested in contributing a new template? See our contribution guidelines to ge
 
     content = """# Available Templates
 
-This page lists all available MCP server templates.
+This page lists all available MCP Platform server templates.
 
 """
 

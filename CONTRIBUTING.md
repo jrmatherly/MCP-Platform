@@ -307,8 +307,8 @@ Brief description of changes
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/mcp-server-templates.git
-cd mcp-server-templates
+git clone https://github.com/your-username/MCP-Platform.git
+cd MCP-Platform
 
 # Make scripts executable
 chmod +x scripts/*.sh

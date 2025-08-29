@@ -1,5 +1,5 @@
 """
-Centralized pytest fixtures for the mcp-template test suite.
+Centralized pytest fixtures for the MCP Platform test suite.
 
 This module provides commonly used fixtures across unit and integration tests
 to reduce duplication and improve test maintainability.

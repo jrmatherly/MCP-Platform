@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-MCP Template Creator - CLI tool for creating new MCP server templates.
+MCP Platform Template Creator - CLI tool for creating new MCP server templates.
 
 This tool creates a complete template structure with boilerplate code,
 configuration files, tests, and documentation.
@@ -46,7 +46,7 @@ class TemplateCreator:
 
         console.print(
             Panel(
-                "[cyan]🚀 MCP Template Creator[/cyan]\n\n"
+                "[cyan]🚀 MCP Platform Template Creator[/cyan]\n\n"
                 "This tool will help you create a complete MCP server template\n"
                 "with all necessary files, tests, and documentation.",
                 title="Template Creator",

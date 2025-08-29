@@ -155,7 +155,7 @@ MCP Templates supports various environment variables to configure system behavio
 
 ## Template Creation Variables
 
-### MCP_TEMPLATE_DEFAULT_TRANSPORT
+### MCP_PLATFORM_DEFAULT_TRANSPORT
 - **Description**: Default transport for newly created templates
 - **Default**: `http`
 - **Type**: String
@@ -163,17 +163,17 @@ MCP Templates supports various environment variables to configure system behavio
 - **Usage**: Used during template creation process
 - **Example**:
   ```bash
-  export MCP_TEMPLATE_DEFAULT_TRANSPORT=stdio
+  export MCP_PLATFORM_DEFAULT_TRANSPORT=stdio
   ```
 
-### MCP_TEMPLATE_DEFAULT_PYTHON_IMAGE
+### MCP_PLATFORM_DEFAULT_PYTHON_IMAGE
 - **Description**: Default Python base image for template creation
 - **Default**: `python:3.10-slim`
 - **Type**: String
 - **Usage**: Sets the base image for Python-based MCP server templates
 - **Example**:
   ```bash
-  export MCP_TEMPLATE_DEFAULT_PYTHON_IMAGE=python:3.11-alpine
+  export MCP_PLATFORM_DEFAULT_PYTHON_IMAGE=python:3.11-alpine
   ```
 
 ## System Environment Variables
