@@ -1,0 +1,18 @@
+apiVersion: v2
+name: mcp-platform
+description: A Helm chart for deploying MCP Platform servers
+version: 0.1.0
+appVersion: "1.0.0"
+type: application
+keywords:
+  - mcp
+  - mcp-platform
+  - model-context-protocol
+  - ai
+  - server
+home: https://github.com/Data-Everything/MCP-Platform
+sources:
+  - https://github.com/Data-Everything/MCP-Platform
+maintainers:
+  - name: Data Everything
+    email: tooling@dataeverything.com

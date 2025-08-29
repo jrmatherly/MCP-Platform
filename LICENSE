@@ -1,0 +1,21 @@
+Elastic License 2.0
+
+License FAQ: https://www.elastic.co/licensing/elastic-license
+
+You may not use this file except in compliance with the Elastic License 2.0.
+
+You may obtain a copy of the License at:
+
+    https://www.elastic.co/licensing/elastic-license
+
+Software: MCP Platform (https://github.com/Data-Everything/mcp-server-templates)
+
+This software is licensed under the Elastic License 2.0 (ELv2), subject to the following limitations:
+
+1. **You may not provide the software to others as a managed or hosted service**. For example, you may not create a commercial SaaS platform using this code.
+2. **You may not relicense, redistribute, or sell** the software or modified versions as a commercial product.
+3. **You may use, modify, and deploy** the software freely, including in internal commercial environments.
+
+The licensor reserves the right to offer the software under a different license to third parties.
+
+For commercial licensing or support, please contact: team@data-everything.io

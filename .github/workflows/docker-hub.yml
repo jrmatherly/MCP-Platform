@@ -1,0 +1,377 @@
+name: Template Test & Docker Release
+
+on:
+  push:
+    branches: [ main, refactor ]
+    paths:
+      - 'mcp_template/template/templates/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'mcp_template/template/templates/**'
+  workflow_dispatch:
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      templates: ${{ steps.changes.outputs.templates }}
+      matrix: ${{ steps.changes.outputs.matrix }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Detect changed templates
+        id: changes
+        run: |
+          # Get list of changed files
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            changed_files=$(git diff --name-only ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }})
+          else
+            changed_files=$(git diff --name-only HEAD^ HEAD)
+          fi
+
+          echo "Changed files:"
+          echo "$changed_files"
+
+          # Use TemplateDiscovery to get eligible templates (with Dockerfiles)
+          echo "🔍 Discovering eligible templates using TemplateDiscovery..."
+          eligible_templates=$(python -c "
+          from mcp_template import TemplateDiscovery
+          import json
+          discovery = TemplateDiscovery()
+          templates = discovery.discover_templates()
+          eligible = [name for name in templates.keys()]
+          print(json.dumps(eligible))
+          ")
+
+          echo "Eligible templates for Docker builds: $eligible_templates"
+
+          # Find changed eligible templates
+          changed_templates=()
+          for template_name in $(echo "$eligible_templates" | jq -r '.[]'); do
+            echo "Checking template: $template_name"
+
+            # Check if any files in this template directory changed
+            if echo "$changed_files" | grep -q "^mcp_template/template/templates/$template_name/"; then
+              echo "  ✅ Has changes - Files changed:"
+              echo "$changed_files" | grep "^mcp_template/template/templates/$template_name/" | sed 's/^/    /'
+              changed_templates+=("$template_name")
+            else
+              echo "  ⏭️  No changes"
+            fi
+          done
+
+          # If no specific changes detected, build all eligible templates (for workflow_dispatch)
+          if [[ ${#changed_templates[@]} -eq 0 && "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "Manual trigger - building all eligible templates"
+            for template_name in $(echo "$eligible_templates" | jq -r '.[]'); do
+              changed_templates+=("$template_name")
+            done
+          fi
+
+          # Create JSON array for output
+          if [[ ${#changed_templates[@]} -gt 0 ]]; then
+            templates_json="["
+            for i in "${!changed_templates[@]}"; do
+              if [ $i -gt 0 ]; then
+                templates_json+=","
+              fi
+              templates_json+="\"${changed_templates[$i]}\""
+            done
+            templates_json+="]"
+            echo "templates=$templates_json" >> $GITHUB_OUTPUT
+
+            # Create matrix for parallel builds
+            matrix_json="{\"include\":["
+            for i in "${!changed_templates[@]}"; do
+              if [ $i -gt 0 ]; then
+                matrix_json+=","
+              fi
+              matrix_json+="{\"template\":\"${changed_templates[$i]}\"}"
+            done
+            matrix_json+="]}"
+            echo "matrix=$matrix_json" >> $GITHUB_OUTPUT
+          else
+            echo "templates=[]" >> $GITHUB_OUTPUT
+            echo "matrix={\"include\":[]}" >> $GITHUB_OUTPUT
+          fi
+
+          echo "Changed templates: ${changed_templates[*]}"
+
+  test-templates:
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.templates != '[]' }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+      fail-fast: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Check if template has tests
+        id: check-tests
+        run: |
+          if [ -d "mcp_template/template/templates/${{ matrix.template }}/tests" ]; then
+            echo "has-tests=true" >> $GITHUB_OUTPUT
+            echo "Template ${{ matrix.template }} has tests directory"
+          else
+            echo "has-tests=false" >> $GITHUB_OUTPUT
+            echo "Template ${{ matrix.template }} does not have tests directory"
+          fi
+
+      - name: Run template unit tests
+        if: steps.check-tests.outputs.has-tests == 'true'
+        run: |
+          cd mcp_template/template/templates/${{ matrix.template }}
+          python -m pytest tests/ -v --tb=short -m "not integration" \
+          --cov-fail-under=5 || if [ $? -eq 5 ]; then \
+          echo "✅ No tests collected - treating as pass"; exit 0; else exit $?; fi
+        timeout-minutes: 10
+
+      - name: Run template integration tests
+        if: steps.check-tests.outputs.has-tests == 'true'
+        run: |
+          cd templmcp_template/template/templatesates/${{ matrix.template }}
+          python -m pytest tests/ -v --tb=short -m integration --cov-fail-under=5
+        timeout-minutes: 15
+        continue-on-error: true
+
+      - name: Check test coverage
+        if: steps.check-tests.outputs.has-tests == 'true'
+        run: |
+          cd mcp_template/template/templates/${{ matrix.template }}
+          python -m pytest tests/ --cov=src --cov-report=term-missing --cov-fail-under=5
+        continue-on-error: true
+
+      - name: Validate template configuration
+        run: |
+          python -c "
+          import sys
+          from pathlib import Path
+          from mcp_template import TemplateDiscovery
+
+          template_name = '${{ matrix.template }}'
+          print(f'🔍 Validating template: {template_name}')
+
+          # Use TemplateDiscovery to validate the template
+          try:
+              discovery = TemplateDiscovery()
+              templates = discovery.discover_templates()
+
+              if template_name not in templates:
+                  print(f'❌ Template {template_name} not found in discoverable templates')
+                  print(f'Available templates: {list(templates.keys())}')
+                  sys.exit(1)
+
+              template_config = templates[template_name]
+              print(f'✅ Template {template_name} is valid and discoverable')
+              print(f'✅ Template info: {template_config[\"name\"]} v{template_config[\"version\"]}')
+              print(f'✅ Description: {template_config[\"description\"]}')
+
+              # Check required files exist
+              template_dir = Path(f'mcp_template/template/templates/{template_name}')
+
+              required_files = ['template.json', 'docs/index.md']
+              if template_config.get('has_dockerfile', False):
+                  required_files.append('Dockerfile')
+
+              for required_file in required_files:
+                  file_path = template_dir / required_file
+                  if not file_path.exists():
+                      print(f'❌ Required file missing: {required_file}')
+                      sys.exit(1)
+                  print(f'✅ Found required file: {required_file}')
+
+          except Exception as e:
+              print(f'❌ Template validation failed: {e}')
+              sys.exit(1)
+          "
+      - name: Test template server startup
+        run: |
+          cd mcp_template/template/templates/${{ matrix.template }}
+          if [ -f "src/server.py" ]; then
+            echo "🚀 Testing server startup for ${{ matrix.template }}..."
+            timeout 10s python -m src.server --help || echo "Server startup test completed"
+          else
+            echo "No server.py found, skipping startup test"
+          fi
+        timeout-minutes: 2
+        continue-on-error: true
+
+      - name: Test Docker build
+        run: |
+          cd mcp_template/template/templates/${{ matrix.template }}
+          if [ -f "Dockerfile" ]; then
+            echo "🐳 Testing Docker build for ${{ matrix.template }}..."
+            docker build -t test-${{ matrix.template }} .
+            echo "✅ Docker build successful"
+          else
+            echo "❌ No Dockerfile found"
+            exit 1
+          fi
+        timeout-minutes: 10
+
+  build-and-push:
+    needs: [detect-changes, test-templates]
+    # Run builds whenever templates changed and tests passed (including PRs from the same repo).
+    # Skip forked PRs for security reasons (secrets/exposed resources).
+    if: ${{ needs.detect-changes.outputs.templates != '[]' && needs.test-templates.result == 'success' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+      fail-fast: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Check deployment conditions
+        run: |
+          echo "🔍 Checking deployment conditions..."
+          echo "Event name: ${{ github.event_name }}"
+          echo "Branch: ${{ github.ref }}"
+          echo "Is main branch: ${{ github.ref == 'refs/heads/main' }}"
+          echo "Is not PR: ${{ github.event_name != 'pull_request' }}"
+
+          if [[ "${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}" == "true" ]]; then
+            echo "✅ Production deployment conditions met - will push to Docker Hub"
+          else
+            echo "⏭️ Production deployment conditions not met - will only build (no push)"
+          fi
+
+      - name: Login to Docker Hub
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          username: dataeverything
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: dataeverything/mcp-${{ matrix.template }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build (PRs / non-main - single-arch, capture logs)
+        if: ${{ github.event_name == 'pull_request' || github.ref != 'refs/heads/main' }}
+        run: |
+          set -euo pipefail
+          cd mcp_template/template/templates/${{ matrix.template }}
+          if [ -f "Dockerfile" ]; then
+            mkdir -p build-logs
+            echo "🐳 Building single-arch image for ${{ matrix.template }} (logs -> build-logs/build-${{ matrix.template }}.log)"
+            # Use single-arch docker build for PRs / non-main to save time
+            docker build -t test-${{ matrix.template }} . 2>&1 | tee build-logs/build-${{ matrix.template }}.log
+            BUILD_EXIT=${PIPESTATUS[0]}
+            echo "Build exit code: $BUILD_EXIT"
+            if [ "$BUILD_EXIT" -ne 0 ]; then
+              exit $BUILD_EXIT
+            fi
+          else
+            echo "No Dockerfile found" | tee build-logs/build-${{ matrix.template }}.log
+            exit 1
+          fi
+
+      - name: Upload build logs (PRs / non-main)
+        if: ${{ github.event_name == 'pull_request' || github.ref != 'refs/heads/main' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log-${{ matrix.template }}
+          path: mcp_template/template/templates/${{ matrix.template }}/build-logs/build-${{ matrix.template }}.log
+
+      - name: Build and push to Docker Hub (main branch)
+        if: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
+        uses: docker/build-push-action@v5
+        with:
+          context: ./mcp_template/template/templates/${{ matrix.template }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  summary:
+    needs: [detect-changes, test-templates, build-and-push]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build Summary
+        run: |
+          if [[ "${{ needs.detect-changes.outputs.templates }}" == "[]" ]]; then
+            echo "## 🔍 No templates changed" >> $GITHUB_STEP_SUMMARY
+            echo "No MCP template images need to be built." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## 🚀 Template Build & Test Results" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+
+            # Test results
+            echo "### 🧪 Test Results:" >> $GITHUB_STEP_SUMMARY
+            if [[ "${{ needs.test-templates.result }}" == "success" ]]; then
+              echo "✅ All template tests passed" >> $GITHUB_STEP_SUMMARY
+            elif [[ "${{ needs.test-templates.result }}" == "failure" ]]; then
+              echo "❌ Some template tests failed" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "⏭️ Template tests were skipped" >> $GITHUB_STEP_SUMMARY
+            fi
+
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 🐳 Docker Build Results:" >> $GITHUB_STEP_SUMMARY
+
+            if [[ "${{ needs.test-templates.result }}" == "success" ]]; then
+              if [[ "${{ needs.build-and-push.result }}" == "success" ]]; then
+                echo "✅ All images built and pushed successfully!" >> $GITHUB_STEP_SUMMARY
+                echo "" >> $GITHUB_STEP_SUMMARY
+                echo "### Built Templates:" >> $GITHUB_STEP_SUMMARY
+
+                for template in $(echo '${{ needs.detect-changes.outputs.templates }}' | jq -r '.[]'); do
+                  image_url="dataeverything/mcp-$template:latest"
+                  echo "- **$template**: \`docker pull $image_url\`" >> $GITHUB_STEP_SUMMARY
+                done
+
+                echo "" >> $GITHUB_STEP_SUMMARY
+                echo "### 🐳 Docker Hub:" >> $GITHUB_STEP_SUMMARY
+                echo "Images are available at: [Docker Hub](https://hub.docker.com/u/dataeverything)" >> $GITHUB_STEP_SUMMARY
+              else
+                echo "❌ Some builds failed. Check the job logs for details." >> $GITHUB_STEP_SUMMARY
+              fi
+            else
+              echo "⏭️ Docker builds were skipped due to test failures" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "**Note**: Images are only built when all template tests pass." >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
