@@ -209,13 +209,13 @@ Our platform provides dynamic tool discovery to automatically catalog all availa
 
 ```bash
 # Discover all available tools
-mcpt> tools github --config GITHUB_PERSONAL_ACCESS_TOKEN="your_token"
+mcpp> tools github --config GITHUB_PERSONAL_ACCESS_TOKEN="your_token"
 
 # Refresh tool cache
-mcpt> tools github --refresh
+mcpp> tools github --refresh
 
 # Get detailed tool information
-mcpt> tools github --verbose
+mcpp> tools github --verbose
 ```
 
 ## Platform Benefits
@@ -370,7 +370,7 @@ All 77 GitHub tools are available through the MCP interface. Each tool includes:
 
 For detailed API documentation of each tool, use:
 ```bash
-mcpt> tools github --tool-name <tool_name> --detailed
+mcpp> tools github --tool-name <tool_name> --detailed
 ```
 
 ## Contributing

@@ -21,7 +21,7 @@ unselect
 ### Sample Output
 ```
 ✅ Template unselected
-mcpt>
+mcpp>
 ```
 
 ## When and How to Run

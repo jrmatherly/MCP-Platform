@@ -80,10 +80,10 @@ mcpp deploy filesystem \
 
 ```bash
 # Discover available tools
-mcpt> tools demo
+mcpp> tools demo
 
 # Get detailed tool information
-mcpt> tools filesystem --detailed
+mcpp> tools filesystem --detailed
 
 # Generate integration examples
 mcpp connect demo --llm claude
@@ -156,7 +156,7 @@ mcpp validate template-name
 mcpp config template-name --show-schema
 
 # Test tool discovery
-mcpt> tools --image template:latest
+mcpp> tools --image template:latest
 ```
 
 ## Creating Custom Templates

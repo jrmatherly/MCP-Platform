@@ -28,7 +28,7 @@ mcpp status
 mcpp deploy demo --config debug=true
 
 # Verify tools are discovered
-mcpt> tools demo
+mcpp> tools demo
 
 # Check logs for errors
 mcpp logs demo --tail 50
@@ -166,7 +166,7 @@ No tools found in deployment
 **Diagnostics:**
 ```bash
 # Test MCP protocol directly
-mcpt> tools --image template:latest
+mcpp> tools --image template:latest
 
 # Check container logs
 mcpp logs deployment --filter "tool\|mcp"
@@ -197,7 +197,7 @@ Only 3 of 10 tools discovered
 **Solutions:**
 ```bash
 # Increase discovery timeout
-mcpt> tools --image template
+mcpp> tools --image template
 
 # Check for tool initialization errors
 mcpp logs deployment --filter "error\|exception"
@@ -261,7 +261,7 @@ mcpp deploy template --config debug=true
 **Solutions:**
 ```bash
 # Increase timeouts
-mcpt> tools --image template
+mcpp> tools --image template
 
 # Use HTTP transport instead of stdio
 mcpp deploy template --transport http

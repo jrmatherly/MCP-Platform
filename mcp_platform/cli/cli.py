@@ -317,10 +317,10 @@ def deploy(
 
             console.print("\nTo use this template, run tools directly:")
             console.print(
-                f"\n💡[dim]  mcpt list-tools {template}     # List available tools[/dim]"
+                f"\n💡[dim]  mcpp list-tools {template}     # List available tools[/dim]"
             )
             console.print(
-                f"💡[dim]  echo 'mcpt {template} call <tool> | mcpt interactive               # Start interactive shell[/dim]\n"
+                f"💡[dim]  echo 'mcpp {template} call <tool> | mcpp interactive               # Start interactive shell[/dim]\n"
             )
             raise typer.Exit(1)
         elif actual_transport not in supported_transports:
@@ -440,10 +440,10 @@ def list_tools(
     metadata about how the tools were discovered.
 
     Examples:
-        mcpt list-tools github              # GitHub tools using priority discovery
-        mcpt list-tools demo --backend docker   # Demo tools from docker backend only
-        mcpt list-tools github --method static  # GitHub tools from template definition only
-        mcpt list-tools demo --force-refresh    # Bypass cache and rediscover
+        mcpp list-tools github              # GitHub tools using priority discovery
+        mcpp list-tools demo --backend docker   # Demo tools from docker backend only
+        mcpp list-tools github --method static  # GitHub tools from template definition only
+        mcpp list-tools demo --force-refresh    # Bypass cache and rediscover
     """
 
     try:
@@ -616,7 +616,7 @@ def list(
         )
         console.print("💡 [dim]Use 'mcpp deploy <template>' to deploy a template[/dim]")
         console.print(
-            "💡 [dim]Use 'mcpt list --backend <name>' for single-backend view[/dim]"
+            "💡 [dim]Use 'mcpp list --backend <name>' for single-backend view[/dim]"
         )
 
     except Exception as e:
@@ -800,10 +800,10 @@ def stop(
     Stop MCP server deployments.
 
     This command can stop deployments in several ways:
-    1. Stop specific deployment by ID: mcpt stop <deployment-id>
-    2. Stop all deployments: mcpt stop --all
-    3. Stop all deployments for a template: mcpt stop --template <template-name>
-    4. Stop with positional argument: mcpt stop all, mcpt stop <template-name>
+    1. Stop specific deployment by ID: mcpp stop <deployment-id>
+    2. Stop all deployments: mcpp stop --all
+    3. Stop all deployments for a template: mcpp stop --template <template-name>
+    4. Stop with positional argument: mcpp stop all, mcpp stop <template-name>
 
     Use --backend to limit operations to a specific backend.
     Use --dry-run to preview what would be stopped.
@@ -819,10 +819,10 @@ def stop(
             "[red]❌ Please specify what to stop: deployment ID, --all, or --template <name>[/red]"
         )
         console.print("Examples:")
-        console.print("  mcpt stop <deployment-id>")
-        console.print("  mcpt stop --all")
-        console.print("  mcpt stop --template demo")
-        console.print("  mcpt stop all")
+        console.print("  mcpp stop <deployment-id>")
+        console.print("  mcpp stop --all")
+        console.print("  mcpp stop --template demo")
+        console.print("  mcpp stop all")
         raise typer.Exit(1)
 
     if targets_specified > 1:
@@ -984,7 +984,7 @@ def interactive_legacy():
         console.print("[cyan]🚀 Starting legacy interactive CLI mode...[/cyan]")
         console.print("[dim]Type 'help' for available commands, 'quit' to exit[/dim]")
         console.print(
-            "[yellow]⚠️  Consider using 'mcpt interactive' for the enhanced version[/yellow]"
+            "[yellow]⚠️  Consider using 'mcpp interactive' for the enhanced version[/yellow]"
         )
 
         # Import and start the legacy interactive CLI
@@ -1009,40 +1009,40 @@ def install_completion():
         if shell == "zsh":
             console.print("[cyan]Installing Zsh completion...[/cyan]")
             console.print("[yellow]Run this command to install completion:[/yellow]")
-            console.print("[bold]python -m mcp_template --install-completion[/bold]")
+            console.print("[bold]python -m mcp_platform --install-completion[/bold]")
             console.print("\n[yellow]Then add this to your ~/.zshrc:[/yellow]")
             console.print(
-                '[bold]eval "$(_MCPT_COMPLETE=zsh_source python -m mcp_template)"[/bold]'
+                '[bold]eval "$(_MCPT_COMPLETE=zsh_source python -m mcp_platform)"[/bold]'
             )
 
         elif shell == "bash":
             console.print("[cyan]Installing Bash completion...[/cyan]")
             console.print("[yellow]Run this command to install completion:[/yellow]")
-            console.print("[bold]python -m mcp_template --install-completion[/bold]")
+            console.print("[bold]python -m mcp_platform --install-completion[/bold]")
             console.print("\n[yellow]Then add this to your ~/.bashrc:[/yellow]")
             console.print(
-                '[bold]eval "$(_MCPT_COMPLETE=bash_source python -m mcp_template)"[/bold]'
+                '[bold]eval "$(_MCPT_COMPLETE=bash_source python -m mcp_platform)"[/bold]'
             )
 
         elif shell == "fish":
             console.print("[cyan]Installing Fish completion...[/cyan]")
             console.print("[yellow]Run this command to install completion:[/yellow]")
-            console.print("[bold]python -m mcp_template --install-completion[/bold]")
+            console.print("[bold]python -m mcp_platform --install-completion[/bold]")
             console.print("\n[yellow]Then add this to your config.fish:[/yellow]")
             console.print(
-                "[bold]eval (env _MCPT_COMPLETE=fish_source python -m mcp_template)[/bold]"
+                "[bold]eval (env _MCPT_COMPLETE=fish_source python -m mcp_platform)[/bold]"
             )
 
         else:
             console.print(f"[yellow]Shell '{shell}' detected. Manual setup:[/yellow]")
             console.print(
-                'For zsh: eval "$(_MCPT_COMPLETE=zsh_source python -m mcp_template)"'
+                'For zsh: eval "$(_MCPT_COMPLETE=zsh_source python -m mcp_platform)"'
             )
             console.print(
-                'For bash: eval "$(_MCPT_COMPLETE=bash_source python -m mcp_template)"'
+                'For bash: eval "$(_MCPT_COMPLETE=bash_source python -m mcp_platform)"'
             )
             console.print(
-                "For fish: eval (env _MCPT_COMPLETE=fish_source python -m mcp_template)"
+                "For fish: eval (env _MCPT_COMPLETE=fish_source python -m mcp_platform)"
             )
 
         console.print(
@@ -1206,7 +1206,7 @@ def status(
                 console.print(f"  {backend_indicator}: {running}/{total} running")
 
         console.print(
-            "\n💡 [dim]Use 'mcpt list-deployments' for detailed deployment information[/dim]"
+            "\n💡 [dim]Use 'mcpp list-deployments' for detailed deployment information[/dim]"
         )
 
     except Exception as e:

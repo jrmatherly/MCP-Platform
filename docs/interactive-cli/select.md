@@ -22,7 +22,7 @@ select demo
 ### Sample Output
 ```
 ✅ Selected template: demo
-mcpt(demo)>
+mcpp(demo)>
 ```
 
 ## When and How to Run

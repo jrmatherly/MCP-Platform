@@ -421,8 +421,8 @@ class PodmanDeploymentService(BaseDeploymentBackend):
                     )
                     + "\n\n"
                     f"[green]To use this template, run tools directly:[/green]\n"
-                    f"  mcpt> tools {template_id}                    # List available tools\n"
-                    f"  mcpt run-tool {template_id} <tool_name>     # Run a specific tool\n"
+                    f"  mcpp> tools {template_id}                    # List available tools\n"
+                    f"  mcpp run-tool {template_id} <tool_name>     # Run a specific tool\n"
                     f"  echo '{json.dumps({'jsonrpc': '2.0', 'id': 1, 'method': 'tools/list'})}' | \\\n"
                     f"    podman run -i --rm {template_data.get('image', template_data.get('podman_image', f'mcp-{template_id}:latest'))}",
                     title="Stdio Transport Detected",

@@ -106,9 +106,9 @@
   "examples": {
     "http_endpoint": "http://localhost:7071",
     "cli_usage": [
-      "python -m mcp_template deploy demo",
-      "python -m mcp_template deploy demo --config hello_from='My Server'",
-      "python -m mcp_template deploy demo --transport http --port 7071"
+      "python -m mcp_platform deploy demo",
+      "python -m mcp_platform deploy demo --config hello_from='My Server'",
+      "python -m mcp_platform deploy demo --transport http --port 7071"
     ],
     "client_integration": {
       "fastmcp": "from fastmcp.client import FastMCPClient\nclient = FastMCPClient(endpoint='http://localhost:7071')\nresult = client.call('say_hello', name='Alice')",

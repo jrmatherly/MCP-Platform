@@ -87,8 +87,8 @@ async with MCPClient() as client:
 ### Validate Configuration
 
 ```python
-from mcp_template.client import MCPClient
-from mcp_template.exceptions import ValidationError
+from mcp_platform.client import MCPClient
+from mcp_platform.exceptions import ValidationError
 
 async with MCPClient() as client:
     config_values = {
@@ -204,8 +204,8 @@ async with MCPClient() as client:
 ### Common Template Errors
 
 ```python
-from mcp_template.client import MCPClient
-from mcp_template.exceptions import TemplateNotFoundError, ValidationError
+from mcp_platform.client import MCPClient
+from mcp_platform.exceptions import TemplateNotFoundError, ValidationError
 
 async with MCPClient() as client:
     try:

@@ -138,7 +138,7 @@ jobs:
 
     - name: Build demo Docker image
       run: |
-        docker build -t dataeverything/mcp-demo:latest ./mcp_template/template/templates/demo
+        docker build -t dataeverything/mcp-demo:latest ./mcp_platform/template/templates/demo
 
     - name: Run Docker-specific tests
       run: |
@@ -176,7 +176,7 @@ jobs:
 
     - name: Build demo Docker image
       run: |
-        docker build -t dataeverything/mcp-demo:latest ./mcp_template/template/templates/demo
+        docker build -t dataeverything/mcp-demo:latest ./mcp_platform/template/templates/demo
 
     - name: Run Kubernetes-specific tests
       run: |
@@ -207,8 +207,8 @@ jobs:
 
     - name: Test template ${{ matrix.template }}
       run: |
-        if [ -d "mcp_template/template/templates/${{ matrix.template }}/tests" ]; then
-          python -m pytest mcp_template/template/templates/${{ matrix.template }}/tests/ -v --tb=short --cov-fail-under=0
+        if [ -d "mcp_platform/template/templates/${{ matrix.template }}/tests" ]; then
+          python -m pytest mcp_platform/template/templates/${{ matrix.template }}/tests/ -v --tb=short --cov-fail-under=0
         else
           echo "No tests found for template ${{ matrix.template }}"
         fi
@@ -243,7 +243,7 @@ jobs:
 
     - name: Build demo Docker image
       run: |
-        docker build -t dataeverything/mcp-demo:latest ./mcp_template/template/templates/demo
+        docker build -t dataeverything/mcp-demo:latest ./mcp_platform/template/templates/demo
 
     - name: Ensure Docker is logged out
       run: docker logout || true
@@ -284,7 +284,7 @@ jobs:
 
     - name: Build demo Docker image
       run: |
-        docker build -t dataeverything/mcp-demo:latest ./mcp_template/template/templates/demo
+        docker build -t dataeverything/mcp-demo:latest ./mcp_platform/template/templates/demo
 
     - name: Ensure Docker is logged out
       run: docker logout || true
@@ -293,7 +293,7 @@ jobs:
       run: |
         echo "🧪 Running complete test suite..."
         python -m pytest tests/ \
-          --cov=mcp_template \
+          --cov=mcp_platform \
           --cov-report=term-missing \
           --cov-report=html \
           --cov-report=xml \
@@ -436,7 +436,7 @@ jobs:
 
     - name: Show package version (from git tag)
       run: |
-        python -c "from mcp_template import __version__; print(f'PyPI version from git tag: {__version__}')"
+        python -c "from mcp_platform import __version__; print(f'PyPI version from git tag: {__version__}')"
 
     - name: Check version from setuptools_scm
       run: |

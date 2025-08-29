@@ -92,17 +92,17 @@ test-templates:
 # Code quality
 lint:
 	@echo "🔍 Running code linting..."
-	flake8 mcp_template/ tests/ --max-line-length=100 --ignore=E203,W503
-	bandit -r mcp_template/ -f json -o bandit-report.json || true
+	flake8 mcp_platform/ tests/ --max-line-length=100 --ignore=E203,W503
+	bandit -r mcp_platform/ -f json -o bandit-report.json || true
 
 format:
 	@echo "🎨 Formatting code..."
-	black mcp_template/ tests/
-	isort mcp_template/ tests/
+	black mcp_platform/ tests/
+	isort mcp_platform/ tests/
 
 type-check:
 	@echo "🔬 Running type checking..."
-	mypy mcp_template/ --ignore-missing-imports
+	mypy mcp_platform/ --ignore-missing-imports
 
 # Package building
 build:
@@ -123,15 +123,15 @@ clean:
 # Local development helpers
 deploy-test:
 	@echo "🚀 Deploying test template..."
-	python -m mcp_template deploy file-server
+	python -m mcp_platform deploy file-server
 
 cleanup-test:
 	@echo "🧹 Cleaning up test deployments..."
-	python -m mcp_template cleanup --all
+	python -m mcp_platform cleanup --all
 
 list-templates:
 	@echo "📋 Available templates:"
-	python -m mcp_template list
+	python -m mcp_platform list
 
 # CI/CD simulation
 ci-quick:
@@ -159,7 +159,7 @@ dev-test: test-quick lint
 # Coverage reporting
 coverage:
 	@echo "📊 Generating coverage report..."
-	pytest tests/test_deployment_units.py -m unit --cov=mcp_template --cov-report=html --cov-report=term
+	pytest tests/test_deployment_units.py -m unit --cov=mcp_platform --cov-report=html --cov-report=term
 	@echo "📋 Coverage report generated in htmlcov/"
 
 # Documentation
@@ -185,7 +185,7 @@ docker-check:
 # Template development
 validate-templates:
 	@echo "✅ Validating all templates..."
-	python -c "from mcp_template import TemplateDiscovery; import sys; d = TemplateDiscovery(); t = d.discover_templates(); print(f'Found {len(t)} templates: {list(t.keys())}') if t else sys.exit(1)"
+	python -c "from mcp_platform import TemplateDiscovery; import sys; d = TemplateDiscovery(); t = d.discover_templates(); print(f'Found {len(t)} templates: {list(t.keys())}') if t else sys.exit(1)"
 
 # Release helpers
 pre-release: ci-full
@@ -193,4 +193,4 @@ pre-release: ci-full
 
 version:
 	@echo "📊 Package version:"
-	python -c "import mcp_template; print(getattr(mcp_template, '__version__', 'unknown'))"
+	python -c "import mcp_platform; print(getattr(mcp_platform, '__version__', 'unknown'))"

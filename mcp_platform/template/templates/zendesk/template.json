@@ -497,8 +497,8 @@
   "examples": {
     "http_endpoint": "http://localhost:7072",
     "cli_usage": [
-      "python -m mcp_template deploy zendesk",
-      "python -m mcp_template deploy zendesk --config zendesk_subdomain=mycompany --config zendesk_email=support@mycompany.com"
+      "python -m mcp_platform deploy zendesk",
+      "python -m mcp_platform deploy zendesk --config zendesk_subdomain=mycompany --config zendesk_email=support@mycompany.com"
     ],
     "environment_variables": [
       "ZENDESK_SUBDOMAIN=mycompany",

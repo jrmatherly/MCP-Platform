@@ -68,7 +68,7 @@
 
 ## Core Components
 
-### 1. Entry Point & CLI (`mcp_template/__init__.py`)
+### 1. Entry Point & CLI (`mcp_platform/__init__.py`)
 **Purpose**: Main entry point and argument parsing
 - **Key Functions**: `main()`, argument parsing, enhanced CLI integration
 - **Features**:
@@ -79,7 +79,7 @@
   - Interactive CLI mode support
 - **Exports**: `MCPDeployer`, `TemplateDiscovery`, `DeploymentManager`
 
-### 2. Enhanced Interactive CLI (`mcp_template/interactive_cli.py`)
+### 2. Enhanced Interactive CLI (`mcp_platform/interactive_cli.py`)
 **Purpose**: Advanced interactive interface with enhanced argument parsing
 - **Class**: `InteractiveCLI`
 - **Key Methods**:
@@ -95,7 +95,7 @@
   - **Multiple Config Sources**: File, CLI, environment, session configuration
   - **Beautiful Output**: Rich console formatting with tables and panels
 
-### 3. Enhanced Configuration Processor (`mcp_template/utils/config_processor.py`)
+### 3. Enhanced Configuration Processor (`mcp_platform/utils/config_processor.py`)
 **Purpose**: Advanced configuration processing with Docker integration
 - **Class**: `ConfigProcessor`
 - **Key Methods**:
@@ -110,7 +110,7 @@
   - **Docker Artifact Removal**: Clean removal of Docker-specific path prefixes
   - **Type Conversion**: Intelligent type conversion for configuration values
 
-### 4. Deployment Orchestrator (`mcp_template/deployer.py`)
+### 4. Deployment Orchestrator (`mcp_platform/deployer.py`)
 **Purpose**: High-level deployment interface and configuration management
 - **Class**: `MCPDeployer`
 - **Key Methods**:
@@ -125,7 +125,7 @@
   - MCP config generation
   - Enhanced CLI integration
 
-### 3. Backend Management (`mcp_template/manager.py`)
+### 3. Backend Management (`mcp_platform/manager.py`)
 **Purpose**: Backend abstraction and deployment coordination
 - **Class**: `DeploymentManager`
 - **Backend Support**: Docker, Kubernetes, Mock
@@ -134,7 +134,7 @@
   - `_get_deployment_backend()`: Backend selection and caching
 - **Features**: Unified interface across different deployment targets
 
-### 4. Backend Implementations (`mcp_template/backends/`)
+### 4. Backend Implementations (`mcp_platform/backends/`)
 
 #### Docker Backend (`docker.py`)
 - **Class**: `DockerDeploymentService`
@@ -150,7 +150,7 @@
 - **Class**: `MockDeploymentService`
 - **Purpose**: Testing and development without actual deployment
 
-### 5. Template System (`mcp_template/template/`)
+### 5. Template System (`mcp_platform/template/`)
 
 #### Template Discovery (`discovery.py`)
 - **Class**: `TemplateDiscovery`
@@ -197,7 +197,7 @@ Templates now support advanced configuration features for Docker integration:
 - **Purpose**: Interactive template creation wizard
 - **Features**: Scaffolding new templates with proper structure
 
-### 6. Tools & Discovery (`mcp_template/tools/`)
+### 6. Tools & Discovery (`mcp_platform/tools/`)
 
 #### Tool Discovery (`discovery.py`)
 - **Class**: `ToolDiscovery`
@@ -254,7 +254,7 @@ Templates now support advanced configuration features for Docker integration:
 - **Search & Discovery**: `search_files`, `search_within_files`, `get_file_info`
 - **Batch Operations**: `read_multiple_files`
 
-### 8. Enhanced CLI (`mcp_template/cli.py`)
+### 8. Enhanced CLI (`mcp_platform/cli.py`)
 **Purpose**: Advanced CLI features and tool management
 - **Class**: `EnhancedCLI`
 - **Features**:
@@ -475,7 +475,7 @@ with Progress() as progress:
 ## Extension Points
 
 ### 1. Adding New Backends
-1. Create new class in `mcp_template/backends/`
+1. Create new class in `mcp_platform/backends/`
 2. Inherit from base backend interface
 3. Implement required methods: `deploy()`, `stop()`, `get_logs()`
 4. Register in `DeploymentManager._get_deployment_backend()`
@@ -488,7 +488,7 @@ with Progress() as progress:
 5. Add tests in `templates/template_name/tests/`
 
 ### 3. Extending Tool Discovery
-1. Create new probe class in `mcp_template/tools/`
+1. Create new probe class in `mcp_platform/tools/`
 2. Implement discovery methods
 3. Add to `ToolDiscovery` integration
 4. Include caching support
@@ -715,25 +715,25 @@ def test_end_to_end_volume_processing(self, temp_config_file):
 ### 1. Verbose Logging
 ```bash
 # Enable debug logging
-mcpt deploy demo --verbose
+mcpp deploy demo --verbose
 ```
 
 ### 2. Configuration Inspection
 ```bash
 # Show configuration options
-mcpt deploy demo --show-config
+mcpp deploy demo --show-config
 ```
 
 ### 3. Tool Discovery Debugging
 ```bash
 # Manual tool discovery
-python -c "from mcp_template.tools.discovery import ToolDiscovery; print(ToolDiscovery().discover_tools('image:tag'))"
+python -c "from mcp_platform.tools.discovery import ToolDiscovery; print(ToolDiscovery().discover_tools('image:tag'))"
 ```
 
 ### 4. Override Testing
 ```bash
 # Test override syntax
-python -c "from mcp_template.deployer import MCPDeployer; print(MCPDeployer()._apply_template_overrides({'test': {}}, {'test__field': 'value'}))"
+python -c "from mcp_platform.deployer import MCPDeployer; print(MCPDeployer()._apply_template_overrides({'test': {}}, {'test__field': 'value'}))"
 ```
 
 ---

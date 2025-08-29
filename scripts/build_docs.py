@@ -89,19 +89,19 @@ def copy_template_docs(template_docs: Dict[str, Dict], docs_dir: Path):
 
         # Fix CLI commands - add 'python -m' prefix and 'deploy' command
         content = content.replace(
-            f"mcpt deploy {template_id}",
-            f"python -m mcp_template deploy {template_id}",
+            f"mcpp deploy {template_id}",
+            f"python -m mcp_platform deploy {template_id}",
         )
         content = content.replace(
-            f"mcpt {template_id}",
-            f"python -m mcp_template deploy {template_id}",
+            f"mcpp {template_id}",
+            f"python -m mcp_platform deploy {template_id}",
         )
-        content = content.replace("mcpt create", "python -m mcp_template create")
-        content = content.replace("mcpt list", "python -m mcp_template list")
-        content = content.replace("mcpt stop", "python -m mcp_template stop")
-        content = content.replace("mcpt logs", "python -m mcp_template logs")
-        content = content.replace("mcpt shell", "python -m mcp_template shell")
-        content = content.replace("mcpt cleanup", "python -m mcp_template cleanup")
+        content = content.replace("mcpp create", "python -m mcp_platform create")
+        content = content.replace("mcpp list", "python -m mcp_platform list")
+        content = content.replace("mcpp stop", "python -m mcp_platform stop")
+        content = content.replace("mcpp logs", "python -m mcp_platform logs")
+        content = content.replace("mcpp shell", "python -m mcp_platform shell")
+        content = content.replace("mcpp cleanup", "python -m mcp_platform cleanup")
 
         # Add configuration information from template schema if not present
         config_schema = template_info["config"].get("config_schema", {})
@@ -129,18 +129,18 @@ def copy_template_docs(template_docs: Dict[str, Dict], docs_dir: Path):
             config_section += "```bash\n"
             config_section += "# Deploy with configuration\n"
             config_section += (
-                f"python -m mcp_template deploy {template_id} --show-config\n\n"
+                f"python -m mcp_platform deploy {template_id} --show-config\n\n"
             )
             if properties:
                 first_prop = next(iter(properties.keys()))
                 first_prop_config = properties[first_prop]
                 if first_prop_config.get("env_mapping"):
                     config_section += "# Using environment variables\n"
-                    config_section += f"python -m mcp_template deploy {template_id} --env {first_prop_config['env_mapping']}=value\n\n"
+                    config_section += f"python -m mcp_platform deploy {template_id} --env {first_prop_config['env_mapping']}=value\n\n"
                 config_section += "# Using CLI configuration\n"
-                config_section += "python -m mcp_template deploy {template_id} --config {first_prop}=value\n\n"
+                config_section += "python -m mcp_platform deploy {template_id} --config {first_prop}=value\n\n"
                 config_section += "# Using nested configuration\n"
-                config_section += "python -m mcp_template deploy {template_id} --config category__property=value\n"
+                config_section += "python -m mcp_platform deploy {template_id} --config category__property=value\n"
             config_section += "```\n"
 
             # Replace or append configuration section

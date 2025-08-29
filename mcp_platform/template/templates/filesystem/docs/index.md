@@ -13,9 +13,9 @@ The filesystem template uses **stdio transport** and runs interactively rather t
 ```bash
 # Interactive mode (recommended)
 mcpp interactive
-mcpt> config filesystem allowed_dirs="/tmp /home/user/documents"
-mcpt> tools filesystem
-mcpt> call filesystem list_directory '{"path": "/tmp"}'
+mcpp> config filesystem allowed_dirs="/tmp /home/user/documents"
+mcpp> tools filesystem
+mcpp> call filesystem list_directory '{"path": "/tmp"}'
 
 # Direct tool execution
 mcpp run-tool filesystem list_directory \
@@ -68,7 +68,7 @@ List all configured allowed directories.
 
 **Example**:
 ```bash
-mcpt> call filesystem list_allowed_directories '{}'
+mcpp> call filesystem list_allowed_directories '{}'
 ```
 
 ##### `list_directory`
@@ -81,7 +81,7 @@ List contents of a directory.
 
 **Example**:
 ```bash
-mcpt> call filesystem list_directory '{"path": "/tmp"}'
+mcpp> call filesystem list_directory '{"path": "/tmp"}'
 ```
 
 ##### `tree`
@@ -95,7 +95,7 @@ Display directory structure as a tree.
 
 **Example**:
 ```bash
-mcpt> call filesystem tree '{"path": "/tmp", "max_depth": 3}'
+mcpp> call filesystem tree '{"path": "/tmp", "max_depth": 3}'
 ```
 
 ##### `create_directory`
@@ -108,7 +108,7 @@ Create a new directory.
 
 **Example**:
 ```bash
-mcpt> call filesystem create_directory '{"path": "/tmp/new-folder"}'
+mcpp> call filesystem create_directory '{"path": "/tmp/new-folder"}'
 ```
 
 #### File Operations
@@ -123,7 +123,7 @@ Read contents of a file.
 
 **Example**:
 ```bash
-mcpt> call filesystem read_file '{"path": "/tmp/example.txt"}'
+mcpp> call filesystem read_file '{"path": "/tmp/example.txt"}'
 ```
 
 ##### `read_multiple_files`
@@ -136,7 +136,7 @@ Read multiple files efficiently in a single operation.
 
 **Example**:
 ```bash
-mcpt> call filesystem read_multiple_files '{"paths": ["/tmp/file1.txt", "/tmp/file2.txt"]}'
+mcpp> call filesystem read_multiple_files '{"paths": ["/tmp/file1.txt", "/tmp/file2.txt"]}'
 ```
 
 ##### `write_file`
@@ -150,7 +150,7 @@ Create or overwrite a file with content.
 
 **Example**:
 ```bash
-mcpt> call filesystem write_file '{"path": "/tmp/output.txt", "content": "Hello World!"}'
+mcpp> call filesystem write_file '{"path": "/tmp/output.txt", "content": "Hello World!"}'
 ```
 
 ##### `modify_file`
@@ -164,7 +164,7 @@ Update specific parts of an existing file.
 
 **Example**:
 ```bash
-mcpt> call filesystem modify_file '{"path": "/tmp/existing.txt", "content": "Updated content"}'
+mcpp> call filesystem modify_file '{"path": "/tmp/existing.txt", "content": "Updated content"}'
 ```
 
 ##### `copy_file`
@@ -178,7 +178,7 @@ Copy a file to a new location.
 
 **Example**:
 ```bash
-mcpt> call filesystem copy_file '{"source": "/tmp/source.txt", "destination": "/tmp/backup.txt"}'
+mcpp> call filesystem copy_file '{"source": "/tmp/source.txt", "destination": "/tmp/backup.txt"}'
 ```
 
 ##### `move_file`
@@ -192,7 +192,7 @@ Move or rename a file.
 
 **Example**:
 ```bash
-mcpt> call filesystem move_file '{"source": "/tmp/old.txt", "destination": "/tmp/new.txt"}'
+mcpp> call filesystem move_file '{"source": "/tmp/old.txt", "destination": "/tmp/new.txt"}'
 ```
 
 ##### `delete_file`
@@ -205,7 +205,7 @@ Delete a file or directory.
 
 **Example**:
 ```bash
-mcpt> call filesystem delete_file '{"path": "/tmp/unwanted.txt"}'
+mcpp> call filesystem delete_file '{"path": "/tmp/unwanted.txt"}'
 ```
 
 ##### `get_file_info`
@@ -218,7 +218,7 @@ Get detailed metadata about a file or directory.
 
 **Example**:
 ```bash
-mcpt> call filesystem get_file_info '{"path": "/tmp/example.txt"}'
+mcpp> call filesystem get_file_info '{"path": "/tmp/example.txt"}'
 ```
 
 #### Search Operations
@@ -234,7 +234,7 @@ Search for files by name patterns.
 
 **Example**:
 ```bash
-mcpt> call filesystem search_files '{"path": "/tmp", "pattern": "*.txt"}'
+mcpp> call filesystem search_files '{"path": "/tmp", "pattern": "*.txt"}'
 ```
 
 ##### `search_within_files`
@@ -249,7 +249,7 @@ Search for content within files.
 
 **Example**:
 ```bash
-mcpt> call filesystem search_within_files '{"path": "/tmp", "pattern": "error", "file_pattern": "*.log"}'
+mcpp> call filesystem search_within_files '{"path": "/tmp", "pattern": "error", "file_pattern": "*.log"}'
 ```
 
 ## Advanced Usage
@@ -257,12 +257,12 @@ mcpt> call filesystem search_within_files '{"path": "/tmp", "pattern": "error", 
 ### Batch Operations
 ```bash
 # Read multiple configuration files at once
-mcpt> call filesystem read_multiple_files '{
+mcpp> call filesystem read_multiple_files '{
   "paths": ["/etc/nginx/nginx.conf", "/etc/hosts", "/tmp/config.json"]
 }'
 
 # Search across multiple file types
-mcpt> call filesystem search_within_files '{
+mcpp> call filesystem search_within_files '{
   "path": "/var/log",
   "pattern": "ERROR|FATAL",
   "file_pattern": "*.log"
@@ -272,10 +272,10 @@ mcpt> call filesystem search_within_files '{
 ### Working with Large Directories
 ```bash
 # Use tree with depth limit for large directories
-mcpt> call filesystem tree '{"path": "/usr", "max_depth": 2}'
+mcpp> call filesystem tree '{"path": "/usr", "max_depth": 2}'
 
 # Search specific file patterns to narrow results
-mcpt> call filesystem search_files '{"path": "/home", "pattern": "*.py"}'
+mcpp> call filesystem search_files '{"path": "/home", "pattern": "*.py"}'
 ```
 
 ### Security Best Practices
@@ -360,13 +360,13 @@ export LOG_LEVEL="DEBUG"
 
 # Test locally
 echo '{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}' | \
-  python -m mcp_template.template.templates.filesystem
+  python -m mcp_platform.template.templates.filesystem
 ```
 
 ### Running Tests
 ```bash
 # Template-specific tests
-pytest mcp_template/template/templates/filesystem/tests/ -v
+pytest mcp_platform/template/templates/filesystem/tests/ -v
 
 # Integration tests
 pytest tests/test_volume_mount_command_args.py -v
@@ -407,28 +407,28 @@ mcpp create my-custom-fs --base filesystem
 ### Debug Commands
 ```bash
 # Check configuration
-mcpt> show_config filesystem
+mcpp> show_config filesystem
 
 # List available tools
-mcpt> tools filesystem
+mcpp> tools filesystem
 
 # Enable debug logging
-mcpt> config filesystem log_level=DEBUG
+mcpp> config filesystem log_level=DEBUG
 
 # Test basic connectivity
-mcpt> call filesystem list_allowed_directories '{}'
+mcpp> call filesystem list_allowed_directories '{}'
 ```
 
 ### Performance Optimization
 ```bash
 # For large directories, use specific patterns
-mcpt> call filesystem search_files '{"path": "/large-dir", "pattern": "specific-*.txt"}'
+mcpp> call filesystem search_files '{"path": "/large-dir", "pattern": "specific-*.txt"}'
 
 # Batch operations when possible
-mcpt> call filesystem read_multiple_files '{"paths": ["file1", "file2", "file3"]}'
+mcpp> call filesystem read_multiple_files '{"paths": ["file1", "file2", "file3"]}'
 
 # Use tree with depth limits
-mcpt> call filesystem tree '{"path": "/large-dir", "max_depth": 2}'
+mcpp> call filesystem tree '{"path": "/large-dir", "max_depth": 2}'
 ```
 
 ## Support

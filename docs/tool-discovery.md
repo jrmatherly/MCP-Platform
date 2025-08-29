@@ -63,13 +63,13 @@ Extracts capabilities from existing `template.json` definitions for compatibilit
 
 ```bash
 # Basic tool discovery for deployed template
-mcpt> tools demo
+mcpp> tools demo
 
 # Force refresh cached results
-mcpt> tools demo --refresh
+mcpp> tools demo --refresh
 
 # Ignore cache entirely
-mcpt> tools demo --no-cache
+mcpp> tools demo --no-cache
 ```
 
 ### Template-Based Tool Discovery
@@ -78,13 +78,13 @@ The CLI now supports discovering tools directly from templates, with automatic D
 
 ```bash
 # Discover tools from a template directory
-mcpt> tools my-template
+mcpp> tools my-template
 
 # With configuration values for Docker fallback
-mcpt> tools my-template --config "PORT=8080,HOST=localhost"
+mcpp> tools my-template --config "PORT=8080,HOST=localhost"
 
 # Force refresh template tool discovery
-mcpt> tools my-template --refresh --config "DEBUG=true"
+mcpp> tools my-template --refresh --config "DEBUG=true"
 ```
 
 When a template has `tool_discovery: "dynamic"` in its configuration and standard discovery methods fail, the system automatically:
@@ -112,10 +112,10 @@ Example template configuration supporting dynamic discovery:
 
 ```bash
 # Discover from MCP filesystem server
-mcpt> tools --image mcp/filesystem /tmp
+mcpp> tools --image mcp/filesystem /tmp
 
 # Discover from custom server with arguments
-mcpt> tools --image myregistry/mcp-server:latest config.json --port 8080
+mcpp> tools --image myregistry/mcp-server:latest config.json --port 8080
 
 # Example output for filesystem server
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
@@ -263,7 +263,7 @@ Tool discovery results are automatically cached in `~/.mcp/cache/` for 6 hours b
 ### Cache Management
 
 ```python
-from mcp_template.tools import CacheManager
+from mcp_platform.tools import CacheManager
 
 cache = CacheManager()
 
@@ -284,7 +284,7 @@ cache.clear_all()
 ### Tool Discovery
 
 ```python
-from mcp_template.tools import ToolDiscovery
+from mcp_platform.tools import ToolDiscovery
 from pathlib import Path
 
 discovery = ToolDiscovery()
@@ -309,7 +309,7 @@ for tool in result['tools']:
 ### Docker Probe
 
 ```python
-from mcp_template.tools import DockerProbe
+from mcp_platform.tools import DockerProbe
 
 probe = DockerProbe()
 
@@ -430,5 +430,5 @@ logging.basicConfig(level=logging.DEBUG)
 Or set environment variable:
 ```bash
 export LOG_LEVEL=DEBUG
-mcpt> tools my-template
+mcpp> tools my-template
 ```

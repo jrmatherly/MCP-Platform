@@ -20,7 +20,7 @@ mcpp deploy demo
 mcpp config demo
 
 # Discover tools from template
-mcpt> tools demo
+mcpp> tools demo
 ```
 
 ## Global Options
@@ -106,7 +106,7 @@ mcpp deploy my-server --config debug=true
 mcpp logs my-server --follow
 
 # Test tools
-mcpt> tools my-server
+mcpp> tools my-server
 mcpp connect my-server --llm claude
 ```
 
@@ -128,8 +128,8 @@ mcpp logs prod-filesystem --tail 100
 
 ```bash
 # Unified tool discovery command
-mcpt> tools demo                              # From templates
-mcpt> tools --image mcp/filesystem /tmp       # From Docker images
+mcpp> tools demo                              # From templates
+mcpp> tools --image mcp/filesystem /tmp       # From Docker images
 
 # Get integration examples
 mcpp connect demo --llm vscode
@@ -208,7 +208,7 @@ Add to `.vscode/settings.json`:
 
 ```python
 import asyncio
-from mcp_template.client import MCPClient
+from mcp_platform.client import MCPClient
 
 async def main():
     client = MCPClient("container-name")

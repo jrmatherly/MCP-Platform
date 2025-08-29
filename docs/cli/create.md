@@ -100,7 +100,7 @@ Add another option? [y/N]: n
 🚀 Next steps:
   1. Implement your tools in src/tools.py
   2. Test: mcpp deploy custom-server
-  3. Verify: mcpt> tools custom-server
+  3. Verify: mcpp> tools custom-server
 ```
 
 ### Specify Template ID
@@ -221,7 +221,7 @@ mcpp create --from-image mcp/filesystem my-filesystem
 
 ```bash
 # First, discover tools from an image
-mcpt> tools --image custom/mcp-server:latest > discovery.json
+mcpp> tools --image custom/mcp-server:latest > discovery.json
 
 # Then create template from discovery
 mcpp create --from-discovery discovery.json custom-template
@@ -449,7 +449,7 @@ mcpp create test-template
 mcpp deploy test-template
 
 # Verify tools are discovered
-mcpt> tools test-template
+mcpp> tools test-template
 
 # Test with configuration
 mcpp deploy test-template --config debug=true

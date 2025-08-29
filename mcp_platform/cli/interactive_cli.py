@@ -119,7 +119,7 @@ def setup_completion():
     readline.parse_and_bind("set show-all-if-ambiguous on")
 
     # Try to load history from file
-    history_file = os.path.expanduser("~/.mcp/.mcpt_history")
+    history_file = os.path.expanduser("~/.mcp/.mcpp_history")
     try:
         # Ensure directory exists
         os.makedirs(os.path.dirname(history_file), exist_ok=True)
@@ -236,7 +236,7 @@ def get_session() -> InteractiveSession:
 
 # Create Typer app for interactive commands
 app = typer.Typer(
-    name="mcpt-interactive",
+    name="mcpp-interactive",
     help="MCP Interactive CLI - Enhanced shell for MCP operations",
     rich_markup_mode="rich",
     add_completion=False,  # Disable completion in interactive mode
@@ -2098,7 +2098,7 @@ def main():
     """Main entry point for standalone execution."""
     if len(sys.argv) > 1 and sys.argv[1] in ["--help", "-h"]:
         console.print("Enhanced MCP Interactive CLI")
-        console.print("Usage: python -m mcp_template.cli.interactive_cli_v2")
+        console.print("Usage: python -m mcp_platform.cli.interactive_cli_v2")
         console.print("       or: python interactive_cli_v2.py")
         return
 

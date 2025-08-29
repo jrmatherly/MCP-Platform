@@ -283,7 +283,7 @@ from collections import defaultdict
 
 def monitor_logs():
     """Simple real-time log monitoring."""
-    cmd = ["python", "-m", "mcp_template", "logs", "demo", "--follow", "--format", "json"]
+    cmd = ["python", "-m", "mcp_platform", "logs", "demo", "--follow", "--format", "json"]
 
     stats = defaultdict(int)
 

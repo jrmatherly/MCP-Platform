@@ -162,7 +162,7 @@ mcpp list
 mcpp deploy demo
 
 # Discover available tools
-mcpt> tools demo
+mcpp> tools demo
 
 # Get integration examples
 mcpp connect demo --llm claude
@@ -268,7 +268,7 @@ mcpp connect api-server --llm curl
 **Automatic MCP Protocol Discovery:**
 ```bash
 # Discover tools from any MCP-compliant Docker image
-mcpt> tools--image mcp/filesystem /tmp
+mcpp> tools--image mcp/filesystem /tmp
 
 # Rich formatted output shows all capabilities:
 ✅ Discovered 11 tools via docker_mcp_stdio
@@ -283,9 +283,9 @@ mcpt> tools--image mcp/filesystem /tmp
 ```bash
 # Get ready-to-use integration code
 mcpp i
-mcpt> tools demo --format json
+mcpp> tools demo --format json
 exit
-mcpt> connect demo --llm vscode
+mcpp> connect demo --llm vscode
 ```
 
 ### 📊 Available Templates

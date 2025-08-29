@@ -160,9 +160,9 @@
     "sse_endpoint": "http://localhost:3002/sse",
     "streamable_http_endpoint": "http://localhost:3002/mcp",
     "cli_usage": [
-      "python -m mcp_template deploy gitlab --config gitlab_personal_access_token=your_token",
-      "python -m mcp_template deploy gitlab --config mcp_transport=sse --config mcp_port=3002",
-      "python -m mcp_template deploy gitlab --config mcp_transport=streamable-http --port 3002"
+      "python -m mcp_platform deploy gitlab --config gitlab_personal_access_token=your_token",
+      "python -m mcp_platform deploy gitlab --config mcp_transport=sse --config mcp_port=3002",
+      "python -m mcp_platform deploy gitlab --config mcp_transport=streamable-http --port 3002"
     ],
     "client_integration": {
       "stdio": "Use with Claude Desktop or other MCP clients via stdio transport",

@@ -418,8 +418,8 @@ deployed = asyncio.run(setup_development_environment())
 ### Common Server Management Errors
 
 ```python
-from mcp_template.client import MCPClient
-from mcp_template.exceptions import (
+from mcp_platform.client import MCPClient
+from mcp_platform.exceptions import (
     DeploymentError,
     ServerNotFoundError,
     ValidationError

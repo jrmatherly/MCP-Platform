@@ -54,7 +54,7 @@ call --config-file config.json --env API_KEY=xyz demo my_tool '{"input": "value"
 
 ### Default Tabular Format
 ```
-mcpt> call demo say_hello {"name": "Sam"}
+mcpp> call demo say_hello {"name": "Sam"}
 🚀 Calling tool 'say_hello' from template 'demo'
 Checking for running server (HTTP first, stdio fallback)...
                      🎯 say_hello Results
@@ -67,7 +67,7 @@ Checking for running server (HTTP first, stdio fallback)...
 
 ### Raw JSON Format (--raw flag)
 ```
-mcpt> call --raw demo say_hello {"name": "Sam"}
+mcpp> call --raw demo say_hello {"name": "Sam"}
 🚀 Calling tool 'say_hello' from template 'demo'
 Checking for running server (HTTP first, stdio fallback)...
 Tool Result: say_hello

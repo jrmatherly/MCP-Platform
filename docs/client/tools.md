@@ -417,8 +417,8 @@ async with MCPClient() as client:
 ### Tool Execution Errors
 
 ```python
-from mcp_template.client import MCPClient
-from mcp_template.exceptions import ToolCallError, ToolNotFoundError
+from mcp_platform.client import MCPClient
+from mcp_platform.exceptions import ToolCallError, ToolNotFoundError
 
 async with MCPClient() as client:
     try:

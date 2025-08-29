@@ -142,13 +142,13 @@ Successfully created a comprehensive GitLab MCP Server template extending the ht
 - **Integration examples**: Real-world usage patterns and workflows
 
 ## Files Created/Modified
-1. `/mcp_template/template/templates/gitlab/template.json` - Core configuration
-2. `/mcp_template/template/templates/gitlab/README.md` - User documentation
-3. `/mcp_template/template/templates/gitlab/USAGE.md` - Usage guide
-4. `/mcp_template/template/templates/gitlab/docs/index.md` - Technical reference
-5. `/mcp_template/template/templates/gitlab/tests/test_gitlab_config.py` - Config tests
-6. `/mcp_template/template/templates/gitlab/tests/test_gitlab_integration.py` - Integration tests
-7. `/mcp_template/template/templates/gitlab/tests/test_gitlab_tools.py` - Tool validation tests
+1. `/mcp_platform/template/templates/gitlab/template.json` - Core configuration
+2. `/mcp_platform/template/templates/gitlab/README.md` - User documentation
+3. `/mcp_platform/template/templates/gitlab/USAGE.md` - Usage guide
+4. `/mcp_platform/template/templates/gitlab/docs/index.md` - Technical reference
+5. `/mcp_platform/template/templates/gitlab/tests/test_gitlab_config.py` - Config tests
+6. `/mcp_platform/template/templates/gitlab/tests/test_gitlab_integration.py` - Integration tests
+7. `/mcp_platform/template/templates/gitlab/tests/test_gitlab_tools.py` - Tool validation tests
 
 ## Quality Assurance
 - **Schema validation**: Complete JSON schema validation with proper error handling

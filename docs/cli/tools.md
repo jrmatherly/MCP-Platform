@@ -8,10 +8,10 @@
 
 ```bash
 # For deployed templates
-mcpt> tools TEMPLATE [OPTIONS]
+mcpp> tools TEMPLATE [OPTIONS]
 
 # For Docker images
-mcpt> tools --image IMAGE [SERVER_ARGS...] [OPTIONS]
+mcpp> tools --image IMAGE [SERVER_ARGS...] [OPTIONS]
 ```
 
 ## Description
@@ -65,7 +65,7 @@ The tools command features intelligent credential detection and auto-provisionin
 ### Auto-Credential Injection
 ```bash
 # Automatically provides dummy credentials for discovery
-mcpt> tools github
+mcpp> tools github
 # No need to provide real GitHub token - uses placeholder for tool discovery
 
 # Manual credential provision for functional tools
@@ -92,7 +92,7 @@ mcpp run-tool github search_repositories \
 
 ```bash
 # List tools from demo template
-mcpt> tools demo
+mcpp> tools demo
 
 # Example output:
 ╭─────────────────────────────────────────────────────────────╮
@@ -119,7 +119,7 @@ mcpt> tools demo
 
 ```bash
 # Discover tools from filesystem server
-mcpt> tools --image mcp/filesystem /tmp
+mcpp> tools --image mcp/filesystem /tmp
 
 # Example output:
 ╭──────────────────────────────────────────────────────────────╮
@@ -145,7 +145,7 @@ mcpt> tools --image mcp/filesystem /tmp
 └──────────────────────┴───────────────────────────────────────┘
 
 💡 Usage Example:
-  from mcp_template.tools.mcp_client_probe import MCPClientProbe
+  from mcp_platform.tools.mcp_client_probe import MCPClientProbe
   client = MCPClientProbe()
   result = client.discover_tools_from_docker_sync('mcp/filesystem', ['/tmp'])
 ```
@@ -154,15 +154,15 @@ mcpt> tools --image mcp/filesystem /tmp
 
 ```bash
 # Database server with connection parameters
-mcpt> tools --image myregistry/postgres-mcp:latest \
+mcpp> tools --image myregistry/postgres-mcp:latest \
   --host localhost --port 5432 --database mydb
 
 # API server with authentication
-mcpt> tools --image company/api-mcp:v1.0 \
+mcpp> tools --image company/api-mcp:v1.0 \
   --api-key $API_TOKEN --base-url https://api.example.com
 
 # File server with multiple directories
-mcpt> tools --image mcp/filesystem \
+mcpp> tools --image mcp/filesystem \
   /data /workspace /tmp
 ```
 
@@ -170,7 +170,7 @@ mcpt> tools --image mcp/filesystem \
 
 ```bash
 # List file server tools
-mcpt> tools filesystem
+mcpp> tools filesystem
 
 # Example output shows comprehensive file operations:
 ┏━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
@@ -192,13 +192,13 @@ mcpt> tools filesystem
 
 ```bash
 # Force refresh of cached tool information
-mcpt> tools demo --refresh
+mcpp> tools demo --refresh
 
 # Ignore cache and perform fresh discovery
-mcpt> tools demo --no-cache
+mcpp> tools demo --no-cache
 
 # Use cached results (default behavior)
-mcpt> tools demo
+mcpp> tools demo
 ```
 
 ## Detailed Tool Information
@@ -229,7 +229,7 @@ The command also provides ready-to-use integration examples:
 ### Python Integration
 ```python
 # FastMCP client usage
-from mcp_template.client import MCPClient
+from mcp_platform.client import MCPClient
 
 async def use_tools():
     client = MCPClient("demo-container-name")
@@ -299,14 +299,14 @@ Rich table with formatted columns showing tool names, descriptions, and metadata
 For programmatic usage:
 ```bash
 # Pipe to jq for JSON processing
-mcpt> tools demo 2>/dev/null | \
+mcpp> tools demo 2>/dev/null | \
   grep -A 1000 "Tools data:" | tail -n +2 | jq '.'
 ```
 
 ### Compact Format
 ```bash
 # Get just tool names
-mcpt> tools demo 2>/dev/null | \
+mcpp> tools demo 2>/dev/null | \
   grep "│" | grep -E "^\│\s+\w+" | awk '{print $2}'
 ```
 
@@ -369,10 +369,10 @@ rm -rf ~/.mcp-template/cache/tools/
 ### Discovery Strategy Override
 ```bash
 # Force specific discovery method (advanced)
-MCP_DISCOVERY_METHOD=static mcpt> tools demo
+MCP_DISCOVERY_METHOD=static mcpp> tools demo
 
 # Enable debug logging
-MCP_DEBUG=1 mcpt> tools demo --refresh
+MCP_DEBUG=1 mcpp> tools demo --refresh
 ```
 
 ### Custom Tool Definitions
@@ -382,7 +382,7 @@ Add custom tool definitions to template directory:
 echo '{"tools": [...]}' > templates/demo/tools.json
 
 # Refresh to pick up changes
-mcpt> tools demo --refresh
+mcpp> tools demo --refresh
 ```
 
 ## See Also
@@ -401,7 +401,7 @@ The `discover-tools` command has been merged into the unified `tools` command. U
 mcpp discover-tools --image mcp/filesystem /tmp
 
 # New (recommended)
-mcpt> tools --image mcp/filesystem /tmp
+mcpp> tools --image mcp/filesystem /tmp
 ```
 
 The old command will continue to work but will show a deprecation warning.

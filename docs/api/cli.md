@@ -98,7 +98,7 @@ mcpp run-tool filesystem read_file \
 List available tools for a template or discover tools from a Docker image.
 
 ```bash
-mcpt> tools [TEMPLATE] [OPTIONS]
+mcpp> tools [TEMPLATE] [OPTIONS]
 ```
 
 **Arguments:**
@@ -113,17 +113,17 @@ mcpt> tools [TEMPLATE] [OPTIONS]
 **Examples:**
 ```bash
 # List tools for a template
-mcpt> tools github
-mcpt> tools filesystem
+mcpp> tools github
+mcpp> tools filesystem
 
 # Discover tools from Docker image
-mcpt> tools --image mcp/github:latest
+mcpp> tools --image mcp/github:latest
 
 # List tools with configuration
-mcpt> tools github --config github_token=your_token
+mcpp> tools github --config github_token=your_token
 
 # Force refresh tool discovery
-mcpt> tools github --refresh
+mcpp> tools github --refresh
 ```
 
 ### `stop`

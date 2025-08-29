@@ -274,7 +274,7 @@ import subprocess
 
 def check_deployment_health():
     result = subprocess.run([
-        'python', '-m', 'mcp_template', 'list', '--format', 'json'
+        'python', '-m', 'mcp_platform', 'list', '--format', 'json'
     ], capture_output=True, text=True)
 
     data = json.loads(result.stdout)

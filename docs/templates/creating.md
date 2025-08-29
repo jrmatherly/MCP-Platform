@@ -578,7 +578,7 @@ mcpp deploy my-template --config debug=true
 mcpp status my-template
 
 # Test tool discovery
-mcpt> tools my-template
+mcpp> tools my-template
 
 # Test tools interactively
 mcpp connect my-template --test

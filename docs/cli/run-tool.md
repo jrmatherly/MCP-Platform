@@ -15,7 +15,7 @@ mcpp run-tool  # ❌ Deprecated
 ```bash
 mcpp interactive
 # Then in interactive mode:
-mcpt> call [tool-name] [arguments]
+mcpp> call [tool-name] [arguments]
 ```
 
 ## Why the Change?
@@ -37,13 +37,13 @@ The `run-tool` command was replaced with the more powerful interactive CLI that 
 
 2. **Use the call command**:
    ```bash
-   mcpt> call list_repositories
-   mcpt> call create_issue --title "Bug fix" --body "Description"
+   mcpp> call list_repositories
+   mcpp> call create_issue --title "Bug fix" --body "Description"
    ```
 
 3. **Exit when done**:
    ```bash
-   mcpt> exit
+   mcpp> exit
    ```
 
 ## Related Documentation

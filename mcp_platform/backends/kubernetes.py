@@ -95,7 +95,7 @@ class KubernetesDeploymentService(BaseDeploymentBackend):
                 namespace_body = client.V1Namespace(
                     metadata=client.V1ObjectMeta(
                         name=self.namespace,
-                        labels={"app.kubernetes.io/managed-by": "mcp-templates"},
+                        labels={"app.kubernetes.io/managed-by": "mcp-platform"},
                     )
                 )
                 if dry_run:
@@ -217,7 +217,7 @@ class KubernetesDeploymentService(BaseDeploymentBackend):
             "Release": {
                 "Name": deployment_name,
                 "Namespace": self.namespace,
-                "Service": "mcp-templates",
+                "Service": "mcp-platform",
             },
         }
 
@@ -253,7 +253,7 @@ class KubernetesDeploymentService(BaseDeploymentBackend):
                 "labels": {
                     "app.kubernetes.io/name": name,
                     "app.kubernetes.io/instance": name,
-                    "app.kubernetes.io/managed-by": "mcp-templates",
+                    "app.kubernetes.io/managed-by": "mcp-platform",
                     "mcp-template.io/template-name": template_id,
                 },
             },
@@ -332,7 +332,7 @@ class KubernetesDeploymentService(BaseDeploymentBackend):
                 "labels": {
                     "app.kubernetes.io/name": name,
                     "app.kubernetes.io/instance": name,
-                    "app.kubernetes.io/managed-by": "mcp-templates",
+                    "app.kubernetes.io/managed-by": "mcp-platform",
                 },
             },
             "spec": {
@@ -367,7 +367,7 @@ class KubernetesDeploymentService(BaseDeploymentBackend):
                 "labels": {
                     "app.kubernetes.io/name": name,
                     "app.kubernetes.io/instance": name,
-                    "app.kubernetes.io/managed-by": "mcp-templates",
+                    "app.kubernetes.io/managed-by": "mcp-platform",
                 },
             },
             "data": {k: str(v) for k, v in values["mcp"]["config"].items()},
@@ -686,7 +686,7 @@ class KubernetesDeploymentService(BaseDeploymentBackend):
         try:
             deployments = self.apps_v1.list_namespaced_deployment(
                 namespace=self.namespace,
-                label_selector="app.kubernetes.io/managed-by=mcp-templates",
+                label_selector="app.kubernetes.io/managed-by=mcp-platform",
             )
 
             result = []
@@ -834,7 +834,7 @@ class KubernetesDeploymentService(BaseDeploymentBackend):
     ) -> Dict[str, Any]:
         """Clean up stopped containers (scale 0 deployments)."""
         try:
-            label_selector = "app.kubernetes.io/managed-by=mcp-templates"
+            label_selector = "app.kubernetes.io/managed-by=mcp-platform"
             if template_name:
                 label_selector += f",app.kubernetes.io/name={template_name}"
 

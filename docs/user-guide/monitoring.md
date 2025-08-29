@@ -123,7 +123,7 @@ def analyze_deployment_logs(deployment_name, hours=24):
 
     # Get logs
     result = subprocess.run([
-        'python', '-m', 'mcp_template', 'logs',
+        'python', '-m', 'mcp_platform', 'logs',
         deployment_name, '--since', f'{hours}h', '--format', 'json'
     ], capture_output=True, text=True)
 
@@ -178,7 +178,7 @@ if __name__ == "__main__":
     if deployment == "all":
         # Analyze all deployments
         result = subprocess.run([
-            'python', '-m', 'mcp_template', 'list', '--format', 'json'
+            'python', '-m', 'mcp_platform', 'list', '--format', 'json'
         ], capture_output=True, text=True)
 
         deployments = json.loads(result.stdout)
@@ -232,7 +232,7 @@ def collect_metrics():
     try:
         # Get deployment status
         result = subprocess.run([
-            'python', '-m', 'mcp_template', 'status', '--format', 'json'
+            'python', '-m', 'mcp_platform', 'status', '--format', 'json'
         ], capture_output=True, text=True)
 
         if result.returncode == 0:
@@ -278,7 +278,7 @@ def collect_tool_metrics():
     """Collect tool usage metrics from recent logs."""
     # Get recent logs and parse for tool usage
     result = subprocess.run([
-        'python', '-m', 'mcp_template', 'logs', '--all',
+        'python', '-m', 'mcp_platform', 'logs', '--all',
         '--since', '5m', '--format', 'json'
     ], capture_output=True, text=True)
 
@@ -380,7 +380,7 @@ class AlertManager:
     def check_deployments(self):
         """Check all deployments and send alerts if needed."""
         result = subprocess.run([
-            'python', '-m', 'mcp_template', 'status', '--format', 'json'
+            'python', '-m', 'mcp_platform', 'status', '--format', 'json'
         ], capture_output=True, text=True)
 
         if result.returncode == 0:
@@ -557,7 +557,7 @@ def benchmark_deployment(deployment_name, test_duration=60):
 
     # Get deployment info
     result = subprocess.run([
-        'python', '-m', 'mcp_template', 'status',
+        'python', '-m', 'mcp_platform', 'status',
         deployment_name, '--format', 'json'
     ], capture_output=True, text=True)
 
@@ -569,7 +569,7 @@ def benchmark_deployment(deployment_name, test_duration=60):
 
     # Get available tools
     result = subprocess.run([
-        'python', '-m', 'mcp_template', 'tools',
+        'python', '-m', 'mcp_platform', 'tools',
         deployment_name, '--format', 'json'
     ], capture_output=True, text=True)
 
@@ -625,7 +625,7 @@ def benchmark_deployment(deployment_name, test_duration=60):
 
     # Resource usage during benchmark
     final_status = subprocess.run([
-        'python', '-m', 'mcp_template', 'status',
+        'python', '-m', 'mcp_platform', 'status',
         deployment_name, '--format', 'json'
     ], capture_output=True, text=True)
 

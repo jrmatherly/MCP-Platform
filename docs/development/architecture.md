@@ -27,7 +27,7 @@ Overview of the MCP Templates system architecture.
 
 ## Core Components
 
-### CLI Interface (`mcp_template/__init__.py`)
+### CLI Interface (`mcp_platform/__init__.py`)
 - Command-line argument parsing
 - User interaction and prompts
 - Output formatting and display

@@ -532,7 +532,7 @@ git checkout -b feature/your-feature-name
 
 ```bash
 # Edit code
-vim mcp_template/...
+vim mcp_platform/...
 
 # Run development tests frequently
 make dev-test
@@ -594,7 +594,7 @@ git push origin feature/your-feature-name
 
 ```bash
 # Validate specific template
-python -c "from mcp_template import TemplateDiscovery; d = TemplateDiscovery(); t = d.discover_templates(); print('your-template' in t)"
+python -c "from mcp_platform import TemplateDiscovery; d = TemplateDiscovery(); t = d.discover_templates(); print('your-template' in t)"
 
 # Test template deployment
 mcpp deploy your-template --show-config
@@ -678,7 +678,7 @@ make dev-setup
 make install-dev
 
 # Check Python path
-python -c "import mcp_template; print(mcp_template.__file__)"
+python -c "import mcp_platform; print(mcp_platform.__file__)"
 ```
 
 **Make command not working:**

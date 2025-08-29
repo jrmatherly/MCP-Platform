@@ -4,11 +4,11 @@ on:
   push:
     branches: [ main, refactor ]
     paths:
-      - 'mcp_template/template/templates/**'
+      - 'mcp_platform/template/templates/**'
   pull_request:
     branches: [ main ]
     paths:
-      - 'mcp_template/template/templates/**'
+      - 'mcp_platform/template/templates/**'
   workflow_dispatch:
 
 jobs:
@@ -49,7 +49,7 @@ jobs:
           # Use TemplateDiscovery to get eligible templates (with Dockerfiles)
           echo "🔍 Discovering eligible templates using TemplateDiscovery..."
           eligible_templates=$(python -c "
-          from mcp_template import TemplateDiscovery
+          from mcp_platform import TemplateDiscovery
           import json
           discovery = TemplateDiscovery()
           templates = discovery.discover_templates()
@@ -65,9 +65,9 @@ jobs:
             echo "Checking template: $template_name"
 
             # Check if any files in this template directory changed
-            if echo "$changed_files" | grep -q "^mcp_template/template/templates/$template_name/"; then
+            if echo "$changed_files" | grep -q "^mcp_platform/template/templates/$template_name/"; then
               echo "  ✅ Has changes - Files changed:"
-              echo "$changed_files" | grep "^mcp_template/template/templates/$template_name/" | sed 's/^/    /'
+              echo "$changed_files" | grep "^mcp_platform/template/templates/$template_name/" | sed 's/^/    /'
               changed_templates+=("$template_name")
             else
               echo "  ⏭️  No changes"
@@ -136,7 +136,7 @@ jobs:
       - name: Check if template has tests
         id: check-tests
         run: |
-          if [ -d "mcp_template/template/templates/${{ matrix.template }}/tests" ]; then
+          if [ -d "mcp_platform/template/templates/${{ matrix.template }}/tests" ]; then
             echo "has-tests=true" >> $GITHUB_OUTPUT
             echo "Template ${{ matrix.template }} has tests directory"
           else
@@ -147,7 +147,7 @@ jobs:
       - name: Run template unit tests
         if: steps.check-tests.outputs.has-tests == 'true'
         run: |
-          cd mcp_template/template/templates/${{ matrix.template }}
+          cd mcp_platform/template/templates/${{ matrix.template }}
           python -m pytest tests/ -v --tb=short -m "not integration" \
           --cov-fail-under=5 || if [ $? -eq 5 ]; then \
           echo "✅ No tests collected - treating as pass"; exit 0; else exit $?; fi
@@ -156,7 +156,7 @@ jobs:
       - name: Run template integration tests
         if: steps.check-tests.outputs.has-tests == 'true'
         run: |
-          cd templmcp_template/template/templatesates/${{ matrix.template }}
+          cd templmcp_platform/template/templatesates/${{ matrix.template }}
           python -m pytest tests/ -v --tb=short -m integration --cov-fail-under=5
         timeout-minutes: 15
         continue-on-error: true
@@ -164,7 +164,7 @@ jobs:
       - name: Check test coverage
         if: steps.check-tests.outputs.has-tests == 'true'
         run: |
-          cd mcp_template/template/templates/${{ matrix.template }}
+          cd mcp_platform/template/templates/${{ matrix.template }}
           python -m pytest tests/ --cov=src --cov-report=term-missing --cov-fail-under=5
         continue-on-error: true
 
@@ -173,7 +173,7 @@ jobs:
           python -c "
           import sys
           from pathlib import Path
-          from mcp_template import TemplateDiscovery
+          from mcp_platform import TemplateDiscovery
 
           template_name = '${{ matrix.template }}'
           print(f'🔍 Validating template: {template_name}')
@@ -194,7 +194,7 @@ jobs:
               print(f'✅ Description: {template_config[\"description\"]}')
 
               # Check required files exist
-              template_dir = Path(f'mcp_template/template/templates/{template_name}')
+              template_dir = Path(f'mcp_platform/template/templates/{template_name}')
 
               required_files = ['template.json', 'docs/index.md']
               if template_config.get('has_dockerfile', False):
@@ -213,7 +213,7 @@ jobs:
           "
       - name: Test template server startup
         run: |
-          cd mcp_template/template/templates/${{ matrix.template }}
+          cd mcp_platform/template/templates/${{ matrix.template }}
           if [ -f "src/server.py" ]; then
             echo "🚀 Testing server startup for ${{ matrix.template }}..."
             timeout 10s python -m src.server --help || echo "Server startup test completed"
@@ -225,7 +225,7 @@ jobs:
 
       - name: Test Docker build
         run: |
-          cd mcp_template/template/templates/${{ matrix.template }}
+          cd mcp_platform/template/templates/${{ matrix.template }}
           if [ -f "Dockerfile" ]; then
             echo "🐳 Testing Docker build for ${{ matrix.template }}..."
             docker build -t test-${{ matrix.template }} .
@@ -290,7 +290,7 @@ jobs:
         if: ${{ github.event_name == 'pull_request' || github.ref != 'refs/heads/main' }}
         run: |
           set -euo pipefail
-          cd mcp_template/template/templates/${{ matrix.template }}
+          cd mcp_platform/template/templates/${{ matrix.template }}
           if [ -f "Dockerfile" ]; then
             mkdir -p build-logs
             echo "🐳 Building single-arch image for ${{ matrix.template }} (logs -> build-logs/build-${{ matrix.template }}.log)"
@@ -311,13 +311,13 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: build-log-${{ matrix.template }}
-          path: mcp_template/template/templates/${{ matrix.template }}/build-logs/build-${{ matrix.template }}.log
+          path: mcp_platform/template/templates/${{ matrix.template }}/build-logs/build-${{ matrix.template }}.log
 
       - name: Build and push to Docker Hub (main branch)
         if: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
         uses: docker/build-push-action@v5
         with:
-          context: ./mcp_template/template/templates/${{ matrix.template }}
+          context: ./mcp_platform/template/templates/${{ matrix.template }}
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}

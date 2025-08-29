@@ -137,20 +137,20 @@ mcpp connect template-name --llm vscode
 ```bash
 # Get JSON configuration
 mcpp i
-mcpt> tools template-name --format json
+mcpp> tools template-name --format json
 ```
 
 ### How do I see what tools are available?
 
 ```bash
 # List tools in a template
-mcpt> tools template-name
+mcpp> tools template-name
 
 # Discover tools from any MCP server
-mcpt> tools --image custom/mcp-server
+mcpp> tools --image custom/mcp-server
 
 # Get detailed tool information
-mcpt> tools template-name --detailed
+mcpp> tools template-name --detailed
 ```
 
 ## Template Development
@@ -205,7 +205,7 @@ mcpp validate my-template
 mcpp deploy my-template
 
 # Test tool discovery
-mcpt> tools my-template
+mcpp> tools my-template
 
 # Run template tests
 cd templates/my-template
@@ -333,7 +333,7 @@ See the [Troubleshooting Guide](guides/troubleshooting.md) for comprehensive sol
 **Debugging Steps:**
 ```bash
 # Test tool discovery directly
-mcpt> tools --image template:latest
+mcpp> tools --image template:latest
 
 # Check MCP protocol response
 mcpp connect deployment --test-connection
@@ -476,7 +476,7 @@ Yes! The platform provides multiple integration options:
 
 **API Integration:**
 ```python
-from mcp_template import TemplateManager
+from mcp_platform import TemplateManager
 
 manager = TemplateManager()
 deployment = manager.deploy("template-name", config={"key": "value"})
@@ -588,7 +588,7 @@ See the [Contributing Guide](guides/contributing.md) for detailed guidelines.
    ```bash
    mcpp deploy my-new-template
    mcpp i
-   mcpt> tools my-new-template
+   mcpp> tools my-new-template
    ```
 
 3. **Add documentation:**

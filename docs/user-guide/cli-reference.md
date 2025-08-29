@@ -353,8 +353,8 @@ mcpp status demo-deployment --backend k8s
 List available tools for a template or discover tools from a Docker image.
 
 ```bash
-mcpt> tools TEMPLATE_NAME [OPTIONS]
-mcpt> tools --image IMAGE_NAME [SERVER_ARGS...]
+mcpp> tools TEMPLATE_NAME [OPTIONS]
+mcpp> tools --image IMAGE_NAME [SERVER_ARGS...]
 ```
 
 **Arguments:**
@@ -371,19 +371,19 @@ mcpt> tools --image IMAGE_NAME [SERVER_ARGS...]
 **Examples:**
 ```bash
 # List tools for a template
-mcpt> tools demo
+mcpp> tools demo
 
 # List tools with cache refresh
-mcpt> tools demo --refresh
+mcpp> tools demo --refresh
 
 # List tools for dynamic template with config
-mcpt> tools github --config github_token=your_token
+mcpp> tools github --config github_token=your_token
 
 # Discover tools from Docker image
-mcpt> tools --image mcp/filesystem /tmp
+mcpp> tools --image mcp/filesystem /tmp
 
 # Discover tools with multiple config values
-mcpt> tools github --config github_token=token --config log_level=DEBUG
+mcpp> tools github --config github_token=token --config log_level=DEBUG
 ```
 
 **Note:** For templates with `tool_discovery: "dynamic"`, if standard discovery methods fail, the command will automatically attempt to spin up the Docker image specified in the template configuration to discover tools dynamically.

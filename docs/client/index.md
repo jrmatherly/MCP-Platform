@@ -27,7 +27,7 @@ MCPClient is a high-level Python interface that encapsulates all MCP template fu
 
 ```python
 import asyncio
-from mcp_template.client import MCPClient
+from mcp_platform.client import MCPClient
 
 async def main():
     # Use as async context manager for automatic cleanup

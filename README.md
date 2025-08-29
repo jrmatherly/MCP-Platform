@@ -44,7 +44,7 @@ Zero-configuration deployment of production-ready MCP servers with Docker contai
 
 ```bash
 # Install MCP Templates
-pip install mcp-templates
+pip install mcp-platform
 
 # List available templates
 mcpp list
@@ -99,7 +99,7 @@ Ready-to-use templates for common use cases: filesystem, databases, APIs, and mo
 
 ### PyPI (Recommended)
 ```bash
-pip install mcp-templates
+pip install mcp-platform
 ```
 
 ### Docker
@@ -155,7 +155,7 @@ mcpp deploy my-template --backend mock
 ```
 ┌─────────────┐    ┌───────────────────┐    ┌─────────────────────┐
 │  CLI Tool   │───▶│ DeploymentManager │───▶│ Backend (Docker)    │
-│  (mcpt)     │    │                   │    │                     │
+│  (mcpp)     │    │                   │    │                     │
 └─────────────┘    └───────────────────┘    └─────────────────────┘
        │                      │                        │
        ▼                      ▼                        ▼

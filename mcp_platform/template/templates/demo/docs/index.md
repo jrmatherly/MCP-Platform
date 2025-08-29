@@ -63,7 +63,7 @@ mcpp deploy demo --config hello_from="CLI Server"
 mcpp config demo
 
 # List available tools
-mcpt> tools demo
+mcpp> tools demo
 
 # Get integration examples
 mcpp connect demo --llm claude

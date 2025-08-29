@@ -21,8 +21,8 @@ pip install -r requirements-dev.txt
 python -m pytest
 
 # Run linting
-black mcp_template/ tests/
-flake8 mcp_template/ tests/
+black mcp_platform/ tests/
+flake8 mcp_platform/ tests/
 ```
 
 ## Contributing Guidelines

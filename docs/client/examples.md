@@ -12,8 +12,8 @@ CI/CD Pipeline Example: Deploy and test MCP servers as part of deployment pipeli
 """
 import asyncio
 from typing import Dict, List
-from mcp_template.client import MCPClient
-from mcp_template.exceptions import DeploymentError, ToolCallError
+from mcp_platform.client import MCPClient
+from mcp_platform.exceptions import DeploymentError, ToolCallError
 
 class MCPPipeline:
     """MCP deployment pipeline for CI/CD"""
@@ -188,7 +188,7 @@ import asyncio
 import time
 from datetime import datetime
 from typing import Dict, List
-from mcp_template.client import MCPClient
+from mcp_platform.client import MCPClient
 
 class MCPMonitor:
     """Monitor MCP infrastructure health and performance"""
@@ -336,7 +336,7 @@ ETL Pipeline Example: Extract, transform, and load data using MCP tools
 import asyncio
 import json
 from typing import List, Dict, Any
-from mcp_template.client import MCPClient
+from mcp_platform.client import MCPClient
 
 class MCPETLPipeline:
     """ETL pipeline using MCP tools for data processing"""
@@ -617,7 +617,7 @@ Microservices Orchestration Example: Coordinate multiple MCP services for comple
 import asyncio
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
-from mcp_template.client import MCPClient
+from mcp_platform.client import MCPClient
 
 @dataclass
 class ServiceStep:

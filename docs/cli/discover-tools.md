@@ -11,7 +11,7 @@
 mcpp discover-tools --image mcp/filesystem /tmp
 
 # New (recommended)
-mcpt> tools --image mcp/filesystem /tmp
+mcpp> tools --image mcp/filesystem /tmp
 ```
 
 ---
@@ -86,7 +86,7 @@ mcpp discover-tools --image mcp/filesystem /tmp
 └──────────────────────┴───────────────────────────────────────┘
 
 💡 Usage Example:
-  from mcp_template.tools.mcp_client_probe import MCPClientProbe
+  from mcp_platform.tools.mcp_client_probe import MCPClientProbe
   client = MCPClientProbe()
   result = client.discover_tools_from_docker_sync('mcp/filesystem', ['/tmp'])
 ```

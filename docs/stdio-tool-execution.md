@@ -30,7 +30,7 @@ Available tools in this template:
   • create_pull_request
 
 To use this template, run tools directly:
-  mcpt> tools github                         # List available tools
+  mcpp> tools github                         # List available tools
   mcpp run-tool github <tool_name>          # Run a specific tool
 ```
 
@@ -42,16 +42,16 @@ Before running tools, discover what's available:
 
 ```bash
 # List all tools in a template
-mcpt> tools github
+mcpp> tools github
 
 # List tools with configuration (for dynamic discovery)
-mcpt> tools github --config github_token=your_token
+mcpp> tools github --config github_token=your_token
 
 # Force refresh tool cache
-mcpt> tools github --refresh
+mcpp> tools github --refresh
 
 # Discover tools from a Docker image directly
-mcpt> tools --image mcp/custom-server:latest
+mcpp> tools --image mcp/custom-server:latest
 ```
 
 ### 2. Running Tools
@@ -203,7 +203,7 @@ mcpp run-tool database describe_table \
 
 ```bash
 # Work with custom Docker images
-mcpt> tools --image company/custom-mcp:latest
+mcpp> tools --image company/custom-mcp:latest
 
 # Run tools from custom servers
 mcpp run-tool custom-template analyze_data \
@@ -228,7 +228,7 @@ $ mcpp run-tool nonexistent search
 $ mcpp run-tool github invalid_tool
 ❌ Unknown tool: invalid_tool
 ```
-*Solution*: List available tools with `mcpt> tools github`
+*Solution*: List available tools with `mcpp> tools github`
 
 **3. Invalid JSON Arguments**
 ```bash
@@ -335,7 +335,7 @@ mcpp run-tool filesystem list_directory \
 - Validate JSON arguments before sending complex requests
 
 ### 4. Documentation
-- Use `mcpt> tools <template>` to discover available tools
+- Use `mcpp> tools <template>` to discover available tools
 - Check template documentation for specific configuration options
 - Review tool descriptions and parameter requirements
 

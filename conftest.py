@@ -342,24 +342,24 @@ def _mock_kubernetes_service_for_unit_tests(request):
         # require real Kubernetes behavior should use @pytest.mark.kubernetes
         # and will not have these patches applied.
         # Patch both the class object referenced from the package namespace
-        # (`mcp_template.backends.KubernetesDeploymentService`) and the
-        # original module path (`mcp_template.backends.kubernetes...`) so the
+        # (`mcp_platform.backends.KubernetesDeploymentService`) and the
+        # original module path (`mcp_platform.backends.kubernetes...`) so the
         # patch works regardless of import ordering in CI.
         with (
             patch(
-                "mcp_template.backends.KubernetesDeploymentService._ensure_kubernetes_available",
+                "mcp_platform.backends.KubernetesDeploymentService._ensure_kubernetes_available",
                 new=lambda self: True,
             ),
             patch(
-                "mcp_template.backends.KubernetesDeploymentService._ensure_namespace_exists",
+                "mcp_platform.backends.KubernetesDeploymentService._ensure_namespace_exists",
                 new=lambda self, dry_run=False: None,
             ),
             patch(
-                "mcp_template.backends.kubernetes.KubernetesDeploymentService._ensure_kubernetes_available",
+                "mcp_platform.backends.kubernetes.KubernetesDeploymentService._ensure_kubernetes_available",
                 new=lambda self: True,
             ),
             patch(
-                "mcp_template.backends.kubernetes.KubernetesDeploymentService._ensure_namespace_exists",
+                "mcp_platform.backends.kubernetes.KubernetesDeploymentService._ensure_namespace_exists",
                 new=lambda self, dry_run=False: None,
             ),
         ):

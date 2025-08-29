@@ -13,7 +13,7 @@ pip install mcp-template
 ```
 
 ```python
-from mcp_template.client import MCPClient
+from mcp_platform.client import MCPClient
 ```
 
 ## Quick Start
@@ -21,7 +21,7 @@ from mcp_template.client import MCPClient
 ### Basic Client Usage
 
 ```python
-from mcp_template.client import MCPClient
+from mcp_platform.client import MCPClient
 
 # Initialize the client
 client = MCPClient()
@@ -56,7 +56,7 @@ else:
 ### Server Management
 
 ```python
-from mcp_template.client import MCPClient
+from mcp_platform.client import MCPClient
 
 client = MCPClient()
 
@@ -669,7 +669,7 @@ client = MCPClient(timeout=120)
 ### Building a Chatbot Interface
 
 ```python
-from mcp_template.client_enhanced import MCPClient
+from mcp_platform.client_enhanced import MCPClient
 
 class MCPChatbot:
     def __init__(self):
@@ -718,7 +718,7 @@ if result["success"]:
 ### Automated Testing Framework
 
 ```python
-from mcp_template.client_enhanced import MCPClient
+from mcp_platform.client_enhanced import MCPClient
 import json
 
 class MCPTestRunner:

@@ -57,7 +57,7 @@ The interactive CLI includes built-in support for command history and tab comple
 
 - **Command History**: Use ↑/↓ arrow keys to navigate through previous commands
   - History is maintained during the session
-  - Commands are saved to `~/.mcp/.mcpt_history` and restored between sessions
+  - Commands are saved to `~/.mcp/.mcpp_history` and restored between sessions
   - The prompt stays visible when navigating history
 - **Tab Completion**: Press Tab to auto-complete:
   - Commands (e.g., `tem[Tab]` → `templates`)
@@ -72,18 +72,18 @@ Use template selection to streamline repetitive operations:
 
 ```bash
 # Traditional approach (repetitive)
-mcpt> tools demo
-mcpt> call demo say_hello '{"name": "Alice"}'
-mcpt> config demo port=8080
+mcpp> tools demo
+mcpp> call demo say_hello '{"name": "Alice"}'
+mcpp> config demo port=8080
 
 # Enhanced approach (with template selection)
-mcpt> select demo        # Select template once
+mcpp> select demo        # Select template once
 ✅ Selected template: demo
 
-mcpt(demo)> tools        # No need to specify template
-mcpt(demo)> call say_hello '{"name": "Alice"}'
-mcpt(demo)> config port=8080
-mcpt(demo)> unselect     # Return to global mode
+mcpp(demo)> tools        # No need to specify template
+mcpp(demo)> call say_hello '{"name": "Alice"}'
+mcpp(demo)> config port=8080
+mcpp(demo)> unselect     # Return to global mode
 ```
 
 ## Example Session
@@ -94,30 +94,30 @@ mcpp interactive
 ✨ Command history and tab completion enabled
 
 # List available templates
-mcpt> templates
+mcpp> templates
 
 # Select a template for the session
-mcpt> select demo
+mcpp> select demo
 ✅ Selected template: demo
 
 # List tools (uses selected template automatically)
-mcpt(demo)> tools
+mcpp(demo)> tools
 
 # Call a tool with force refresh
-mcpt(demo)> tools --force-refresh
+mcpp(demo)> tools --force-refresh
 
 # Execute a tool
-mcpt(demo)> call say_hello '{"name": "World"}'
+mcpp(demo)> call say_hello '{"name": "World"}'
 
 # View servers
-mcpt(demo)> servers
+mcpp(demo)> servers
 
 # Unselect template
-mcpt(demo)> unselect
+mcpp(demo)> unselect
 📤 Unselected template: demo
 
 # Exit session
-mcpt> exit
+mcpp> exit
 Goodbye!
 ```
 

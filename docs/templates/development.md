@@ -1329,7 +1329,7 @@ Add to your Claude Desktop configuration:
   "mcpServers": {
     "my-new-template": {
       "command": "python",
-      "args": ["-m", "mcp_template", "run", "my-new-template"],
+      "args": ["-m", "mcp_platform", "run", "my-new-template"],
       "env": {
         "CUSTOM_API_KEY": "your-api-key"
       }
@@ -1347,7 +1347,7 @@ Add to your Continue configuration:
   "mcpServers": [
     {
       "name": "my-new-template",
-      "command": ["python", "-m", "mcp_template", "run", "my-new-template"],
+      "command": ["python", "-m", "mcp_platform", "run", "my-new-template"],
       "env": {
         "CUSTOM_API_KEY": "your-api-key"
       }

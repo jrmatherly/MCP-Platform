@@ -87,18 +87,18 @@ export MCP_LOG_LEVEL=info                  # Log level (default: info)
 
 ```bash
 # Deploy with basic configuration
-python -m mcp_template deploy zendesk \
+python -m mcp_platform deploy zendesk \
   --config zendesk_subdomain=mycompany \
   --config zendesk_email=support@mycompany.com
 
 # Deploy with API token
-python -m mcp_template deploy zendesk \
+python -m mcp_platform deploy zendesk \
   --config zendesk_subdomain=mycompany \
   --config zendesk_email=support@mycompany.com \
   --config zendesk_api_token=your_token_here
 
 # Deploy with custom settings
-python -m mcp_template deploy zendesk \
+python -m mcp_platform deploy zendesk \
   --config zendesk_subdomain=mycompany \
   --config zendesk_email=support@mycompany.com \
   --config rate_limit_requests=150 \

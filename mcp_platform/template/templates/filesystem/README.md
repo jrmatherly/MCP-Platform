@@ -53,9 +53,9 @@ The Filesystem MCP Server provides comprehensive file system operations while ma
 mcpp interactive
 
 # Configure and call tools
-mcpt> config filesystem allowed_dirs="/home/user/documents /tmp/workspace"
-mcpt> tools filesystem
-mcpt> call filesystem list_directory '{"path": "/tmp"}'
+mcpp> config filesystem allowed_dirs="/home/user/documents /tmp/workspace"
+mcpp> tools filesystem
+mcpp> call filesystem list_directory '{"path": "/tmp"}'
 ```
 
 #### 2. Command Line with Configuration
@@ -91,46 +91,46 @@ docker run -i --rm \
 ### Basic File Operations
 ```bash
 # List directory contents
-mcpt> call filesystem list_directory '{"path": "/tmp"}'
+mcpp> call filesystem list_directory '{"path": "/tmp"}'
 
 # Read a file
-mcpt> call filesystem read_file '{"path": "/tmp/example.txt"}'
+mcpp> call filesystem read_file '{"path": "/tmp/example.txt"}'
 
 # Write content to a file
-mcpt> call filesystem write_file '{"path": "/tmp/output.txt", "content": "Hello World!"}'
+mcpp> call filesystem write_file '{"path": "/tmp/output.txt", "content": "Hello World!"}'
 
 # Get file information
-mcpt> call filesystem get_file_info '{"path": "/tmp/example.txt"}'
+mcpp> call filesystem get_file_info '{"path": "/tmp/example.txt"}'
 ```
 
 ### Advanced Operations
 ```bash
 # Search for files by pattern
-mcpt> call filesystem search_files '{"path": "/tmp", "pattern": "*.txt"}'
+mcpp> call filesystem search_files '{"path": "/tmp", "pattern": "*.txt"}'
 
 # Search within file contents
-mcpt> call filesystem search_within_files '{"path": "/tmp", "pattern": "error", "file_pattern": "*.log"}'
+mcpp> call filesystem search_within_files '{"path": "/tmp", "pattern": "error", "file_pattern": "*.log"}'
 
 # Display directory tree
-mcpt> call filesystem tree '{"path": "/tmp", "max_depth": 3}'
+mcpp> call filesystem tree '{"path": "/tmp", "max_depth": 3}'
 
 # Read multiple files at once
-mcpt> call filesystem read_multiple_files '{"paths": ["/tmp/file1.txt", "/tmp/file2.txt"]}'
+mcpp> call filesystem read_multiple_files '{"paths": ["/tmp/file1.txt", "/tmp/file2.txt"]}'
 ```
 
 ### File Management
 ```bash
 # Copy files
-mcpt> call filesystem copy_file '{"source": "/tmp/source.txt", "destination": "/tmp/backup.txt"}'
+mcpp> call filesystem copy_file '{"source": "/tmp/source.txt", "destination": "/tmp/backup.txt"}'
 
 # Move/rename files
-mcpt> call filesystem move_file '{"source": "/tmp/old.txt", "destination": "/tmp/new.txt"}'
+mcpp> call filesystem move_file '{"source": "/tmp/old.txt", "destination": "/tmp/new.txt"}'
 
 # Create directories
-mcpt> call filesystem create_directory '{"path": "/tmp/new-folder"}'
+mcpp> call filesystem create_directory '{"path": "/tmp/new-folder"}'
 
 # Delete files/directories
-mcpt> call filesystem delete_file '{"path": "/tmp/unwanted.txt"}'
+mcpp> call filesystem delete_file '{"path": "/tmp/unwanted.txt"}'
 ```
 
 ## Security & Best Practices
@@ -174,7 +174,7 @@ echo '{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}' | \
 ### Running Tests
 ```bash
 # Run filesystem-specific tests
-pytest mcp_template/template/templates/filesystem/tests/ -v
+pytest mcp_platform/template/templates/filesystem/tests/ -v
 
 # Run integration tests
 pytest tests/test_volume_mount_command_args.py -v
@@ -184,7 +184,7 @@ pytest tests/test_volume_mount_command_args.py -v
 ```bash
 # Build the image
 docker build -t my-filesystem-server \
-  mcp_template/template/templates/filesystem/
+  mcp_platform/template/templates/filesystem/
 
 # Run with custom configuration
 docker run -i --rm \
@@ -247,7 +247,7 @@ ls -laZ /path/to/directory
 **Directory Not Found**
 ```bash
 # Verify allowed_dirs configuration
-mcpt> call filesystem list_allowed_directories '{}'
+mcpp> call filesystem list_allowed_directories '{}'
 
 # Check actual mount points in container
 docker run --rm -v "/host/path:/container/path" \
@@ -257,10 +257,10 @@ docker run --rm -v "/host/path:/container/path" \
 **Tools Not Available**
 ```bash
 # Verify configuration is properly set
-mcpt> show_config filesystem
+mcpp> show_config filesystem
 
 # Test tool discovery
-mcpt> tools filesystem --force-server
+mcpp> tools filesystem --force-server
 ```
 
 ### Debug Mode
