@@ -20,7 +20,7 @@ class TestEndToEndScenarios:
         with (
             patch("subprocess.run") as mock_run,
             patch(
-                "mcp_template.backends.docker.DockerDeploymentService._ensure_docker_available"
+                "mcp_platform.backends.docker.DockerDeploymentService._ensure_docker_available"
             ),
         ):
             # Mock docker commands

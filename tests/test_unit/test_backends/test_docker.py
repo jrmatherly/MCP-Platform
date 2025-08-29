@@ -17,15 +17,15 @@ class TestDockerDeploymentService:
     def test_init(self):
         """Test Docker service initialization."""
         with patch(
-            "mcp_template.backends.docker.DockerDeploymentService._ensure_docker_available"
+            "mcp_platform.backends.docker.DockerDeploymentService._ensure_docker_available"
         ):
             service = DockerDeploymentService()
             assert service is not None
 
     @patch(
-        "mcp_template.backends.docker.DockerDeploymentService._ensure_docker_available"
+        "mcp_platform.backends.docker.DockerDeploymentService._ensure_docker_available"
     )
-    @patch("mcp_template.backends.docker.DockerDeploymentService._run_command")
+    @patch("mcp_platform.backends.docker.DockerDeploymentService._run_command")
     def test_deploy_template_success(self, mock_run_command, mock_ensure_docker):
         """Test successful template deployment."""
         # Setup mocks
@@ -50,9 +50,9 @@ class TestDockerDeploymentService:
         assert "container_id" in result
 
     @patch(
-        "mcp_template.backends.docker.DockerDeploymentService._ensure_docker_available"
+        "mcp_platform.backends.docker.DockerDeploymentService._ensure_docker_available"
     )
-    @patch("mcp_template.backends.docker.DockerDeploymentService._run_command")
+    @patch("mcp_platform.backends.docker.DockerDeploymentService._run_command")
     def test_deploy_template_with_pull(self, mock_run_command, mock_ensure_docker):
         """Test deployment with image pulling."""
         mock_run_command.side_effect = [
@@ -71,9 +71,9 @@ class TestDockerDeploymentService:
         assert "pull" in pull_call[0][0]
 
     @patch(
-        "mcp_template.backends.docker.DockerDeploymentService._ensure_docker_available"
+        "mcp_platform.backends.docker.DockerDeploymentService._ensure_docker_available"
     )
-    @patch("mcp_template.backends.docker.DockerDeploymentService._run_command")
+    @patch("mcp_platform.backends.docker.DockerDeploymentService._run_command")
     def test_deploy_template_docker_error(self, mock_run_command, mock_ensure_docker):
         """Test deployment failure handling."""
         mock_run_command.side_effect = Exception("Docker error")
@@ -85,9 +85,9 @@ class TestDockerDeploymentService:
             service.deploy_template("test", {}, template_data, {})
 
     @patch(
-        "mcp_template.backends.docker.DockerDeploymentService._ensure_docker_available"
+        "mcp_platform.backends.docker.DockerDeploymentService._ensure_docker_available"
     )
-    @patch("mcp_template.backends.docker.DockerDeploymentService._run_command")
+    @patch("mcp_platform.backends.docker.DockerDeploymentService._run_command")
     def test_list_deployments(self, mock_run_command, mock_ensure_docker):
         """Test listing deployments."""
         mock_response = """{"ID": "abc123def456", "Names": "mcp-test-123", "State": "running", "CreatedAt": "2024-01-01", "RunningFor": "2 hours ago", "Image": "test:latest", "Labels": "template=test,managed-by=mcp-template", "Ports": "0.0.0.0:8080->8080/tcp"}"""
@@ -102,9 +102,9 @@ class TestDockerDeploymentService:
         assert deployments[0]["template"] == "test"
 
     @patch(
-        "mcp_template.backends.docker.DockerDeploymentService._ensure_docker_available"
+        "mcp_platform.backends.docker.DockerDeploymentService._ensure_docker_available"
     )
-    @patch("mcp_template.backends.docker.DockerDeploymentService._run_command")
+    @patch("mcp_platform.backends.docker.DockerDeploymentService._run_command")
     def test_delete_deployment_success(self, mock_run_command, mock_ensure_docker):
         """Test successful deployment deletion."""
         mock_run_command.return_value = Mock(stdout="", stderr="")
@@ -116,9 +116,9 @@ class TestDockerDeploymentService:
         assert mock_run_command.called
 
     @patch(
-        "mcp_template.backends.docker.DockerDeploymentService._ensure_docker_available"
+        "mcp_platform.backends.docker.DockerDeploymentService._ensure_docker_available"
     )
-    @patch("mcp_template.backends.docker.DockerDeploymentService._run_command")
+    @patch("mcp_platform.backends.docker.DockerDeploymentService._run_command")
     def test_delete_deployment_not_found(self, mock_run_command, mock_ensure_docker):
         """Test deletion of non-existent deployment."""
         from subprocess import CalledProcessError
@@ -133,9 +133,9 @@ class TestDockerDeploymentService:
         assert result is False
 
     @patch(
-        "mcp_template.backends.docker.DockerDeploymentService._ensure_docker_available"
+        "mcp_platform.backends.docker.DockerDeploymentService._ensure_docker_available"
     )
-    @patch("mcp_template.backends.docker.DockerDeploymentService._run_command")
+    @patch("mcp_platform.backends.docker.DockerDeploymentService._run_command")
     def test_get_deployment_status(self, mock_run_command, mock_ensure_docker):
         """Test getting deployment status with logs via unified get_deployment_info method."""
         mock_response = """[{"Name": "/test-container", "State": {"Status": "running", "Running": true}, "Created": "2024-01-01", "Config": {"Image": "test:latest", "Labels": {"template": "test"}}}]"""
@@ -158,7 +158,7 @@ class TestDockerDeploymentService:
     def test_prepare_environment_variables(self):
         """Test environment variable preparation."""
         with patch(
-            "mcp_template.backends.docker.DockerDeploymentService._ensure_docker_available"
+            "mcp_platform.backends.docker.DockerDeploymentService._ensure_docker_available"
         ):
             service = DockerDeploymentService()
             config = {"param1": "value1", "param2": "value2"}
@@ -174,7 +174,7 @@ class TestDockerDeploymentService:
     def test_prepare_port_mappings(self):
         """Test port mapping preparation."""
         with patch(
-            "mcp_template.backends.docker.DockerDeploymentService._ensure_docker_available"
+            "mcp_platform.backends.docker.DockerDeploymentService._ensure_docker_available"
         ):
             service = DockerDeploymentService()
             template_data = {"ports": {"8080": 8080, "9000": 9001}}
@@ -197,7 +197,7 @@ class TestDockerDeploymentService:
     def test_prepare_volume_mounts(self):
         """Test volume mount preparation."""
         with patch(
-            "mcp_template.backends.docker.DockerDeploymentService._ensure_docker_available"
+            "mcp_platform.backends.docker.DockerDeploymentService._ensure_docker_available"
         ):
             service = DockerDeploymentService()
             template_data = {"volumes": {"/host/path": "/container/path"}}
@@ -209,9 +209,9 @@ class TestDockerDeploymentService:
                 assert "/host/path:/container/path" in volumes
 
     @patch(
-        "mcp_template.backends.docker.DockerDeploymentService._ensure_docker_available"
+        "mcp_platform.backends.docker.DockerDeploymentService._ensure_docker_available"
     )
-    @patch("mcp_template.backends.docker.DockerDeploymentService._run_command")
+    @patch("mcp_platform.backends.docker.DockerDeploymentService._run_command")
     def test_get_deployment_logs_success(self, mock_run_command, mock_ensure_docker):
         """Test successful retrieval of deployment logs."""
         # Setup mock for docker logs command
@@ -234,9 +234,9 @@ class TestDockerDeploymentService:
         )
 
     @patch(
-        "mcp_template.backends.docker.DockerDeploymentService._ensure_docker_available"
+        "mcp_platform.backends.docker.DockerDeploymentService._ensure_docker_available"
     )
-    @patch("mcp_template.backends.docker.DockerDeploymentService._run_command")
+    @patch("mcp_platform.backends.docker.DockerDeploymentService._run_command")
     def test_get_deployment_logs_with_parameters(
         self, mock_run_command, mock_ensure_docker
     ):
@@ -272,9 +272,9 @@ class TestDockerDeploymentService:
         )
 
     @patch(
-        "mcp_template.backends.docker.DockerDeploymentService._ensure_docker_available"
+        "mcp_platform.backends.docker.DockerDeploymentService._ensure_docker_available"
     )
-    @patch("mcp_template.backends.docker.DockerDeploymentService._run_command")
+    @patch("mcp_platform.backends.docker.DockerDeploymentService._run_command")
     def test_get_deployment_logs_failure(self, mock_run_command, mock_ensure_docker):
         """Test logs retrieval failure handling."""
         # Setup mock for failed docker logs command
@@ -296,9 +296,9 @@ class TestDockerDeploymentService:
         )
 
     @patch(
-        "mcp_template.backends.docker.DockerDeploymentService._ensure_docker_available"
+        "mcp_platform.backends.docker.DockerDeploymentService._ensure_docker_available"
     )
-    @patch("mcp_template.backends.docker.DockerDeploymentService._run_command")
+    @patch("mcp_platform.backends.docker.DockerDeploymentService._run_command")
     def test_get_deployment_logs_default_lines(
         self, mock_run_command, mock_ensure_docker
     ):

@@ -39,7 +39,7 @@ class TestRunner:
             "pytest",
             "-m",
             "unit",
-            "--cov=mcp_template",
+            "--cov=mcp_platform",
             "--cov-report=term-missing",
             "--cov-report=html",
             "--cov-report=xml",
@@ -141,7 +141,7 @@ class TestRunner:
             sys.executable,
             "-m",
             "pytest",
-            "--cov=mcp_template",
+            "--cov=mcp_platform",
             "--cov=templates",
             "--cov-report=term-missing",
             "--cov-report=html",
@@ -193,7 +193,7 @@ class TestRunner:
             sys.executable,
             "-m",
             "pytest",
-            "--cov=mcp_template",
+            "--cov=mcp_platform",
             "--cov=templates",
             "--cov-report=term-missing",
             "--cov-report=html",
@@ -321,10 +321,10 @@ class TestRunner:
         """
         missing_tests = []
 
-        # Check mcp_template module
-        mcp_template_dir = self.root_dir / "mcp_template"
-        if mcp_template_dir.exists():
-            for py_file in mcp_template_dir.glob("*.py"):
+        # Check mcp_platform module
+        mcp_platform_dir = self.root_dir / "mcp_platform"
+        if mcp_platform_dir.exists():
+            for py_file in mcp_platform_dir.glob("*.py"):
                 if py_file.name.startswith("_"):
                     continue
 

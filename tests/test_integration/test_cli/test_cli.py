@@ -1,5 +1,5 @@
 """
-Integration tests for the main CLI module (mcp_template.cli.cli).
+Integration tests for the main CLI module (mcp_platform.cli.cli).
 
 These tests focus on realistic CLI workflows and end-to-end functionality,
 using mock backends where possible to avoid external dependencies.
@@ -25,7 +25,7 @@ class TestCLIWorkflows:
         """Set up test fixtures."""
         self.runner = CliRunner()
 
-    @patch("mcp_template.cli.cli.MCPClient")
+    @patch("mcp_platform.cli.cli.MCPClient")
     def test_full_deployment_workflow(self, mock_client_class):
         """Test complete deployment workflow: deploy -> list -> logs -> stop."""
         mock_client = Mock()
@@ -109,8 +109,8 @@ class TestCLIWorkflows:
         )
         assert result.exit_code == 0
 
-    @patch("mcp_template.backends.available_valid_backends")
-    @patch("mcp_template.cli.cli.MCPClient")
+    @patch("mcp_platform.backends.available_valid_backends")
+    @patch("mcp_platform.cli.cli.MCPClient")
     def test_template_discovery_workflow(
         self, mock_client_class, mock_available_backends
     ):
@@ -197,8 +197,8 @@ class TestCLIWorkflows:
         result = self.runner.invoke(app, ["list-templates"])
         assert result.exit_code == 0
 
-    @patch("mcp_template.backends.available_valid_backends")
-    @patch("mcp_template.cli.cli.MCPClient")
+    @patch("mcp_platform.backends.available_valid_backends")
+    @patch("mcp_platform.cli.cli.MCPClient")
     def test_multi_backend_management(self, mock_client_class, mock_available_backends):
         """Test managing deployments across multiple backends."""
         mock_client = Mock()
@@ -269,8 +269,8 @@ class TestCLIWorkflows:
         result = self.runner.invoke(app, ["--backend", "mock", "stop", "demo-mock"])
         assert result.exit_code == 0
 
-    @patch("mcp_template.backends.available_valid_backends")
-    @patch("mcp_template.cli.cli.MCPClient")
+    @patch("mcp_platform.backends.available_valid_backends")
+    @patch("mcp_platform.cli.cli.MCPClient")
     def test_configuration_management_workflow(
         self, mock_client_class, mock_available_backends
     ):
@@ -378,8 +378,8 @@ class TestCLIWorkflows:
         )
         assert result.exit_code == 0
 
-    @patch("mcp_template.backends.available_valid_backends")
-    @patch("mcp_template.cli.cli.MCPClient")
+    @patch("mcp_platform.backends.available_valid_backends")
+    @patch("mcp_platform.cli.cli.MCPClient")
     def test_error_recovery_workflow(self, mock_client_class, mock_available_backends):
         """Test CLI behavior during error conditions and recovery."""
         mock_client = Mock()
@@ -444,8 +444,8 @@ class TestCLIWorkflows:
         result = self.runner.invoke(app, ["list-deployments"])
         assert result.exit_code != 0
 
-    @patch("mcp_template.backends.available_valid_backends")
-    @patch("mcp_template.cli.cli.MCPClient")
+    @patch("mcp_platform.backends.available_valid_backends")
+    @patch("mcp_platform.cli.cli.MCPClient")
     def test_logs_and_monitoring_workflow(
         self, mock_client_class, mock_available_backends
     ):
@@ -489,9 +489,9 @@ class TestCLIWorkflows:
         )
         assert result.exit_code == 0
 
-    @patch("mcp_template.backends.available_valid_backends")
-    @patch("mcp_template.cli.cli.MCPClient")
-    @patch("mcp_template.cli.cli.run_interactive_shell")
+    @patch("mcp_platform.backends.available_valid_backends")
+    @patch("mcp_platform.cli.cli.MCPClient")
+    @patch("mcp_platform.cli.cli.run_interactive_shell")
     def test_interactive_mode_workflow(
         self, mock_interactive, mock_client_class, mock_available_backends
     ):
@@ -513,13 +513,13 @@ class TestCLIWorkflows:
     def test_shell_completion_workflow(self):
         """Test shell completion installation and usage."""
         # Test completion installation
-        with patch("mcp_template.cli.cli.install_completion") as mock_install:
+        with patch("mcp_platform.cli.cli.install_completion") as mock_install:
             result = self.runner.invoke(app, ["install-completion"])
             assert result.exit_code == 0
             mock_install.assert_called_once()
 
-    @patch("mcp_template.backends.available_valid_backends")
-    @patch("mcp_template.cli.cli.MCPClient")
+    @patch("mcp_platform.backends.available_valid_backends")
+    @patch("mcp_platform.cli.cli.MCPClient")
     def test_dry_run_workflow(self, mock_client_class, mock_available_backends):
         """Test dry-run mode across different commands."""
         mock_client = Mock()
@@ -553,8 +553,8 @@ class TestCLIWorkflows:
         )
         assert result.exit_code == 0
 
-    @patch("mcp_template.backends.available_valid_backends")
-    @patch("mcp_template.cli.cli.MCPClient")
+    @patch("mcp_platform.backends.available_valid_backends")
+    @patch("mcp_platform.cli.cli.MCPClient")
     def test_output_format_workflow(self, mock_client_class, mock_available_backends):
         """Test different output formats (table, json, yaml)."""
         mock_client = Mock()
@@ -605,7 +605,7 @@ class TestCLIIntegrationEdgeCases:
         )  # Missing template name
         assert result.exit_code != 0
 
-    @patch("mcp_template.cli.cli.MCPClient")
+    @patch("mcp_platform.cli.cli.MCPClient")
     def test_network_timeout_handling(self, mock_client_class):
         """Test handling of network timeouts and connection issues."""
         mock_client = Mock()
@@ -619,7 +619,7 @@ class TestCLIIntegrationEdgeCases:
         result = self.runner.invoke(app, ["list-deployments"])
         assert result.exit_code != 0
 
-    @patch("mcp_template.cli.cli.MCPClient")
+    @patch("mcp_platform.cli.cli.MCPClient")
     def test_concurrent_operation_handling(self, mock_client_class):
         """Test handling of concurrent operations and conflicts."""
         mock_client = Mock()

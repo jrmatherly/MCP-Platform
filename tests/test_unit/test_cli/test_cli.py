@@ -1,5 +1,5 @@
 """
-Unit tests for the main CLI module (mcp_template.cli.cli).
+Unit tests for the main CLI module (mcp_platform.cli.cli).
 
 These tests focus on individual CLI commands and functions in isolation,
 using mocks for external dependencies like MCPClient.
@@ -61,7 +61,7 @@ class TestCLIUtilities:
 
     def test_setup_logging(self):
         """Test logging setup."""
-        with patch("mcp_template.cli.cli.logging.basicConfig") as mock_config:
+        with patch("mcp_platform.cli.cli.logging.basicConfig") as mock_config:
             setup_logging(verbose=False)
             mock_config.assert_called_once()
 
@@ -99,7 +99,7 @@ class TestCLIState:
         assert "dry_run" in cli_state
 
     @patch.dict(os.environ, {"MCP_BACKEND": "mock"})
-    @patch("mcp_template.backends.available_valid_backends")
+    @patch("mcp_platform.backends.available_valid_backends")
     def test_cli_state_backend_from_env(self, mock_available_backends):
         """Test CLI state reads backend from environment."""
         mock_available_backends.return_value = {"mock": {}, "docker": {}}
@@ -143,7 +143,7 @@ class TestCLICommands:
         """Set up test fixtures."""
         self.runner = CliRunner()
 
-    @patch("mcp_template.cli.cli.MCPClient")
+    @patch("mcp_platform.cli.cli.MCPClient")
     def test_list_templates_command(self, mock_client_class):
         """Test list_templates command."""
         mock_client = Mock()
@@ -158,7 +158,7 @@ class TestCLICommands:
         assert result.exit_code == 0
         mock_client.list_templates.assert_called_once()
 
-    @patch("mcp_template.cli.cli.MCPClient")
+    @patch("mcp_platform.cli.cli.MCPClient")
     def test_list_deployments_command(self, mock_client_class):
         """Test list_deployments command."""
         mock_client = Mock()
@@ -173,7 +173,7 @@ class TestCLICommands:
         assert result.exit_code == 0
         mock_client.list_servers.assert_called_once()
 
-    @patch("mcp_template.cli.cli.MCPClient")
+    @patch("mcp_platform.cli.cli.MCPClient")
     def test_deploy_command_success(self, mock_client_class):
         """Test deploy command with successful deployment."""
         mock_client = Mock()
@@ -203,7 +203,7 @@ class TestCLICommands:
         assert result.exit_code == 0
         mock_client.deploy_template.assert_called_once()
 
-    @patch("mcp_template.cli.cli.MCPClient")
+    @patch("mcp_platform.cli.cli.MCPClient")
     def test_deploy_command_failure(self, mock_client_class):
         """Test deploy command with failed deployment."""
         mock_client = Mock()
@@ -225,7 +225,7 @@ class TestCLICommands:
         assert result.exit_code != 0
         mock_client.deploy_template.assert_called_once()
 
-    @patch("mcp_template.cli.cli.MCPClient")
+    @patch("mcp_platform.cli.cli.MCPClient")
     def test_stop_command(self, mock_client_class):
         """Test stop command."""
         mock_client = Mock()
@@ -243,7 +243,7 @@ class TestCLICommands:
         assert result.exit_code == 0
         mock_client.stop_server.assert_called()
 
-    @patch("mcp_template.cli.cli.MCPClient")
+    @patch("mcp_platform.cli.cli.MCPClient")
     def test_logs_command(self, mock_client_class):
         """Test logs command."""
         mock_client = Mock()
@@ -264,7 +264,7 @@ class TestCLICommands:
         assert result.exit_code == 0
         mock_client.get_server_logs.assert_called()
 
-    @patch("mcp_template.cli.cli.MCPClient")
+    @patch("mcp_platform.cli.cli.MCPClient")
     def test_status_command(self, mock_client_class):
         """Test status command."""
         mock_client = Mock()
@@ -283,7 +283,7 @@ class TestCLICommands:
 
         assert result.exit_code == 0
 
-    @patch("mcp_template.cli.cli.MCPClient")
+    @patch("mcp_platform.cli.cli.MCPClient")
     def test_list_tools_command(self, mock_client_class):
         """Test list_tools command."""
         mock_client = Mock()
@@ -308,7 +308,7 @@ class TestCLICommands:
             include_metadata=True,
         )
 
-    @patch("mcp_template.cli.cli.MCPClient")
+    @patch("mcp_platform.cli.cli.MCPClient")
     def test_list_command_servers(self, mock_client_class):
         """Test list-deployments command (lists servers/deployments)."""
         mock_client = Mock()
@@ -327,7 +327,7 @@ class TestCLICommands:
         assert result.exit_code == 0
         mock_client.list_servers.assert_called()
 
-    @patch("mcp_template.cli.cli.MCPClient")
+    @patch("mcp_platform.cli.cli.MCPClient")
     def test_list_command_templates(self, mock_client_class):
         """Test list-templates command."""
         mock_client = Mock()
@@ -341,7 +341,7 @@ class TestCLICommands:
         assert result.exit_code == 0
         mock_client.list_templates.assert_called()
 
-    @patch("mcp_template.cli.cli.run_interactive_shell")
+    @patch("mcp_platform.cli.cli.run_interactive_shell")
     def test_interactive_command(self, mock_interactive):
         """Test interactive command."""
         result = self.runner.invoke(app, ["interactive"])
@@ -357,7 +357,7 @@ class TestCLICommands:
 
     def test_install_completion_command(self):
         """Test install completion command."""
-        with patch("mcp_template.cli.cli.install_completion") as mock_install:
+        with patch("mcp_platform.cli.cli.install_completion") as mock_install:
             result = self.runner.invoke(app, ["install-completion"])
 
             assert result.exit_code == 0
@@ -371,7 +371,7 @@ class TestCLIErrorHandling:
         """Set up test fixtures."""
         self.runner = CliRunner()
 
-    @patch("mcp_template.cli.cli.MCPClient")
+    @patch("mcp_platform.cli.cli.MCPClient")
     def test_deploy_with_invalid_template(self, mock_client_class):
         """Test deploy command with invalid template."""
         mock_client = Mock()
@@ -383,7 +383,7 @@ class TestCLIErrorHandling:
         # Should handle error gracefully
         assert result.exit_code != 0
 
-    @patch("mcp_template.cli.cli.MCPClient")
+    @patch("mcp_platform.cli.cli.MCPClient")
     def test_client_initialization_error(self, mock_client_class):
         """Test handling of client initialization errors."""
         mock_client_class.side_effect = Exception("Failed to initialize client")
@@ -393,7 +393,7 @@ class TestCLIErrorHandling:
         # Should handle error gracefully
         assert result.exit_code != 0
 
-    @patch("mcp_template.cli.cli.MCPClient")
+    @patch("mcp_platform.cli.cli.MCPClient")
     def test_backend_unavailable_error(self, mock_client_class):
         """Test handling when backend is unavailable."""
         mock_client = Mock()
@@ -413,8 +413,8 @@ class TestCLIDryRunMode:
         """Set up test fixtures."""
         self.runner = CliRunner()
 
-    @patch("mcp_template.backends.available_valid_backends")
-    @patch("mcp_template.cli.cli.MCPClient")
+    @patch("mcp_platform.backends.available_valid_backends")
+    @patch("mcp_platform.cli.cli.MCPClient")
     def test_deploy_dry_run(self, mock_client_class, mock_available_backends):
         """Test deploy command in dry-run mode."""
         mock_client = Mock()
@@ -437,8 +437,8 @@ class TestCLIDryRunMode:
         # The actual dry-run behavior depends on implementation
         # This test verifies the command accepts the flag
 
-    @patch("mcp_template.backends.available_valid_backends")
-    @patch("mcp_template.cli.cli.MCPClient")
+    @patch("mcp_platform.backends.available_valid_backends")
+    @patch("mcp_platform.cli.cli.MCPClient")
     def test_stop_dry_run(self, mock_client_class, mock_available_backends):
         """Test stop command in dry-run mode."""
         mock_client = Mock()
@@ -464,8 +464,8 @@ class TestCLIConfigurationOptions:
         """Set up test fixtures."""
         self.runner = CliRunner()
 
-    @patch("mcp_template.backends.available_valid_backends")
-    @patch("mcp_template.cli.cli.MCPClient")
+    @patch("mcp_platform.backends.available_valid_backends")
+    @patch("mcp_platform.cli.cli.MCPClient")
     def test_deploy_with_backend_option(
         self, mock_client_class, mock_available_backends
     ):
@@ -492,8 +492,8 @@ class TestCLIConfigurationOptions:
         # Verify backend was passed to client
         mock_client_class.assert_called_with(backend_type="mock")
 
-    @patch("mcp_template.backends.available_valid_backends")
-    @patch("mcp_template.cli.cli.MCPClient")
+    @patch("mcp_platform.backends.available_valid_backends")
+    @patch("mcp_platform.cli.cli.MCPClient")
     def test_deploy_with_config_file(self, mock_client_class, mock_available_backends):
         """Test deploy command with configuration file."""
         mock_client = Mock()

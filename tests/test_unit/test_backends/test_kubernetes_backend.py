@@ -18,10 +18,10 @@ pytestmark = [pytest.mark.unit, pytest.mark.kubernetes]
 class TestKubernetesDeploymentService:
     """Test Kubernetes deployment service."""
 
-    @patch("mcp_template.backends.kubernetes.config.load_kube_config")
-    @patch("mcp_template.backends.kubernetes.client.AppsV1Api")
-    @patch("mcp_template.backends.kubernetes.client.CoreV1Api")
-    @patch("mcp_template.backends.kubernetes.client.AutoscalingV1Api")
+    @patch("mcp_platform.backends.kubernetes.config.load_kube_config")
+    @patch("mcp_platform.backends.kubernetes.client.AppsV1Api")
+    @patch("mcp_platform.backends.kubernetes.client.CoreV1Api")
+    @patch("mcp_platform.backends.kubernetes.client.AutoscalingV1Api")
     def test_init_success(
         self, mock_autoscaling, mock_core, mock_apps, mock_load_config
     ):
@@ -38,8 +38,8 @@ class TestKubernetesDeploymentService:
         assert service.apps_v1 is not None
         assert service.core_v1 is not None
 
-    @patch("mcp_template.backends.kubernetes.config.load_kube_config")
-    @patch("mcp_template.backends.kubernetes.client.CoreV1Api")
+    @patch("mcp_platform.backends.kubernetes.config.load_kube_config")
+    @patch("mcp_platform.backends.kubernetes.client.CoreV1Api")
     def test_init_creates_namespace(self, mock_core, mock_load_config):
         """Test namespace creation when it doesn't exist."""
         mock_core_instance = Mock()
@@ -51,15 +51,15 @@ class TestKubernetesDeploymentService:
         mock_core_instance.get_api_resources.return_value = Mock()
 
         with (
-            patch("mcp_template.backends.kubernetes.client.AppsV1Api"),
-            patch("mcp_template.backends.kubernetes.client.AutoscalingV1Api"),
+            patch("mcp_platform.backends.kubernetes.client.AppsV1Api"),
+            patch("mcp_platform.backends.kubernetes.client.AutoscalingV1Api"),
         ):
             service = KubernetesDeploymentService(namespace="new-namespace")
 
         mock_core_instance.create_namespace.assert_called_once()
         assert service.namespace == "new-namespace"
 
-    @patch("mcp_template.backends.kubernetes.config.load_kube_config")
+    @patch("mcp_platform.backends.kubernetes.config.load_kube_config")
     def test_init_fails_on_invalid_config(self, mock_load_config):
         """Test initialization failure when Kubernetes config is invalid."""
         mock_load_config.side_effect = Exception("Invalid config")
@@ -70,10 +70,10 @@ class TestKubernetesDeploymentService:
     def test_generate_deployment_name(self):
         """Test deployment name generation."""
         with (
-            patch("mcp_template.backends.kubernetes.config.load_kube_config"),
-            patch("mcp_template.backends.kubernetes.client.AppsV1Api"),
-            patch("mcp_template.backends.kubernetes.client.CoreV1Api") as mock_core,
-            patch("mcp_template.backends.kubernetes.client.AutoscalingV1Api"),
+            patch("mcp_platform.backends.kubernetes.config.load_kube_config"),
+            patch("mcp_platform.backends.kubernetes.client.AppsV1Api"),
+            patch("mcp_platform.backends.kubernetes.client.CoreV1Api") as mock_core,
+            patch("mcp_platform.backends.kubernetes.client.AutoscalingV1Api"),
         ):
             mock_core_instance = Mock()
             mock_core.return_value = mock_core_instance
@@ -89,10 +89,10 @@ class TestKubernetesDeploymentService:
     def test_create_helm_values_http(self):
         """Test Helm values creation for HTTP server."""
         with (
-            patch("mcp_template.backends.kubernetes.config.load_kube_config"),
-            patch("mcp_template.backends.kubernetes.client.AppsV1Api"),
-            patch("mcp_template.backends.kubernetes.client.CoreV1Api") as mock_core,
-            patch("mcp_template.backends.kubernetes.client.AutoscalingV1Api"),
+            patch("mcp_platform.backends.kubernetes.config.load_kube_config"),
+            patch("mcp_platform.backends.kubernetes.client.AppsV1Api"),
+            patch("mcp_platform.backends.kubernetes.client.CoreV1Api") as mock_core,
+            patch("mcp_platform.backends.kubernetes.client.AutoscalingV1Api"),
         ):
             mock_core_instance = Mock()
             mock_core.return_value = mock_core_instance
@@ -127,10 +127,10 @@ class TestKubernetesDeploymentService:
     def test_create_helm_values_stdio(self):
         """Test Helm values creation for stdio server."""
         with (
-            patch("mcp_template.backends.kubernetes.config.load_kube_config"),
-            patch("mcp_template.backends.kubernetes.client.AppsV1Api"),
-            patch("mcp_template.backends.kubernetes.client.CoreV1Api") as mock_core,
-            patch("mcp_template.backends.kubernetes.client.AutoscalingV1Api"),
+            patch("mcp_platform.backends.kubernetes.config.load_kube_config"),
+            patch("mcp_platform.backends.kubernetes.client.AppsV1Api"),
+            patch("mcp_platform.backends.kubernetes.client.CoreV1Api") as mock_core,
+            patch("mcp_platform.backends.kubernetes.client.AutoscalingV1Api"),
         ):
             mock_core_instance = Mock()
             mock_core.return_value = mock_core_instance
@@ -154,18 +154,18 @@ class TestKubernetesDeploymentService:
             assert values["mcp"]["command"] == ["python", "server.py"]
 
     @patch(
-        "mcp_template.backends.kubernetes.KubernetesDeploymentService._wait_for_deployment_ready"
+        "mcp_platform.backends.kubernetes.KubernetesDeploymentService._wait_for_deployment_ready"
     )
     @patch(
-        "mcp_template.backends.kubernetes.KubernetesDeploymentService._get_deployment_details"
+        "mcp_platform.backends.kubernetes.KubernetesDeploymentService._get_deployment_details"
     )
     def test_deploy_template_success(self, mock_get_details, mock_wait_ready):
         """Test successful template deployment."""
         with (
-            patch("mcp_template.backends.kubernetes.config.load_kube_config"),
-            patch("mcp_template.backends.kubernetes.client.AppsV1Api") as mock_apps,
-            patch("mcp_template.backends.kubernetes.client.CoreV1Api") as mock_core,
-            patch("mcp_template.backends.kubernetes.client.AutoscalingV1Api"),
+            patch("mcp_platform.backends.kubernetes.config.load_kube_config"),
+            patch("mcp_platform.backends.kubernetes.client.AppsV1Api") as mock_apps,
+            patch("mcp_platform.backends.kubernetes.client.CoreV1Api") as mock_core,
+            patch("mcp_platform.backends.kubernetes.client.AutoscalingV1Api"),
         ):
             # Setup mocks
             mock_core_instance = Mock()
@@ -201,10 +201,10 @@ class TestKubernetesDeploymentService:
     def test_deploy_template_failure(self):
         """Test template deployment failure."""
         with (
-            patch("mcp_template.backends.kubernetes.config.load_kube_config"),
-            patch("mcp_template.backends.kubernetes.client.AppsV1Api") as mock_apps,
-            patch("mcp_template.backends.kubernetes.client.CoreV1Api") as mock_core,
-            patch("mcp_template.backends.kubernetes.client.AutoscalingV1Api"),
+            patch("mcp_platform.backends.kubernetes.config.load_kube_config"),
+            patch("mcp_platform.backends.kubernetes.client.AppsV1Api") as mock_apps,
+            patch("mcp_platform.backends.kubernetes.client.CoreV1Api") as mock_core,
+            patch("mcp_platform.backends.kubernetes.client.AutoscalingV1Api"),
         ):
             mock_core_instance = Mock()
             mock_apps_instance = Mock()
@@ -232,10 +232,10 @@ class TestKubernetesDeploymentService:
     def test_list_deployments(self):
         """Test listing deployments."""
         with (
-            patch("mcp_template.backends.kubernetes.config.load_kube_config"),
-            patch("mcp_template.backends.kubernetes.client.AppsV1Api") as mock_apps,
-            patch("mcp_template.backends.kubernetes.client.CoreV1Api") as mock_core,
-            patch("mcp_template.backends.kubernetes.client.AutoscalingV1Api"),
+            patch("mcp_platform.backends.kubernetes.config.load_kube_config"),
+            patch("mcp_platform.backends.kubernetes.client.AppsV1Api") as mock_apps,
+            patch("mcp_platform.backends.kubernetes.client.CoreV1Api") as mock_core,
+            patch("mcp_platform.backends.kubernetes.client.AutoscalingV1Api"),
         ):
             mock_core_instance = Mock()
             mock_apps_instance = Mock()
@@ -268,10 +268,10 @@ class TestKubernetesDeploymentService:
     def test_delete_deployment(self):
         """Test deployment deletion."""
         with (
-            patch("mcp_template.backends.kubernetes.config.load_kube_config"),
-            patch("mcp_template.backends.kubernetes.client.AppsV1Api") as mock_apps,
-            patch("mcp_template.backends.kubernetes.client.CoreV1Api") as mock_core,
-            patch("mcp_template.backends.kubernetes.client.AutoscalingV1Api"),
+            patch("mcp_platform.backends.kubernetes.config.load_kube_config"),
+            patch("mcp_platform.backends.kubernetes.client.AppsV1Api") as mock_apps,
+            patch("mcp_platform.backends.kubernetes.client.CoreV1Api") as mock_core,
+            patch("mcp_platform.backends.kubernetes.client.AutoscalingV1Api"),
         ):
             mock_core_instance = Mock()
             mock_apps_instance = Mock()
@@ -292,10 +292,10 @@ class TestKubernetesDeploymentService:
     def test_stop_deployment(self):
         """Test stopping deployment (scaling to 0)."""
         with (
-            patch("mcp_template.backends.kubernetes.config.load_kube_config"),
-            patch("mcp_template.backends.kubernetes.client.AppsV1Api") as mock_apps,
-            patch("mcp_template.backends.kubernetes.client.CoreV1Api") as mock_core,
-            patch("mcp_template.backends.kubernetes.client.AutoscalingV1Api"),
+            patch("mcp_platform.backends.kubernetes.config.load_kube_config"),
+            patch("mcp_platform.backends.kubernetes.client.AppsV1Api") as mock_apps,
+            patch("mcp_platform.backends.kubernetes.client.CoreV1Api") as mock_core,
+            patch("mcp_platform.backends.kubernetes.client.AutoscalingV1Api"),
         ):
             mock_core_instance = Mock()
             mock_apps_instance = Mock()
@@ -321,10 +321,10 @@ class TestKubernetesDeploymentService:
     def test_get_deployment_info(self):
         """Test getting deployment information."""
         with (
-            patch("mcp_template.backends.kubernetes.config.load_kube_config"),
-            patch("mcp_template.backends.kubernetes.client.AppsV1Api") as mock_apps,
-            patch("mcp_template.backends.kubernetes.client.CoreV1Api") as mock_core,
-            patch("mcp_template.backends.kubernetes.client.AutoscalingV1Api"),
+            patch("mcp_platform.backends.kubernetes.config.load_kube_config"),
+            patch("mcp_platform.backends.kubernetes.client.AppsV1Api") as mock_apps,
+            patch("mcp_platform.backends.kubernetes.client.CoreV1Api") as mock_core,
+            patch("mcp_platform.backends.kubernetes.client.AutoscalingV1Api"),
         ):
             mock_core_instance = Mock()
             mock_apps_instance = Mock()
@@ -347,10 +347,10 @@ class TestKubernetesDeploymentService:
     def test_get_deployment_info_with_logs(self):
         """Test getting deployment information with logs."""
         with (
-            patch("mcp_template.backends.kubernetes.config.load_kube_config"),
-            patch("mcp_template.backends.kubernetes.client.AppsV1Api") as mock_apps,
-            patch("mcp_template.backends.kubernetes.client.CoreV1Api") as mock_core,
-            patch("mcp_template.backends.kubernetes.client.AutoscalingV1Api"),
+            patch("mcp_platform.backends.kubernetes.config.load_kube_config"),
+            patch("mcp_platform.backends.kubernetes.client.AppsV1Api") as mock_apps,
+            patch("mcp_platform.backends.kubernetes.client.CoreV1Api") as mock_core,
+            patch("mcp_platform.backends.kubernetes.client.AutoscalingV1Api"),
         ):
             mock_core_instance = Mock()
             mock_apps_instance = Mock()
@@ -376,10 +376,10 @@ class TestKubernetesDeploymentService:
     def test_connect_to_deployment_not_implemented(self):
         """Test that connect_to_deployment raises NotImplementedError."""
         with (
-            patch("mcp_template.backends.kubernetes.config.load_kube_config"),
-            patch("mcp_template.backends.kubernetes.client.AppsV1Api"),
-            patch("mcp_template.backends.kubernetes.client.CoreV1Api") as mock_core,
-            patch("mcp_template.backends.kubernetes.client.AutoscalingV1Api"),
+            patch("mcp_platform.backends.kubernetes.config.load_kube_config"),
+            patch("mcp_platform.backends.kubernetes.client.AppsV1Api"),
+            patch("mcp_platform.backends.kubernetes.client.CoreV1Api") as mock_core,
+            patch("mcp_platform.backends.kubernetes.client.AutoscalingV1Api"),
         ):
             mock_core_instance = Mock()
             mock_core.return_value = mock_core_instance
@@ -394,10 +394,10 @@ class TestKubernetesDeploymentService:
     def test_cleanup_stopped_containers(self):
         """Test cleanup of stopped containers (scaled to 0)."""
         with (
-            patch("mcp_template.backends.kubernetes.config.load_kube_config"),
-            patch("mcp_template.backends.kubernetes.client.AppsV1Api") as mock_apps,
-            patch("mcp_template.backends.kubernetes.client.CoreV1Api") as mock_core,
-            patch("mcp_template.backends.kubernetes.client.AutoscalingV1Api"),
+            patch("mcp_platform.backends.kubernetes.config.load_kube_config"),
+            patch("mcp_platform.backends.kubernetes.client.AppsV1Api") as mock_apps,
+            patch("mcp_platform.backends.kubernetes.client.CoreV1Api") as mock_core,
+            patch("mcp_platform.backends.kubernetes.client.AutoscalingV1Api"),
         ):
             mock_core_instance = Mock()
             mock_apps_instance = Mock()
@@ -428,10 +428,10 @@ class TestKubernetesDeploymentService:
     def test_cleanup_dangling_images(self):
         """Test cleanup of dangling images (returns informational message)."""
         with (
-            patch("mcp_template.backends.kubernetes.config.load_kube_config"),
-            patch("mcp_template.backends.kubernetes.client.AppsV1Api"),
-            patch("mcp_template.backends.kubernetes.client.CoreV1Api") as mock_core,
-            patch("mcp_template.backends.kubernetes.client.AutoscalingV1Api"),
+            patch("mcp_platform.backends.kubernetes.config.load_kube_config"),
+            patch("mcp_platform.backends.kubernetes.client.AppsV1Api"),
+            patch("mcp_platform.backends.kubernetes.client.CoreV1Api") as mock_core,
+            patch("mcp_platform.backends.kubernetes.client.AutoscalingV1Api"),
         ):
             mock_core_instance = Mock()
             mock_core.return_value = mock_core_instance

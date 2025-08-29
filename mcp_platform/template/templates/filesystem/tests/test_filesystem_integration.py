@@ -74,7 +74,7 @@ class TestFilesystemIntegration:
         # Check that allowed_dirs is configured as command arg
         assert "allowed_dirs" in command_arg_props
 
-    @patch("mcp_template.backends.docker.DockerDeploymentService._run_command")
+    @patch("mcp_platform.backends.docker.DockerDeploymentService._run_command")
     def test_template_stdio_transport(self, mock_run_command):
         """Test that filesystem template uses stdio transport correctly."""
         # Mock docker ps command to return empty (no existing containers)

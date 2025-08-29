@@ -1,5 +1,5 @@
 """
-Unit tests for the base probe module (mcp_template.tools.base_probe).
+Unit tests for the base probe module (mcp_platform.tools.base_probe).
 
 Tests the abstract base class and shared functionality for MCP server tool discovery.
 """
@@ -58,7 +58,7 @@ class TestBaseProbe:
         assert result["image"] == "test-image"
         assert "tools" in result
 
-    @patch("mcp_template.tools.base_probe.MCPClientProbe")
+    @patch("mcp_platform.tools.base_probe.MCPClientProbe")
     def test_mcp_client_initialization(self, mock_client_class):
         """Test MCP client is properly initialized."""
         mock_client = Mock()
@@ -181,7 +181,7 @@ class TestBaseProbeIntegration:
         """Set up test fixtures."""
         self.probe = ConcreteProbe()
 
-    @patch("mcp_template.tools.base_probe.MCPClientProbe")
+    @patch("mcp_platform.tools.base_probe.MCPClientProbe")
     def test_mcp_client_interaction(self, mock_client_class):
         """Test interaction with MCP client."""
         mock_client = Mock()
@@ -233,7 +233,7 @@ class TestBaseProbeLogging:
         """Set up test fixtures."""
         self.probe = ConcreteProbe()
 
-    @patch("mcp_template.tools.base_probe.logger")
+    @patch("mcp_platform.tools.base_probe.logger")
     def test_logger_is_available(self, mock_logger):
         """Test that logger is properly imported and available."""
         # Import the module to trigger logger usage
@@ -245,7 +245,7 @@ class TestBaseProbeLogging:
         """Test that logger has correct name."""
         from mcp_platform.tools.base_probe import logger
 
-        assert logger.name == "mcp_template.tools.base_probe"
+        assert logger.name == "mcp_platform.tools.base_probe"
 
 
 class TestBaseProbeDocumentation:

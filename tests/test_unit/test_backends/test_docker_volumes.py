@@ -21,7 +21,7 @@ class TestDockerBackendVolumeMounting:
         """Test Docker backend prepares volume mounts correctly."""
 
         with patch(
-            "mcp_template.backends.docker.DockerDeploymentService._ensure_docker_available"
+            "mcp_platform.backends.docker.DockerDeploymentService._ensure_docker_available"
         ):
             service = DockerDeploymentService()
 

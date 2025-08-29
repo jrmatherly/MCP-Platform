@@ -1,5 +1,5 @@
 """
-Unit tests for the MCP client probe module (mcp_template.tools.mcp_client_probe).
+Unit tests for the MCP client probe module (mcp_platform.tools.mcp_client_probe).
 
 Tests MCP server communication and tool discovery via stdio and HTTP protocols.
 """

@@ -22,7 +22,7 @@ class TestInteractiveSession:
     def test_session_persistence(self):
         """Test that session state persists across operations."""
         with patch(
-            "mcp_template.cli.interactive_cli.CacheManager"
+            "mcp_platform.cli.interactive_cli.CacheManager"
         ) as mock_cache_manager:
             mock_cache = Mock()
             mock_cache_manager.return_value = mock_cache
@@ -45,7 +45,7 @@ class TestInteractiveSession:
     def test_multiple_templates_config(self):
         """Test managing configuration for multiple templates."""
         with patch(
-            "mcp_template.cli.interactive_cli.CacheManager"
+            "mcp_platform.cli.interactive_cli.CacheManager"
         ) as mock_cache_manager:
             mock_cache = Mock()
             mock_cache_manager.return_value = mock_cache
@@ -79,7 +79,7 @@ class TestInteractiveSession:
     def test_template_switching_workflow(self):
         """Test switching between templates."""
         with patch(
-            "mcp_template.cli.interactive_cli.CacheManager"
+            "mcp_platform.cli.interactive_cli.CacheManager"
         ) as mock_cache_manager:
             mock_cache = Mock()
             mock_cache_manager.return_value = mock_cache
@@ -104,8 +104,8 @@ class TestInteractiveSession:
 class TestCommandWorkflows:
     """Integration tests for complete command workflows."""
 
-    @patch("mcp_template.cli.interactive_cli.MCPClient")
-    @patch("mcp_template.cli.interactive_cli.get_session")
+    @patch("mcp_platform.cli.interactive_cli.MCPClient")
+    @patch("mcp_platform.cli.interactive_cli.get_session")
     def test_template_selection_and_tools_workflow(
         self, mock_get_session, mock_mcp_client
     ):
@@ -117,7 +117,7 @@ class TestCommandWorkflows:
         mock_session.get_selected_template.return_value = None
         mock_get_session.return_value = mock_session
 
-        with patch("mcp_template.cli.list_tools") as mock_cli_list_tools:
+        with patch("mcp_platform.cli.list_tools") as mock_cli_list_tools:
             # Select template
             select_template("demo")
             mock_session.select_template.assert_called_once_with("demo")
@@ -138,7 +138,7 @@ class TestCommandWorkflows:
                 output_format="table",
             )
 
-    @patch("mcp_template.cli.interactive_cli.get_session")
+    @patch("mcp_platform.cli.interactive_cli.get_session")
     def test_configuration_workflow(self, mock_get_session):
         """Test complete configuration workflow."""
         from mcp_platform.cli.interactive_cli import configure_template
@@ -152,8 +152,8 @@ class TestCommandWorkflows:
         mock_get_session.return_value = mock_session
 
         with (
-            patch("mcp_template.cli.interactive_cli.console"),
-            patch("mcp_template.cli.interactive_cli.show_config") as mock_show_config,
+            patch("mcp_platform.cli.interactive_cli.console"),
+            patch("mcp_platform.cli.interactive_cli.show_config") as mock_show_config,
         ):
             # Configure template
             configure_template(
@@ -167,7 +167,7 @@ class TestCommandWorkflows:
             )
             mock_show_config.assert_called_once_with("demo")
 
-    @patch("mcp_template.cli.interactive_cli.get_session")
+    @patch("mcp_platform.cli.interactive_cli.get_session")
     def test_tool_call_workflow(self, mock_get_session):
         """Test calling a tool with configuration."""
         from mcp_platform.cli.interactive_cli import call_tool
@@ -209,7 +209,7 @@ class TestCommandWorkflows:
         # Verify the client method was called
         mock_client.call_tool_with_config.assert_called_once()
 
-    @patch("mcp_template.cli.interactive_cli.get_session")
+    @patch("mcp_platform.cli.interactive_cli.get_session")
     def test_server_management_workflow(self, mock_get_session):
         """Test server deployment and management workflow."""
         from mcp_platform.cli.interactive_cli import deploy_template
@@ -220,7 +220,7 @@ class TestCommandWorkflows:
         mock_session.get_template_config.return_value = {"api_key": "test123"}
         mock_get_session.return_value = mock_session
 
-        with patch("mcp_template.cli.deploy") as mock_cli_deploy:
+        with patch("mcp_platform.cli.deploy") as mock_cli_deploy:
             # Deploy server
             deploy_template(
                 template="demo",
@@ -240,7 +240,7 @@ class TestCommandWorkflows:
 class TestErrorRecovery:
     """Integration tests for error recovery scenarios."""
 
-    @patch("mcp_template.cli.list")
+    @patch("mcp_platform.cli.list")
     def test_api_error_recovery(self, mock_cli_list):
         """Test recovery from API errors."""
         from mcp_platform.cli.interactive_cli import list_templates
@@ -248,7 +248,7 @@ class TestErrorRecovery:
         # Setup mock to raise exception
         mock_cli_list.side_effect = Exception("Network error")
 
-        with patch("mcp_template.cli.interactive_cli.console") as mock_console:
+        with patch("mcp_platform.cli.interactive_cli.console") as mock_console:
             # Should not raise exception, but handle error gracefully
             list_templates()
 
@@ -260,7 +260,7 @@ class TestErrorRecovery:
             ]
             assert len(error_calls) > 0
 
-    @patch("mcp_template.cli.interactive_cli.get_session")
+    @patch("mcp_platform.cli.interactive_cli.get_session")
     def test_missing_template_error_recovery(self, mock_get_session):
         """Test recovery from missing template errors."""
         from mcp_platform.cli.interactive_cli import list_tools
@@ -269,7 +269,7 @@ class TestErrorRecovery:
         mock_session.get_selected_template.return_value = None
         mock_get_session.return_value = mock_session
 
-        with patch("mcp_template.cli.interactive_cli.console") as mock_console:
+        with patch("mcp_platform.cli.interactive_cli.console") as mock_console:
             # Should handle missing template gracefully
             list_tools(template=None)
 
@@ -282,7 +282,7 @@ class TestErrorRecovery:
             ]
             assert len(error_calls) > 0
 
-    @patch("mcp_template.cli.interactive_cli.get_session")
+    @patch("mcp_platform.cli.interactive_cli.get_session")
     def test_invalid_config_format_recovery(self, mock_get_session):
         """Test recovery from invalid configuration format."""
         from mcp_platform.cli.interactive_cli import configure_template
@@ -294,7 +294,7 @@ class TestErrorRecovery:
         mock_session.get_selected_template.return_value = "demo"
         mock_get_session.return_value = mock_session
 
-        with patch("mcp_template.cli.interactive_cli.console") as mock_console:
+        with patch("mcp_platform.cli.interactive_cli.console") as mock_console:
             # Should handle invalid format gracefully
             configure_template(template=None, config_pairs=["invalid_format_no_equals"])
 
@@ -312,7 +312,7 @@ class TestErrorRecovery:
 class TestComplexWorkflows:
     """Integration tests for complex, multi-step workflows."""
 
-    @patch("mcp_template.cli.interactive_cli.get_session")
+    @patch("mcp_platform.cli.interactive_cli.get_session")
     def test_complete_user_session(self, mock_get_session):
         """Test a complete user session from start to finish."""
         from mcp_platform.cli.interactive_cli import (
@@ -344,9 +344,9 @@ class TestComplexWorkflows:
         mock_get_session.return_value = mock_session
 
         with (
-            patch("mcp_template.cli.list_tools") as mock_cli_list_tools,
-            patch("mcp_template.cli.deploy") as mock_cli_deploy,
-            patch("mcp_template.cli.interactive_cli.show_config"),
+            patch("mcp_platform.cli.list_tools") as mock_cli_list_tools,
+            patch("mcp_platform.cli.deploy") as mock_cli_deploy,
+            patch("mcp_platform.cli.interactive_cli.show_config"),
         ):
             # 1. Select template
             select_template("demo")
@@ -396,7 +396,7 @@ class TestComplexWorkflows:
             unselect_template()
             mock_session.unselect_template.assert_called()
 
-    @patch("mcp_template.cli.interactive_cli.get_session")
+    @patch("mcp_platform.cli.interactive_cli.get_session")
     def test_multi_template_workflow(self, mock_get_session):
         """Test working with multiple templates in one session."""
         from mcp_platform.cli.interactive_cli import (
@@ -415,8 +415,8 @@ class TestComplexWorkflows:
         mock_get_session.return_value = mock_session
 
         with (
-            patch("mcp_template.cli.list_tools") as mock_cli_list_tools,
-            patch("mcp_template.cli.interactive_cli.show_config"),
+            patch("mcp_platform.cli.list_tools") as mock_cli_list_tools,
+            patch("mcp_platform.cli.interactive_cli.show_config"),
         ):
             # Work with demo template
             mock_session.get_selected_template.return_value = "demo"
@@ -447,7 +447,7 @@ class TestComplexWorkflows:
 class TestPerformanceAndLimits:
     """Integration tests for performance and edge cases."""
 
-    @patch("mcp_template.cli.interactive_cli.CacheManager")
+    @patch("mcp_platform.cli.interactive_cli.CacheManager")
     def test_large_configuration_handling(self, mock_cache_manager):
         """Test handling of large configuration sets."""
         mock_cache = Mock()
@@ -498,9 +498,9 @@ class TestPerformanceAndLimits:
 class TestCommandlineArgumentParsing:
     """Test complex command line argument parsing in main interactive loop."""
 
-    @patch("mcp_template.cli.interactive_cli.input")
-    @patch("mcp_template.cli.interactive_cli.console")
-    @patch("mcp_template.cli.interactive_cli.get_session")
+    @patch("mcp_platform.cli.interactive_cli.input")
+    @patch("mcp_platform.cli.interactive_cli.console")
+    @patch("mcp_platform.cli.interactive_cli.get_session")
     def test_logs_command_backend_flag_parsing(
         self, mock_get_session, mock_console, mock_input
     ):
@@ -511,7 +511,7 @@ class TestCommandlineArgumentParsing:
 
         mock_input.side_effect = ["logs target --backend docker", "exit"]
 
-        with patch("mcp_template.cli.interactive_cli.get_logs") as mock_get_logs:
+        with patch("mcp_platform.cli.interactive_cli.get_logs") as mock_get_logs:
             from mcp_platform.cli.interactive_cli import run_interactive_shell
 
             run_interactive_shell()
@@ -519,25 +519,25 @@ class TestCommandlineArgumentParsing:
                 target="target", backend="docker", lines=100
             )
 
-    @patch("mcp_template.cli.interactive_cli.input")
-    @patch("mcp_template.cli.interactive_cli.console")
+    @patch("mcp_platform.cli.interactive_cli.input")
+    @patch("mcp_platform.cli.interactive_cli.console")
     def test_logs_command_lines_flag_parsing(self, mock_console, mock_input):
         """Test logs command with --lines flag parsing."""
         mock_input.side_effect = ["logs target --lines 50", "exit"]
 
-        with patch("mcp_template.cli.interactive_cli.get_logs") as mock_get_logs:
+        with patch("mcp_platform.cli.interactive_cli.get_logs") as mock_get_logs:
             from mcp_platform.cli.interactive_cli import run_interactive_shell
 
             run_interactive_shell()
             mock_get_logs.assert_called_with(target="target", backend=None, lines=50)
 
-    @patch("mcp_template.cli.interactive_cli.input")
-    @patch("mcp_template.cli.interactive_cli.console")
+    @patch("mcp_platform.cli.interactive_cli.input")
+    @patch("mcp_platform.cli.interactive_cli.console")
     def test_logs_command_lines_flag_invalid_number(self, mock_console, mock_input):
         """Test logs command with invalid --lines number."""
         mock_input.side_effect = ["logs target --lines invalid", "exit"]
 
-        with patch("mcp_template.cli.interactive_cli.get_logs") as mock_get_logs:
+        with patch("mcp_platform.cli.interactive_cli.get_logs") as mock_get_logs:
             from mcp_platform.cli.interactive_cli import run_interactive_shell
 
             run_interactive_shell()
@@ -545,13 +545,13 @@ class TestCommandlineArgumentParsing:
                 "[red]❌ --lines requires a valid number[/red]"
             )
 
-    @patch("mcp_template.cli.interactive_cli.input")
-    @patch("mcp_template.cli.interactive_cli.console")
+    @patch("mcp_platform.cli.interactive_cli.input")
+    @patch("mcp_platform.cli.interactive_cli.console")
     def test_logs_command_backend_flag_missing_value(self, mock_console, mock_input):
         """Test logs command with --backend flag missing value."""
         mock_input.side_effect = ["logs target --backend", "exit"]
 
-        with patch("mcp_template.cli.interactive_cli.get_logs") as mock_get_logs:
+        with patch("mcp_platform.cli.interactive_cli.get_logs") as mock_get_logs:
             from mcp_platform.cli.interactive_cli import run_interactive_shell
 
             run_interactive_shell()
@@ -559,13 +559,13 @@ class TestCommandlineArgumentParsing:
                 "[red]❌ --backend requires a backend name[/red]"
             )
 
-    @patch("mcp_template.cli.interactive_cli.input")
-    @patch("mcp_template.cli.interactive_cli.console")
+    @patch("mcp_platform.cli.interactive_cli.input")
+    @patch("mcp_platform.cli.interactive_cli.console")
     def test_logs_command_unknown_flag_warning(self, mock_console, mock_input):
         """Test logs command with unknown flag shows warning."""
         mock_input.side_effect = ["logs target --unknown-flag", "exit"]
 
-        with patch("mcp_template.cli.interactive_cli.get_logs") as mock_get_logs:
+        with patch("mcp_platform.cli.interactive_cli.get_logs") as mock_get_logs:
             from mcp_platform.cli.interactive_cli import run_interactive_shell
 
             run_interactive_shell()
@@ -573,9 +573,9 @@ class TestCommandlineArgumentParsing:
                 "[yellow]⚠️ Ignoring unknown flag: --unknown-flag[/yellow]"
             )
 
-    @patch("mcp_template.cli.interactive_cli.input")
-    @patch("mcp_template.cli.interactive_cli.console")
-    @patch("mcp_template.cli.interactive_cli.get_session")
+    @patch("mcp_platform.cli.interactive_cli.input")
+    @patch("mcp_platform.cli.interactive_cli.console")
+    @patch("mcp_platform.cli.interactive_cli.get_session")
     def test_logs_command_no_target_no_selected_template(
         self, mock_get_session, mock_console, mock_input
     ):
@@ -586,7 +586,7 @@ class TestCommandlineArgumentParsing:
 
         mock_input.side_effect = ["logs", "exit"]
 
-        with patch("mcp_template.cli.interactive_cli.get_logs") as mock_get_logs:
+        with patch("mcp_platform.cli.interactive_cli.get_logs") as mock_get_logs:
             from mcp_platform.cli.interactive_cli import run_interactive_shell
 
             run_interactive_shell()
@@ -599,10 +599,10 @@ class TestCommandlineArgumentParsing:
 class TestInteractiveLoopMainFlow:
     """Test main interactive loop functionality."""
 
-    @patch("mcp_template.cli.interactive_cli.READLINE_AVAILABLE", True)
-    @patch("mcp_template.cli.interactive_cli.setup_completion")
-    @patch("mcp_template.cli.interactive_cli.get_session")
-    @patch("mcp_template.cli.interactive_cli.console")
+    @patch("mcp_platform.cli.interactive_cli.READLINE_AVAILABLE", True)
+    @patch("mcp_platform.cli.interactive_cli.setup_completion")
+    @patch("mcp_platform.cli.interactive_cli.get_session")
+    @patch("mcp_platform.cli.interactive_cli.console")
     def test_run_interactive_shell_with_readline(
         self, mock_console, mock_get_session, mock_setup
     ):
@@ -623,9 +623,9 @@ class TestInteractiveLoopMainFlow:
             "[dim]✨ Command history and tab completion enabled[/dim]"
         )
 
-    @patch("mcp_template.cli.interactive_cli.READLINE_AVAILABLE", False)
-    @patch("mcp_template.cli.interactive_cli.get_session")
-    @patch("mcp_template.cli.interactive_cli.console")
+    @patch("mcp_platform.cli.interactive_cli.READLINE_AVAILABLE", False)
+    @patch("mcp_platform.cli.interactive_cli.get_session")
+    @patch("mcp_platform.cli.interactive_cli.console")
     def test_run_interactive_shell_no_readline(self, mock_console, mock_get_session):
         """Test interactive shell without readline."""
         mock_session = Mock()
@@ -642,8 +642,8 @@ class TestInteractiveLoopMainFlow:
             "[dim]💡 Install readline for command history and tab completion[/dim]"
         )
 
-    @patch("mcp_template.cli.interactive_cli.get_session")
-    @patch("mcp_template.cli.interactive_cli.console")
+    @patch("mcp_platform.cli.interactive_cli.get_session")
+    @patch("mcp_platform.cli.interactive_cli.console")
     def test_interactive_shell_keyboard_interrupt(self, mock_console, mock_get_session):
         """Test keyboard interrupt handling in interactive shell."""
         mock_session = Mock()
@@ -660,8 +660,8 @@ class TestInteractiveLoopMainFlow:
             "\n[yellow]Use 'exit' or 'quit' to leave the interactive shell[/yellow]"
         )
 
-    @patch("mcp_template.cli.interactive_cli.get_session")
-    @patch("mcp_template.cli.interactive_cli.console")
+    @patch("mcp_platform.cli.interactive_cli.get_session")
+    @patch("mcp_platform.cli.interactive_cli.console")
     def test_interactive_shell_eof_error(self, mock_console, mock_get_session):
         """Test EOF error handling in interactive shell."""
         mock_session = Mock()
@@ -676,8 +676,8 @@ class TestInteractiveLoopMainFlow:
 
         mock_console.print.assert_any_call("\n[yellow]Goodbye![/yellow]")
 
-    @patch("mcp_template.cli.interactive_cli.get_session")
-    @patch("mcp_template.cli.interactive_cli.console")
+    @patch("mcp_platform.cli.interactive_cli.get_session")
+    @patch("mcp_platform.cli.interactive_cli.console")
     def test_interactive_shell_unknown_command(self, mock_console, mock_get_session):
         """Test unknown command handling."""
         mock_session = Mock()
@@ -693,8 +693,8 @@ class TestInteractiveLoopMainFlow:
             "[red]❌ Unknown command: unknown_command[/red]"
         )
 
-    @patch("mcp_template.cli.interactive_cli.get_session")
-    @patch("mcp_template.cli.interactive_cli.console")
+    @patch("mcp_platform.cli.interactive_cli.get_session")
+    @patch("mcp_platform.cli.interactive_cli.console")
     def test_interactive_shell_empty_command(self, mock_console, mock_get_session):
         """Test empty command handling."""
         mock_session = Mock()
@@ -719,7 +719,7 @@ class TestMainFunctionIntegration:
     """Test main function behavior."""
 
     @patch("sys.argv", ["script", "--help"])
-    @patch("mcp_template.cli.interactive_cli.console")
+    @patch("mcp_platform.cli.interactive_cli.console")
     def test_main_with_help_flag(self, mock_console):
         """Test main function with --help flag."""
         from mcp_platform.cli import interactive_cli
@@ -728,7 +728,7 @@ class TestMainFunctionIntegration:
         mock_console.print.assert_any_call("Enhanced MCP Interactive CLI")
 
     @patch("sys.argv", ["script", "-h"])
-    @patch("mcp_template.cli.interactive_cli.console")
+    @patch("mcp_platform.cli.interactive_cli.console")
     def test_main_with_h_flag(self, mock_console):
         """Test main function with -h flag."""
         from mcp_platform.cli import interactive_cli
@@ -737,7 +737,7 @@ class TestMainFunctionIntegration:
         mock_console.print.assert_any_call("Enhanced MCP Interactive CLI")
 
     @patch("sys.argv", ["script"])
-    @patch("mcp_template.cli.interactive_cli.run_interactive_shell")
+    @patch("mcp_platform.cli.interactive_cli.run_interactive_shell")
     def test_main_without_args(self, mock_run_shell):
         """Test main function without arguments."""
         from mcp_platform.cli import interactive_cli
@@ -749,8 +749,8 @@ class TestMainFunctionIntegration:
 class TestStopCommandEnhanced:
     """Enhanced tests for stop command functionality in Interactive CLI."""
 
-    @patch("mcp_template.cli.interactive_cli.get_session")
-    @patch("mcp_template.cli.stop")
+    @patch("mcp_platform.cli.interactive_cli.get_session")
+    @patch("mcp_platform.cli.stop")
     def test_stop_server_no_target_with_session_template(
         self, mock_cli_stop, mock_get_session
     ):
@@ -762,7 +762,7 @@ class TestStopCommandEnhanced:
         mock_session.get_selected_template.return_value = "demo"
         mock_get_session.return_value = mock_session
 
-        with patch("mcp_template.cli.interactive_cli.console") as mock_console:
+        with patch("mcp_platform.cli.interactive_cli.console") as mock_console:
             stop_server()
 
             # Should call CLI stop with session template as target
@@ -776,12 +776,12 @@ class TestStopCommandEnhanced:
                 force=False,
             )
 
-    @patch("mcp_template.cli.stop")
+    @patch("mcp_platform.cli.stop")
     def test_stop_server_dry_run_mode(self, mock_cli_stop):
         """Test stop command in dry-run mode."""
         from mcp_platform.cli.interactive_cli import stop_server
 
-        with patch("mcp_template.cli.interactive_cli.console") as mock_console:
+        with patch("mcp_platform.cli.interactive_cli.console") as mock_console:
             stop_server(all=True, dry_run=True)
 
             # Should call CLI stop with dry_run enabled
@@ -795,12 +795,12 @@ class TestStopCommandEnhanced:
                 force=False,
             )
 
-    @patch("mcp_template.cli.stop")
+    @patch("mcp_platform.cli.stop")
     def test_stop_all_servers_with_force(self, mock_cli_stop):
         """Test stopping all servers with force option."""
         from mcp_platform.cli.interactive_cli import stop_server
 
-        with patch("mcp_template.cli.interactive_cli.console") as mock_console:
+        with patch("mcp_platform.cli.interactive_cli.console") as mock_console:
             stop_server(all=True, force=True, timeout=60)
 
             # Should call CLI stop with all and force options
@@ -814,12 +814,12 @@ class TestStopCommandEnhanced:
                 force=True,
             )
 
-    @patch("mcp_template.cli.stop")
+    @patch("mcp_platform.cli.stop")
     def test_stop_specific_template_servers(self, mock_cli_stop):
         """Test stopping all servers for a specific template."""
         from mcp_platform.cli.interactive_cli import stop_server
 
-        with patch("mcp_template.cli.interactive_cli.console") as mock_console:
+        with patch("mcp_platform.cli.interactive_cli.console") as mock_console:
             stop_server(template="demo", force=True)
 
             # Should call CLI stop with template option
@@ -833,12 +833,12 @@ class TestStopCommandEnhanced:
                 force=True,
             )
 
-    @patch("mcp_template.cli.stop")
+    @patch("mcp_platform.cli.stop")
     def test_stop_specific_deployment_id(self, mock_cli_stop):
         """Test stopping a specific deployment by ID."""
         from mcp_platform.cli.interactive_cli import stop_server
 
-        with patch("mcp_template.cli.interactive_cli.console") as mock_console:
+        with patch("mcp_platform.cli.interactive_cli.console") as mock_console:
             stop_server(target="deployment-123", force=True)
 
             # Should call CLI stop with specific target
@@ -852,12 +852,12 @@ class TestStopCommandEnhanced:
                 force=True,
             )
 
-    @patch("mcp_template.cli.stop")
+    @patch("mcp_platform.cli.stop")
     def test_stop_with_backend_specification(self, mock_cli_stop):
         """Test stopping servers with specific backend."""
         from mcp_platform.cli.interactive_cli import stop_server
 
-        with patch("mcp_template.cli.interactive_cli.console") as mock_console:
+        with patch("mcp_platform.cli.interactive_cli.console") as mock_console:
             stop_server(all=True, backend="docker", force=True)
 
             # Should call CLI stop with backend specification
@@ -871,7 +871,7 @@ class TestStopCommandEnhanced:
                 force=True,
             )
 
-    @patch("mcp_template.cli.stop")
+    @patch("mcp_platform.cli.stop")
     def test_stop_no_running_servers_delegation(self, mock_cli_stop):
         """Test stop command delegation when no target specified."""
         from mcp_platform.cli.interactive_cli import stop_server
@@ -879,8 +879,8 @@ class TestStopCommandEnhanced:
         # Mock CLI stop to raise an exception to test error handling
         mock_cli_stop.side_effect = Exception("No servers found")
 
-        with patch("mcp_template.cli.interactive_cli.console") as mock_console:
-            with patch("mcp_template.cli.interactive_cli.get_session") as mock_session:
+        with patch("mcp_platform.cli.interactive_cli.console") as mock_console:
+            with patch("mcp_platform.cli.interactive_cli.get_session") as mock_session:
                 mock_session.return_value.get_selected_template.return_value = None
 
                 stop_server()
@@ -889,7 +889,7 @@ class TestStopCommandEnhanced:
                 mock_cli_stop.assert_not_called()
                 mock_console.print.assert_called()
 
-    @patch("mcp_template.cli.stop")
+    @patch("mcp_platform.cli.stop")
     def test_stop_server_error_handling(self, mock_cli_stop):
         """Test stop command handling CLI function errors."""
         from mcp_platform.cli.interactive_cli import stop_server
@@ -897,7 +897,7 @@ class TestStopCommandEnhanced:
         # Mock CLI stop to raise an exception
         mock_cli_stop.side_effect = Exception("Stop operation failed")
 
-        with patch("mcp_template.cli.interactive_cli.console") as mock_console:
+        with patch("mcp_platform.cli.interactive_cli.console") as mock_console:
             stop_server(target="server-1", force=True)
 
             # Should attempt to call CLI stop
@@ -908,12 +908,12 @@ class TestStopCommandEnhanced:
             call_args = mock_console.print.call_args[0][0]
             assert "Error stopping server" in call_args
 
-    @patch("mcp_template.cli.stop")
+    @patch("mcp_platform.cli.stop")
     def test_stop_with_custom_timeout(self, mock_cli_stop):
         """Test stop command with custom timeout."""
         from mcp_platform.cli.interactive_cli import stop_server
 
-        with patch("mcp_template.cli.interactive_cli.console") as mock_console:
+        with patch("mcp_platform.cli.interactive_cli.console") as mock_console:
             stop_server(target="server-1", timeout=120, force=True)
 
             # Should call CLI stop with custom timeout
@@ -927,8 +927,8 @@ class TestStopCommandEnhanced:
                 force=True,
             )
 
-    @patch("mcp_template.cli.interactive_cli.get_session")
-    @patch("mcp_template.cli.stop")
+    @patch("mcp_platform.cli.interactive_cli.get_session")
+    @patch("mcp_platform.cli.stop")
     def test_stop_session_template_fallback(self, mock_cli_stop, mock_get_session):
         """Test stop command falling back to session template when no args."""
         from mcp_platform.cli.interactive_cli import stop_server
@@ -938,7 +938,7 @@ class TestStopCommandEnhanced:
         mock_session.get_selected_template.return_value = "github"
         mock_get_session.return_value = mock_session
 
-        with patch("mcp_template.cli.interactive_cli.console") as mock_console:
+        with patch("mcp_platform.cli.interactive_cli.console") as mock_console:
             stop_server()
 
             # Should use session template as target
@@ -952,12 +952,12 @@ class TestStopCommandEnhanced:
                 force=False,
             )
 
-    @patch("mcp_template.cli.stop")
+    @patch("mcp_platform.cli.stop")
     def test_stop_template_with_dry_run(self, mock_cli_stop):
         """Test stopping template servers in dry-run mode."""
         from mcp_platform.cli.interactive_cli import stop_server
 
-        with patch("mcp_template.cli.interactive_cli.console") as mock_console:
+        with patch("mcp_platform.cli.interactive_cli.console") as mock_console:
             stop_server(template="demo", dry_run=True)
 
             # Should call CLI stop with both template and dry_run
@@ -971,12 +971,12 @@ class TestStopCommandEnhanced:
                 force=False,
             )
 
-    @patch("mcp_template.cli.stop")
+    @patch("mcp_platform.cli.stop")
     def test_stop_with_all_parameters(self, mock_cli_stop):
         """Test stop command with all parameters specified."""
         from mcp_platform.cli.interactive_cli import stop_server
 
-        with patch("mcp_template.cli.interactive_cli.console") as mock_console:
+        with patch("mcp_platform.cli.interactive_cli.console") as mock_console:
             stop_server(
                 target="test-deployment",
                 backend="kubernetes",
@@ -998,12 +998,12 @@ class TestStopCommandEnhanced:
                 force=True,
             )
 
-    @patch("mcp_template.cli.stop")
+    @patch("mcp_platform.cli.stop")
     def test_stop_function_parameter_passing(self, mock_cli_stop):
         """Test that all parameters are correctly passed to CLI function."""
         from mcp_platform.cli.interactive_cli import stop_server
 
-        with patch("mcp_template.cli.interactive_cli.console") as mock_console:
+        with patch("mcp_platform.cli.interactive_cli.console") as mock_console:
             # Test with complex parameter combination
             stop_server(
                 target="complex-test",
@@ -1026,8 +1026,8 @@ class TestStopCommandEnhanced:
                 force=False,
             )
 
-    @patch("mcp_template.cli.interactive_cli.get_session")
-    @patch("mcp_template.cli.stop")
+    @patch("mcp_platform.cli.interactive_cli.get_session")
+    @patch("mcp_platform.cli.stop")
     def test_stop_no_session_template_error(self, mock_cli_stop, mock_get_session):
         """Test stop command when no target and no session template."""
         from mcp_platform.cli.interactive_cli import stop_server
@@ -1037,7 +1037,7 @@ class TestStopCommandEnhanced:
         mock_session.get_selected_template.return_value = None
         mock_get_session.return_value = mock_session
 
-        with patch("mcp_template.cli.interactive_cli.console") as mock_console:
+        with patch("mcp_platform.cli.interactive_cli.console") as mock_console:
             stop_server()
 
             # Should not call CLI stop
@@ -1048,12 +1048,12 @@ class TestStopCommandEnhanced:
             call_args = mock_console.print.call_args[0][0]
             assert "Target required" in call_args
 
-    @patch("mcp_template.cli.stop")
+    @patch("mcp_platform.cli.stop")
     def test_stop_delegation_preserves_defaults(self, mock_cli_stop):
         """Test that default parameter values are preserved in delegation."""
         from mcp_platform.cli.interactive_cli import stop_server
 
-        with patch("mcp_template.cli.interactive_cli.console") as mock_console:
+        with patch("mcp_platform.cli.interactive_cli.console") as mock_console:
             # Call with minimal parameters
             stop_server(target="minimal-test")
 

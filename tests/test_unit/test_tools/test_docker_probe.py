@@ -1,5 +1,5 @@
 """
-Unit tests for the Docker probe module (mcp_template.tools.docker_probe).
+Unit tests for the Docker probe module (mcp_platform.tools.docker_probe).
 
 Tests Docker container-based MCP server tool discovery functionality.
 """

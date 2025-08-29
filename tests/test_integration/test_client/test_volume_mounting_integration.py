@@ -59,7 +59,7 @@ class TestVolumeMountingIntegration:
     def test_volume_mounting_with_template_placeholders(self):
         """Test volume mounting works with template placeholder substitution."""
         with patch(
-            "mcp_template.template.utils.discovery.TemplateDiscovery.get_template_config"
+            "mcp_platform.template.utils.discovery.TemplateDiscovery.get_template_config"
         ) as mock_get_template:
             # Mock template with volume placeholders
             mock_get_template.return_value = {
@@ -100,7 +100,7 @@ class TestVolumeMountingIntegration:
     def test_demo_template_volume_command_integration(self):
         """Test volume and command integration with demo template."""
         with patch(
-            "mcp_template.template.utils.discovery.TemplateDiscovery.get_template_config"
+            "mcp_platform.template.utils.discovery.TemplateDiscovery.get_template_config"
         ) as mock_get_template:
             mock_get_template.return_value = {
                 "template_id": "demo",
@@ -133,7 +133,7 @@ class TestVolumeMountingIntegration:
     def test_filesystem_template_volume_command_integration(self):
         """Test volume and command integration with filesystem template."""
         with patch(
-            "mcp_template.template.utils.discovery.TemplateDiscovery.get_template_config"
+            "mcp_platform.template.utils.discovery.TemplateDiscovery.get_template_config"
         ) as mock_get_template:
             mock_get_template.return_value = {
                 "template_id": "filesystem",

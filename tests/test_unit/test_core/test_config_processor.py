@@ -386,7 +386,7 @@ class TestConfigProcessorVolumeAndCommandArgs:
         # Invalid format with too many colons
         config = {"DATA_DIR": "/host:/container:/extra"}
 
-        with patch("mcp_template.core.config_processor.logger") as mock_logger:
+        with patch("mcp_platform.core.config_processor.logger") as mock_logger:
             result = config_processor.handle_volume_and_args_config_properties(
                 template, config
             )
@@ -560,7 +560,7 @@ class TestConfigProcessorTypeConversion:
         # Invalid integer value
         config_values = {"port": "not_a_number"}
 
-        with patch("mcp_template.core.config_processor.logger") as mock_logger:
+        with patch("mcp_platform.core.config_processor.logger") as mock_logger:
             result = config_processor._convert_config_values(config_values, template)
 
             # Should fall back to string and log warning

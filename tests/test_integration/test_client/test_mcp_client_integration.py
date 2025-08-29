@@ -19,8 +19,8 @@ class TestMCPClientIntegration:
         # Simplified integration test with basic mocking
 
         with (
-            patch("mcp_template.core.TemplateManager") as mock_template_manager_class,
-            patch("mcp_template.core.ToolManager") as mock_tool_manager_class,
+            patch("mcp_platform.core.TemplateManager") as mock_template_manager_class,
+            patch("mcp_platform.core.ToolManager") as mock_tool_manager_class,
         ):
             # Set up mock managers
             mock_template_mgr = MagicMock()
@@ -101,8 +101,8 @@ class TestMCPClientIntegration:
         """Test complete server lifecycle with client."""
 
         with (
-            patch("mcp_template.core.TemplateManager") as mock_template_manager_class,
-            patch("mcp_template.core.ToolManager") as mock_tool_manager_class,
+            patch("mcp_platform.core.TemplateManager") as mock_template_manager_class,
+            patch("mcp_platform.core.ToolManager") as mock_tool_manager_class,
         ):
             # Set up mock managers
             mock_template_mgr = MagicMock()
@@ -187,9 +187,9 @@ class TestMCPClientIntegration:
         """Test direct connection management."""
 
         with (
-            patch("mcp_template.client.client.MCPConnection") as mock_connection_class,
-            patch("mcp_template.core.ToolManager"),
-            patch("mcp_template.client.TemplateDiscovery"),
+            patch("mcp_platform.client.client.MCPConnection") as mock_connection_class,
+            patch("mcp_platform.core.ToolManager"),
+            patch("mcp_platform.client.TemplateDiscovery"),
         ):
             # Setup mock connection
             mock_connection = MagicMock()
@@ -238,8 +238,8 @@ class TestMCPClientIntegration:
         """Test client error handling scenarios."""
 
         with (
-            patch("mcp_template.core.ToolManager") as mock_tool_manager,
-            patch("mcp_template.client.TemplateDiscovery") as mock_template_discovery,
+            patch("mcp_platform.core.ToolManager") as mock_tool_manager,
+            patch("mcp_platform.client.TemplateDiscovery") as mock_template_discovery,
         ):
             # Setup mocks with failures
             mock_tool_mgr = MagicMock()
@@ -271,8 +271,8 @@ class TestMCPClientIntegration:
         """Test client handling of concurrent operations."""
 
         with (
-            patch("mcp_template.core.ToolManager") as mock_tool_manager,
-            patch("mcp_template.client.TemplateDiscovery") as mock_template_discovery,
+            patch("mcp_platform.core.ToolManager") as mock_tool_manager,
+            patch("mcp_platform.client.TemplateDiscovery") as mock_template_discovery,
         ):
             # Setup mocks
             mock_tool_mgr = MagicMock()
@@ -306,9 +306,9 @@ class TestMCPClientIntegration:
         """Test proper resource cleanup."""
 
         with (
-            patch("mcp_template.client.client.MCPConnection") as mock_connection_class,
-            patch("mcp_template.core.ToolManager"),
-            patch("mcp_template.client.TemplateDiscovery"),
+            patch("mcp_platform.client.client.MCPConnection") as mock_connection_class,
+            patch("mcp_platform.core.ToolManager"),
+            patch("mcp_platform.client.TemplateDiscovery"),
         ):
             # Setup multiple mock connections
             mock_connections = []

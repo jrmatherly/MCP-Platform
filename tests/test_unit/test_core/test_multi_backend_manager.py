@@ -27,9 +27,9 @@ def mock_managers():
 class TestMultiBackendManagerInitialization:
     """Test MultiBackendManager initialization."""
 
-    @patch("mcp_template.core.multi_backend_manager.get_backend")
-    @patch("mcp_template.core.deployment_manager.DeploymentManager")
-    @patch("mcp_template.core.tool_manager.ToolManager")
+    @patch("mcp_platform.core.multi_backend_manager.get_backend")
+    @patch("mcp_platform.core.deployment_manager.DeploymentManager")
+    @patch("mcp_platform.core.tool_manager.ToolManager")
     def test_initialization_success(
         self, mock_tool_manager_class, mock_deployment_manager_class, mock_get_backend
     ):
@@ -54,7 +54,7 @@ class TestMultiBackendManagerInitialization:
         expected_calls = [call("docker"), call("kubernetes")]
         mock_get_backend.assert_has_calls(expected_calls, any_order=True)
 
-    @patch("mcp_template.core.multi_backend_manager.get_backend")
+    @patch("mcp_platform.core.multi_backend_manager.get_backend")
     def test_initialization_with_failed_backend(self, mock_get_backend):
         """Test initialization when one backend fails."""
 
@@ -66,8 +66,8 @@ class TestMultiBackendManagerInitialization:
         mock_get_backend.side_effect = get_backend_side_effect
 
         with (
-            patch("mcp_template.core.deployment_manager.DeploymentManager"),
-            patch("mcp_template.core.tool_manager.ToolManager"),
+            patch("mcp_platform.core.deployment_manager.DeploymentManager"),
+            patch("mcp_platform.core.tool_manager.ToolManager"),
         ):
             manager = MultiBackendManager()
 
@@ -80,10 +80,10 @@ class TestMultiBackendManagerInitialization:
         """Test initialization with custom backend list."""
         with (
             patch(
-                "mcp_template.core.multi_backend_manager.get_backend"
+                "mcp_platform.core.multi_backend_manager.get_backend"
             ) as mock_get_backend,
-            patch("mcp_template.core.deployment_manager.DeploymentManager"),
-            patch("mcp_template.core.tool_manager.ToolManager"),
+            patch("mcp_platform.core.deployment_manager.DeploymentManager"),
+            patch("mcp_platform.core.tool_manager.ToolManager"),
         ):
             mock_get_backend.return_value = Mock()
 
@@ -98,9 +98,9 @@ class TestMultiBackendManagerInitialization:
 class TestGetAllDeployments:
     """Test getting deployments from all backends."""
 
-    @patch("mcp_template.core.multi_backend_manager.get_backend")
-    @patch("mcp_template.core.multi_backend_manager.DeploymentManager")
-    @patch("mcp_template.core.multi_backend_manager.ToolManager")
+    @patch("mcp_platform.core.multi_backend_manager.get_backend")
+    @patch("mcp_platform.core.multi_backend_manager.DeploymentManager")
+    @patch("mcp_platform.core.multi_backend_manager.ToolManager")
     def test_get_all_deployments_success(
         self, mock_tm_class, mock_dm_class, mock_get_backend
     ):
@@ -146,9 +146,9 @@ class TestGetAllDeployments:
             mock_deployment_manager.find_deployments_by_criteria.call_count == 2
         )  # Called once per backend
 
-    @patch("mcp_template.core.multi_backend_manager.get_backend")
-    @patch("mcp_template.core.multi_backend_manager.DeploymentManager")
-    @patch("mcp_template.core.multi_backend_manager.ToolManager")
+    @patch("mcp_platform.core.multi_backend_manager.get_backend")
+    @patch("mcp_platform.core.multi_backend_manager.DeploymentManager")
+    @patch("mcp_platform.core.multi_backend_manager.ToolManager")
     def test_get_all_deployments_with_template_filter(
         self, mock_tm_class, mock_dm_class, mock_get_backend
     ):
@@ -186,9 +186,9 @@ class TestGetAllDeployments:
         # Verify template filter was passed to deployment manager (called once per backend)
         assert mock_deployment_manager.find_deployments_by_criteria.call_count == 2
 
-    @patch("mcp_template.core.multi_backend_manager.get_backend")
-    @patch("mcp_template.core.multi_backend_manager.DeploymentManager")
-    @patch("mcp_template.core.multi_backend_manager.ToolManager")
+    @patch("mcp_platform.core.multi_backend_manager.get_backend")
+    @patch("mcp_platform.core.multi_backend_manager.DeploymentManager")
+    @patch("mcp_platform.core.multi_backend_manager.ToolManager")
     def test_get_all_deployments_with_backend_failure(
         self, mock_tm_class, mock_dm_class, mock_get_backend
     ):
@@ -224,9 +224,9 @@ class TestGetAllDeployments:
 class TestBackendDetection:
     """Test backend detection functionality."""
 
-    @patch("mcp_template.core.multi_backend_manager.get_backend")
-    @patch("mcp_template.core.multi_backend_manager.DeploymentManager")
-    @patch("mcp_template.core.multi_backend_manager.ToolManager")
+    @patch("mcp_platform.core.multi_backend_manager.get_backend")
+    @patch("mcp_platform.core.multi_backend_manager.DeploymentManager")
+    @patch("mcp_platform.core.multi_backend_manager.ToolManager")
     def test_detect_backend_for_deployment_success(
         self, mock_tm_class, mock_dm_class, mock_get_backend
     ):
@@ -256,9 +256,9 @@ class TestBackendDetection:
 
         assert result == "kubernetes"
 
-    @patch("mcp_template.core.multi_backend_manager.get_backend")
-    @patch("mcp_template.core.multi_backend_manager.DeploymentManager")
-    @patch("mcp_template.core.multi_backend_manager.ToolManager")
+    @patch("mcp_platform.core.multi_backend_manager.get_backend")
+    @patch("mcp_platform.core.multi_backend_manager.DeploymentManager")
+    @patch("mcp_platform.core.multi_backend_manager.ToolManager")
     def test_detect_backend_for_deployment_not_found(
         self, mock_tm_class, mock_dm_class, mock_get_backend
     ):
@@ -283,9 +283,9 @@ class TestBackendDetection:
 
         assert result is None
 
-    @patch("mcp_template.core.multi_backend_manager.get_backend")
-    @patch("mcp_template.core.multi_backend_manager.DeploymentManager")
-    @patch("mcp_template.core.multi_backend_manager.ToolManager")
+    @patch("mcp_platform.core.multi_backend_manager.get_backend")
+    @patch("mcp_platform.core.multi_backend_manager.DeploymentManager")
+    @patch("mcp_platform.core.multi_backend_manager.ToolManager")
     def test_get_deployment_by_id_success(
         self, mock_tm_class, mock_dm_class, mock_get_backend
     ):
@@ -327,9 +327,9 @@ class TestBackendDetection:
 class TestStopDeployment:
     """Test stopping deployments with auto-detection."""
 
-    @patch("mcp_template.core.multi_backend_manager.get_backend")
-    @patch("mcp_template.core.multi_backend_manager.DeploymentManager")
-    @patch("mcp_template.core.multi_backend_manager.ToolManager")
+    @patch("mcp_platform.core.multi_backend_manager.get_backend")
+    @patch("mcp_platform.core.multi_backend_manager.DeploymentManager")
+    @patch("mcp_platform.core.multi_backend_manager.ToolManager")
     def test_stop_deployment_success(
         self, mock_tm_class, mock_dm_class, mock_get_backend
     ):
@@ -367,9 +367,9 @@ class TestStopDeployment:
         assert result["backend_type"] == "kubernetes"
         mock_deployment_manager.stop_deployment.assert_called_once_with("k8s-789", 30)
 
-    @patch("mcp_template.backends.get_backend")
-    @patch("mcp_template.core.multi_backend_manager.DeploymentManager")
-    @patch("mcp_template.core.multi_backend_manager.ToolManager")
+    @patch("mcp_platform.backends.get_backend")
+    @patch("mcp_platform.core.multi_backend_manager.DeploymentManager")
+    @patch("mcp_platform.core.multi_backend_manager.ToolManager")
     def test_stop_deployment_not_found(
         self, mock_tm_class, mock_dm_class, mock_get_backend
     ):
@@ -395,9 +395,9 @@ class TestStopDeployment:
         assert result["success"] is False
         assert "not found in any backend" in result["error"]
 
-    @patch("mcp_template.backends.get_backend")
-    @patch("mcp_template.core.multi_backend_manager.DeploymentManager")
-    @patch("mcp_template.core.multi_backend_manager.ToolManager")
+    @patch("mcp_platform.backends.get_backend")
+    @patch("mcp_platform.core.multi_backend_manager.DeploymentManager")
+    @patch("mcp_platform.core.multi_backend_manager.ToolManager")
     def test_stop_deployment_operation_failure(
         self, mock_tm_class, mock_dm_class, mock_get_backend
     ):
@@ -436,9 +436,9 @@ class TestStopDeployment:
 class TestGetDeploymentLogs:
     """Test getting deployment logs with auto-detection."""
 
-    @patch("mcp_template.backends.get_backend")
-    @patch("mcp_template.core.multi_backend_manager.DeploymentManager")
-    @patch("mcp_template.core.multi_backend_manager.ToolManager")
+    @patch("mcp_platform.backends.get_backend")
+    @patch("mcp_platform.core.multi_backend_manager.DeploymentManager")
+    @patch("mcp_platform.core.multi_backend_manager.ToolManager")
     def test_get_deployment_logs_success(
         self, mock_tm_class, mock_dm_class, mock_get_backend
     ):
@@ -479,9 +479,9 @@ class TestGetDeploymentLogs:
             "docker-123", lines=50, follow=True
         )
 
-    @patch("mcp_template.backends.get_backend")
-    @patch("mcp_template.core.multi_backend_manager.DeploymentManager")
-    @patch("mcp_template.core.multi_backend_manager.ToolManager")
+    @patch("mcp_platform.backends.get_backend")
+    @patch("mcp_platform.core.multi_backend_manager.DeploymentManager")
+    @patch("mcp_platform.core.multi_backend_manager.ToolManager")
     def test_get_deployment_logs_not_found(
         self, mock_tm_class, mock_dm_class, mock_get_backend
     ):
@@ -511,10 +511,10 @@ class TestGetDeploymentLogs:
 class TestGetAllTools:
     """Test getting tools from all backends and templates."""
 
-    @patch("mcp_template.backends.get_backend")
-    @patch("mcp_template.core.multi_backend_manager.DeploymentManager")
-    @patch("mcp_template.core.multi_backend_manager.ToolManager")
-    @patch("mcp_template.core.multi_backend_manager.TemplateManager")
+    @patch("mcp_platform.backends.get_backend")
+    @patch("mcp_platform.core.multi_backend_manager.DeploymentManager")
+    @patch("mcp_platform.core.multi_backend_manager.ToolManager")
+    @patch("mcp_platform.core.multi_backend_manager.TemplateManager")
     def test_get_all_tools_success(
         self, mock_template_class, mock_tm_class, mock_dm_class, mock_get_backend
     ):
@@ -575,10 +575,10 @@ class TestGetAllTools:
         assert len(result["static_tools"]) > 0
         assert len(result["dynamic_tools"]) > 0
 
-    @patch("mcp_template.backends.get_backend")
-    @patch("mcp_template.core.multi_backend_manager.DeploymentManager")
-    @patch("mcp_template.core.multi_backend_manager.ToolManager")
-    @patch("mcp_template.core.multi_backend_manager.TemplateManager")
+    @patch("mcp_platform.backends.get_backend")
+    @patch("mcp_platform.core.multi_backend_manager.DeploymentManager")
+    @patch("mcp_platform.core.multi_backend_manager.ToolManager")
+    @patch("mcp_platform.core.multi_backend_manager.TemplateManager")
     def test_get_all_tools_with_template_filter(
         self, mock_template_class, mock_tm_class, mock_dm_class, mock_get_backend
     ):
@@ -619,9 +619,9 @@ class TestGetAllTools:
 class TestCleanupOperations:
     """Test cleanup operations across all backends."""
 
-    @patch("mcp_template.backends.get_backend")
-    @patch("mcp_template.core.multi_backend_manager.DeploymentManager")
-    @patch("mcp_template.core.multi_backend_manager.ToolManager")
+    @patch("mcp_platform.backends.get_backend")
+    @patch("mcp_platform.core.multi_backend_manager.DeploymentManager")
+    @patch("mcp_platform.core.multi_backend_manager.ToolManager")
     def test_cleanup_all_backends_success(
         self, mock_tm_class, mock_dm_class, mock_get_backend
     ):
@@ -655,9 +655,9 @@ class TestCleanupOperations:
         assert result["summary"]["successful_cleanups"] == 2
         assert result["summary"]["failed_cleanups"] == 0
 
-    @patch("mcp_template.backends.get_backend")
-    @patch("mcp_template.core.multi_backend_manager.DeploymentManager")
-    @patch("mcp_template.core.multi_backend_manager.ToolManager")
+    @patch("mcp_platform.backends.get_backend")
+    @patch("mcp_platform.core.multi_backend_manager.DeploymentManager")
+    @patch("mcp_platform.core.multi_backend_manager.ToolManager")
     def test_cleanup_all_backends_partial_failure(
         self, mock_tm_class, mock_dm_class, mock_get_backend
     ):
@@ -695,9 +695,9 @@ class TestCleanupOperations:
 class TestBackendHealth:
     """Test backend health checking."""
 
-    @patch("mcp_template.backends.get_backend")
-    @patch("mcp_template.core.multi_backend_manager.DeploymentManager")
-    @patch("mcp_template.core.multi_backend_manager.ToolManager")
+    @patch("mcp_platform.backends.get_backend")
+    @patch("mcp_platform.core.multi_backend_manager.DeploymentManager")
+    @patch("mcp_platform.core.multi_backend_manager.ToolManager")
     def test_get_backend_health_all_healthy(
         self, mock_tm_class, mock_dm_class, mock_get_backend
     ):
@@ -729,9 +729,9 @@ class TestBackendHealth:
         assert result["kubernetes"]["status"] == "healthy"
         assert result["kubernetes"]["deployment_count"] == 0
 
-    @patch("mcp_template.core.multi_backend_manager.get_backend")
-    @patch("mcp_template.core.multi_backend_manager.DeploymentManager")
-    @patch("mcp_template.core.multi_backend_manager.ToolManager")
+    @patch("mcp_platform.core.multi_backend_manager.get_backend")
+    @patch("mcp_platform.core.multi_backend_manager.DeploymentManager")
+    @patch("mcp_platform.core.multi_backend_manager.ToolManager")
     def test_get_backend_health_with_failures(
         self, mock_tm_class, mock_dm_class, mock_get_backend
     ):
@@ -766,9 +766,9 @@ class TestBackendHealth:
 class TestExecuteOnBackend:
     """Test executing operations on specific backends."""
 
-    @patch("mcp_template.core.multi_backend_manager.get_backend")
-    @patch("mcp_template.core.multi_backend_manager.DeploymentManager")
-    @patch("mcp_template.core.multi_backend_manager.ToolManager")
+    @patch("mcp_platform.core.multi_backend_manager.get_backend")
+    @patch("mcp_platform.core.multi_backend_manager.DeploymentManager")
+    @patch("mcp_platform.core.multi_backend_manager.ToolManager")
     def test_execute_on_backend_success(
         self, mock_tm_class, mock_dm_class, mock_get_backend
     ):
@@ -797,9 +797,9 @@ class TestExecuteOnBackend:
         assert result[0]["id"] == "docker-123"
         mock_deployment_manager.list_deployments.assert_called_once()
 
-    @patch("mcp_template.core.multi_backend_manager.get_backend")
-    @patch("mcp_template.core.multi_backend_manager.DeploymentManager")
-    @patch("mcp_template.core.multi_backend_manager.ToolManager")
+    @patch("mcp_platform.core.multi_backend_manager.get_backend")
+    @patch("mcp_platform.core.multi_backend_manager.DeploymentManager")
+    @patch("mcp_platform.core.multi_backend_manager.ToolManager")
     def test_execute_on_backend_invalid_backend(
         self, mock_tm_class, mock_dm_class, mock_get_backend
     ):
@@ -823,9 +823,9 @@ class TestExecuteOnBackend:
         with pytest.raises(ValueError, match="Backend invalid not available"):
             manager.execute_on_backend("invalid", "deployment", "list_deployments")
 
-    @patch("mcp_template.core.multi_backend_manager.get_backend")
-    @patch("mcp_template.core.multi_backend_manager.DeploymentManager")
-    @patch("mcp_template.core.multi_backend_manager.ToolManager")
+    @patch("mcp_platform.core.multi_backend_manager.get_backend")
+    @patch("mcp_platform.core.multi_backend_manager.DeploymentManager")
+    @patch("mcp_platform.core.multi_backend_manager.ToolManager")
     def test_execute_on_backend_invalid_manager(
         self, mock_tm_class, mock_dm_class, mock_get_backend
     ):
@@ -849,9 +849,9 @@ class TestExecuteOnBackend:
         with pytest.raises(ValueError, match="Invalid manager type: invalid"):
             manager.execute_on_backend("docker", "invalid", "some_method")
 
-    @patch("mcp_template.core.multi_backend_manager.get_backend")
-    @patch("mcp_template.core.multi_backend_manager.DeploymentManager")
-    @patch("mcp_template.core.multi_backend_manager.ToolManager")
+    @patch("mcp_platform.core.multi_backend_manager.get_backend")
+    @patch("mcp_platform.core.multi_backend_manager.DeploymentManager")
+    @patch("mcp_platform.core.multi_backend_manager.ToolManager")
     def test_execute_on_backend_invalid_method(
         self, mock_tm_class, mock_dm_class, mock_get_backend
     ):

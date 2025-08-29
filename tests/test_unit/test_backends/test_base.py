@@ -1,5 +1,5 @@
 """
-Unit tests for the base backend module (mcp_template.backends.base).
+Unit tests for the base backend module (mcp_platform.backends.base).
 
 Tests the abstract base class for deployment backends.
 """

@@ -67,7 +67,7 @@ class TestMCPClientTemplates:
             "demo" in name.lower() for name in template_names
         ), f"Demo template not found in {template_names}"
 
-    @patch("mcp_template.client.client.TemplateManager")
+    @patch("mcp_platform.client.client.TemplateManager")
     def test_list_templates_with_deployed_status(self, mock_template_manager_class):
         """Test template listing with deployment status."""
         # Set up the mock template manager instance
@@ -107,7 +107,7 @@ class TestMCPClientTemplates:
         assert "demo" in result
         assert "deployments" in result["demo"]
 
-    @patch("mcp_template.client.client.TemplateManager")
+    @patch("mcp_platform.client.client.TemplateManager")
     def test_list_templates_error(self, mock_template_manager_class):
         """Test template listing error handling."""
         # Set up the mock to raise an exception
@@ -357,7 +357,7 @@ class TestMCPClientServers:
             "logs": expected_logs,
         }
 
-        with patch("mcp_template.client.client.MultiBackendManager") as mock_class:
+        with patch("mcp_platform.client.client.MultiBackendManager") as mock_class:
             mock_class.return_value = self.mock_multi_manager
             result = self.client.get_server_logs("server123")
 
@@ -374,7 +374,7 @@ class TestMCPClientServers:
             "logs": expected_logs,
         }
 
-        with patch("mcp_template.client.client.MultiBackendManager") as mock_class:
+        with patch("mcp_platform.client.client.MultiBackendManager") as mock_class:
             mock_class.return_value = self.mock_multi_manager
             result = self.client.get_server_logs("server123", lines=50, follow=True)
 
@@ -540,7 +540,7 @@ class TestMCPClientConnections:
         """Test successful stdio connection."""
         mock_connection = AsyncMock()
 
-        with patch("mcp_template.client.client.MCPConnection") as mock_conn_class:
+        with patch("mcp_platform.client.client.MCPConnection") as mock_conn_class:
             mock_conn_class.return_value = mock_connection
             mock_connection.connect_stdio.return_value = True
 
@@ -555,7 +555,7 @@ class TestMCPClientConnections:
         """Test stdio connection failure."""
         mock_connection = AsyncMock()
 
-        with patch("mcp_template.client.client.MCPConnection") as mock_conn_class:
+        with patch("mcp_platform.client.client.MCPConnection") as mock_conn_class:
             mock_conn_class.return_value = mock_connection
             mock_connection.connect_stdio.return_value = False
 
@@ -719,8 +719,8 @@ class TestMCPClientEdgeCases:
 class TestMCPClientIntegration:
     """Integration tests for client functionality."""
 
-    @patch("mcp_template.client.client.TemplateManager")
-    @patch("mcp_template.client.client.MultiBackendManager")
+    @patch("mcp_platform.client.client.TemplateManager")
+    @patch("mcp_platform.client.client.MultiBackendManager")
     def test_complete_workflow(
         self, mock_multi_manager_class, mock_template_manager_class
     ):
@@ -813,7 +813,7 @@ class TestMCPClientConfigurationHandling:
         """Set up test client with mocked dependencies."""
         self.client = MCPClient(backend_type="mock")
 
-    @patch("mcp_template.core.DeploymentManager")
+    @patch("mcp_platform.core.DeploymentManager")
     def test_deploy_template_with_config_precedence(
         self, mock_deployment_manager_class
     ):
@@ -856,7 +856,7 @@ class TestMCPClientConfigurationHandling:
         assert config_sources["config_values"]["key1"] == "from_cli"
         assert config_sources["env_vars"]["key1"] == "from_env"
 
-    @patch("mcp_template.core.DeploymentManager")
+    @patch("mcp_platform.core.DeploymentManager")
     def test_deploy_template_with_volumes_dict(self, mock_deployment_manager_class):
         """Test that deploy_template handles volume dict correctly."""
         mock_deployment_manager = Mock()
@@ -884,7 +884,7 @@ class TestMCPClientConfigurationHandling:
         assert "VOLUMES" in config_sources["config_values"]
         assert config_sources["config_values"]["VOLUMES"] == volumes
 
-    @patch("mcp_template.core.DeploymentManager")
+    @patch("mcp_platform.core.DeploymentManager")
     def test_deploy_template_with_volumes_json_object(
         self, mock_deployment_manager_class
     ):
@@ -915,7 +915,7 @@ class TestMCPClientConfigurationHandling:
         assert volumes["./host"] == "/container"
         assert volumes["./data"] == "/app/data"
 
-    @patch("mcp_template.core.DeploymentManager")
+    @patch("mcp_platform.core.DeploymentManager")
     def test_deploy_template_with_volumes_json_array(
         self, mock_deployment_manager_class
     ):
@@ -945,7 +945,7 @@ class TestMCPClientConfigurationHandling:
         assert volumes["/host/path1"] == "/host/path1"
         assert volumes["/host/path2"] == "/host/path2"
 
-    @patch("mcp_template.core.DeploymentManager")
+    @patch("mcp_platform.core.DeploymentManager")
     def test_deploy_template_with_invalid_volumes_json(
         self, mock_deployment_manager_class
     ):
@@ -961,7 +961,7 @@ class TestMCPClientConfigurationHandling:
         # Should return None on failure
         assert result is None
 
-    @patch("mcp_template.core.DeploymentManager")
+    @patch("mcp_platform.core.DeploymentManager")
     def test_start_server_backward_compatibility(self, mock_deployment_manager_class):
         """Test that start_server maintains backward compatibility."""
         mock_deployment_manager = Mock()
@@ -993,7 +993,7 @@ class TestMCPClientConfigurationHandling:
         assert "config_values" in config_sources
         assert config_sources["config_values"]["key"] == "value"
 
-    @patch("mcp_template.core.DeploymentManager")
+    @patch("mcp_platform.core.DeploymentManager")
     def test_start_server_with_all_new_features(self, mock_deployment_manager_class):
         """Test start_server with all new configuration features."""
         mock_deployment_manager = Mock()

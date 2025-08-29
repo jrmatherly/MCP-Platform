@@ -56,8 +56,8 @@ class TestDockerConnect:
             patch.object(
                 docker_service, "get_deployment_info", return_value=container_info
             ),
-            patch("mcp_template.backends.docker.subprocess.run") as mock_run,
-            patch("mcp_template.backends.docker.os.execvp") as mock_execvp,
+            patch("mcp_platform.backends.docker.subprocess.run") as mock_run,
+            patch("mcp_platform.backends.docker.os.execvp") as mock_execvp,
         ):
             # Mock successful shell detection for bash
             mock_run.return_value = Mock(returncode=0)
@@ -83,8 +83,8 @@ class TestDockerConnect:
             patch.object(
                 docker_service, "get_deployment_info", return_value=container_info
             ),
-            patch("mcp_template.backends.docker.subprocess.run") as mock_run,
-            patch("mcp_template.backends.docker.os.execvp") as mock_execvp,
+            patch("mcp_platform.backends.docker.subprocess.run") as mock_run,
+            patch("mcp_platform.backends.docker.os.execvp") as mock_execvp,
         ):
             # Mock shell detection failure, forcing fallback
             mock_run.side_effect = subprocess.CalledProcessError(1, "which")
@@ -106,9 +106,9 @@ class TestDockerConnect:
             patch.object(
                 docker_service, "get_deployment_info", return_value=container_info
             ),
-            patch("mcp_template.backends.docker.subprocess.run") as mock_run,
+            patch("mcp_platform.backends.docker.subprocess.run") as mock_run,
             patch(
-                "mcp_template.backends.docker.os.execvp",
+                "mcp_platform.backends.docker.os.execvp",
                 side_effect=Exception("Connection failed"),
             ),
         ):
@@ -130,8 +130,8 @@ class TestDockerConnect:
             patch.object(
                 docker_service, "get_deployment_info", return_value=container_info
             ),
-            patch("mcp_template.backends.docker.subprocess.run") as mock_run,
-            patch("mcp_template.backends.docker.os.execvp") as mock_execvp,
+            patch("mcp_platform.backends.docker.subprocess.run") as mock_run,
+            patch("mcp_platform.backends.docker.os.execvp") as mock_execvp,
         ):
             # Mock timeout during shell detection
             mock_run.side_effect = subprocess.TimeoutExpired("which", 5)
@@ -151,8 +151,8 @@ class TestDockerConnect:
             patch.object(
                 docker_service, "get_deployment_info", return_value=container_info
             ),
-            patch("mcp_template.backends.docker.subprocess.run") as mock_run,
-            patch("mcp_template.backends.docker.os.execvp") as mock_execvp,
+            patch("mcp_platform.backends.docker.subprocess.run") as mock_run,
+            patch("mcp_platform.backends.docker.os.execvp") as mock_execvp,
         ):
             # Mock successful detection of bash (first shell to try)
             def mock_run_side_effect(cmd, **kwargs):
@@ -180,8 +180,8 @@ class TestDockerConnect:
             patch.object(
                 docker_service, "get_deployment_info", return_value=container_info
             ),
-            patch("mcp_template.backends.docker.subprocess.run") as mock_run,
-            patch("mcp_template.backends.docker.os.execvp") as mock_execvp,
+            patch("mcp_platform.backends.docker.subprocess.run") as mock_run,
+            patch("mcp_platform.backends.docker.os.execvp") as mock_execvp,
         ):
             # Mock both bash and sh being available
             mock_run.return_value = Mock(returncode=0)

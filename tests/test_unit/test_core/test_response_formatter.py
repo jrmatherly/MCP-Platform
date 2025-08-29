@@ -282,7 +282,7 @@ class TestDisplayFormatters:
         assert table.title == "User Data (3 rows)"
         assert len(table.columns) == 3
 
-    @patch("mcp_template.core.response_formatter.console")
+    @patch("mcp_platform.core.response_formatter.console")
     def test_beautify_json_key_value(self, mock_console):
         """Test beautify_json with key-value data."""
         data = {"name": "test", "version": "1.0", "active": True}
@@ -293,7 +293,7 @@ class TestDisplayFormatters:
             # Either the global console or the instance console should be called
             assert mock_console.print.called or mock_instance_console.print.called
 
-    @patch("mcp_template.core.response_formatter.console")
+    @patch("mcp_platform.core.response_formatter.console")
     def test_beautify_json_table(self, mock_console):
         """Test beautify_json with tabular data."""
         data = [{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}]
@@ -302,7 +302,7 @@ class TestDisplayFormatters:
             self.formatter.beautify_json(data, "User Data")
             assert mock_console.print.called or mock_instance_console.print.called
 
-    @patch("mcp_template.core.response_formatter.console")
+    @patch("mcp_platform.core.response_formatter.console")
     def test_beautify_json_empty(self, mock_console):
         """Test beautify_json with empty collection."""
         data = []
@@ -311,7 +311,7 @@ class TestDisplayFormatters:
             self.formatter.beautify_json(data, "Empty Data")
             assert mock_console.print.called or mock_instance_console.print.called
 
-    @patch("mcp_template.core.response_formatter.console")
+    @patch("mcp_platform.core.response_formatter.console")
     def test_beautify_json_text(self, mock_console):
         """Test beautify_json with plain text."""
         data = "This is plain text"

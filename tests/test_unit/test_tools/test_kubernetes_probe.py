@@ -1,5 +1,5 @@
 """
-Unit tests for the Kubernetes probe module (mcp_template.tools.kubernetes_probe).
+Unit tests for the Kubernetes probe module (mcp_platform.tools.kubernetes_probe).
 
 Tests Kubernetes pod-based MCP server tool discovery functionality.
 """

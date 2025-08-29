@@ -1,5 +1,5 @@
 """
-Integration tests for the tools module (mcp_template.tools.*).
+Integration tests for the tools module (mcp_platform.tools.*).
 
 Tests end-to-end tool discovery workflows across different container platforms.
 """

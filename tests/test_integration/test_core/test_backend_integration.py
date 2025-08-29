@@ -179,7 +179,7 @@ class TestToolManagerBackendIntegration(unittest.TestCase):
         from mcp_platform.core.tool_manager import ToolManager
 
         # Test Docker backend
-        with patch("mcp_template.core.tool_manager.get_backend") as mock_get_backend:
+        with patch("mcp_platform.core.tool_manager.get_backend") as mock_get_backend:
             mock_docker_instance = Mock()
             mock_get_backend.return_value = mock_docker_instance
 
@@ -194,7 +194,7 @@ class TestToolManagerBackendIntegration(unittest.TestCase):
         from mcp_platform.core.tool_manager import ToolManager
 
         # Test Kubernetes backend
-        with patch("mcp_template.core.tool_manager.get_backend") as mock_get_backend:
+        with patch("mcp_platform.core.tool_manager.get_backend") as mock_get_backend:
             mock_k8s_instance = Mock()
             mock_get_backend.return_value = mock_k8s_instance
 
@@ -208,7 +208,7 @@ class TestToolManagerBackendIntegration(unittest.TestCase):
         """Test discover_tools_from_image method functionality."""
         from mcp_platform.core.tool_manager import ToolManager
 
-        with patch("mcp_template.core.tool_manager.get_backend"):
+        with patch("mcp_platform.core.tool_manager.get_backend"):
             tool_manager = ToolManager(backend_type="docker")
 
             # Mock the entire discover_tools_from_image method to test integration
@@ -228,7 +228,7 @@ class TestToolManagerBackendIntegration(unittest.TestCase):
         """Test discover_tools_from_image method functionality for kubernetes backend."""
         from mcp_platform.core.tool_manager import ToolManager
 
-        with patch("mcp_template.core.tool_manager.get_backend"):
+        with patch("mcp_platform.core.tool_manager.get_backend"):
             tool_manager = ToolManager(backend_type="kubernetes")
 
             # Mock the entire discover_tools_from_image method to test integration
@@ -244,7 +244,7 @@ class TestToolManagerBackendIntegration(unittest.TestCase):
                 mock_discover.assert_called_once_with("test-image:latest", timeout=30)
                 self.assertEqual(result, [{"name": "test_tool"}])
 
-    @patch("mcp_template.tools.docker_probe.DockerProbe.discover_tools_from_image")
+    @patch("mcp_platform.tools.docker_probe.DockerProbe.discover_tools_from_image")
     def test_template_discovery_uses_docker_for_dynamic_templates(
         self, mock_docker_discovery
     ):
@@ -266,7 +266,7 @@ class TestToolManagerBackendIntegration(unittest.TestCase):
         }
 
         # Create tool manager with Docker backend
-        with patch("mcp_template.core.tool_manager.get_backend"):
+        with patch("mcp_platform.core.tool_manager.get_backend"):
             tool_manager = ToolManager(backend_type="docker")
 
             # Test Docker image discovery
