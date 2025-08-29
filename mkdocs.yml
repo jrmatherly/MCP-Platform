@@ -111,6 +111,6 @@ extra:
   - icon: fontawesome/brands/github
     link: https://github.com/Data-Everything
   - icon: fontawesome/brands/python
-    link: https://pypi.org/project/mcp-templates/
+    link: https://pypi.org/project/mcp-platform/
 extra_css:
 - stylesheets/extra.css
