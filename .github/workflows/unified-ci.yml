@@ -6,6 +6,13 @@ on:
     tags: ["release-pypi-*"]  # Run on PyPI release tags
   pull_request:
     branches: ["main"]  # Run on all PRs
+  workflow_dispatch:  # Allow manual triggering
+    inputs:
+      deploy_to_pypi:
+        description: 'Deploy to PyPI (requires PyPI release tag)'
+        required: false
+        default: false
+        type: boolean
 
 env:
   PYTHON_VERSION: '3.11'
@@ -78,7 +85,7 @@ jobs:
 
   unit-tests:
     runs-on: ubuntu-latest
-    if: ${{ !(github.event_name == 'pull_request' || github.ref == 'refs/heads/main') }}
+    if: ${{ !(github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/release-pypi-')) }}
     needs: quick-validation
     steps:
     - uses: actions/checkout@v4
@@ -112,7 +119,7 @@ jobs:
 
   docker-tests:
     runs-on: ubuntu-latest
-    if: ${{ !(github.event_name == 'pull_request' || github.ref == 'refs/heads/main') }}
+    if: ${{ !(github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/release-pypi-')) }}
     needs: quick-validation
 
     steps:
@@ -148,7 +155,7 @@ jobs:
 
   kubernetes-tests:
     runs-on: ubuntu-latest
-    if: ${{ !(github.event_name == 'pull_request' || github.ref == 'refs/heads/main') }}
+    if: ${{ !(github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/release-pypi-')) }}
     needs: quick-validation
     steps:
     - uses: actions/checkout@v4
@@ -186,7 +193,7 @@ jobs:
 
   template-tests:
     runs-on: ubuntu-latest
-    if: ${{ !(github.event_name == 'pull_request' || github.ref == 'refs/heads/main') }}
+    if: ${{ !(github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/release-pypi-')) }}
     needs: quick-validation
     strategy:
       matrix:
@@ -215,7 +222,7 @@ jobs:
 
   integration-tests:
     runs-on: ubuntu-latest
-    if: ${{ !(github.event_name == 'pull_request' || github.ref == 'refs/heads/main') }}
+    if: ${{ !(github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/release-pypi-')) }}
     needs: quick-validation
 
     steps:
@@ -257,7 +264,7 @@ jobs:
 
   full-test-suite:
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/release-pypi-') || github.event.inputs.deploy_to_pypi == 'true'
     needs: quick-validation
     steps:
     - uses: actions/checkout@v4
@@ -324,7 +331,7 @@ jobs:
 
   coverage-check:
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/release-pypi-') || github.event.inputs.deploy_to_pypi == 'true'
     needs: [full-test-suite]
     steps:
     - name: Download coverage XML
@@ -376,10 +383,10 @@ jobs:
         print('Coverage requirement satisfied')
         PY
 
-  # Multi-Python version testing (only on main branch and release tags)
+  # Multi-Python version testing (only on main branch, release tags, and manual PyPI deployment)
   multi-python-tests:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || contains(github.ref, 'release-pypi-')
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/release-pypi-') || github.event.inputs.deploy_to_pypi == 'true'
     needs: [quick-validation]
     strategy:
       matrix:
@@ -398,26 +405,46 @@ jobs:
         pip install -r requirements.txt
         pip install -r requirements-dev.txt
 
-    - name: Run core tests on Python ${{ matrix.python-version }}
+    - name: Run comprehensive tests on Python ${{ matrix.python-version }}
       run: |
+        echo "🧪 Running comprehensive test suite on Python ${{ matrix.python-version }}..."
         python -m pytest tests/test_unit -m "unit and not docker and not kubernetes" \
           --tb=short \
-          --disable-warnings
+          --disable-warnings \
+          --cov=mcp_platform \
+          --cov-report=term-missing
 
-  # PyPI deployment (only on release tags)
+  # PyPI deployment (only on release tags or manual dispatch)
   deploy-pypi:
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/release-pypi-')
-    needs: [full-test-suite, code-quality, multi-python-tests]
+    if: startsWith(github.ref, 'refs/tags/release-pypi-') || github.event.inputs.deploy_to_pypi == 'true'
+    needs: [full-test-suite, coverage-check, code-quality, multi-python-tests]
     environment:
       name: pypi
-      url: https://pypi.org/p/mcp-template
+      url: https://pypi.org/p/mcp-platform
     permissions:
       id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
     steps:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
+
+    - name: Validate PyPI deployment conditions
+      run: |
+        if [[ "${{ github.event.inputs.deploy_to_pypi }}" == "true" ]]; then
+          if [[ ! "${{ github.ref }}" =~ ^refs/tags/release-pypi- ]]; then
+            echo "❌ ERROR: Manual PyPI deployment can only be triggered on a release-pypi-* tag"
+            echo "Current ref: ${{ github.ref }}"
+            echo "Please checkout a PyPI release tag and try again"
+            exit 1
+          fi
+          echo "✅ Manual PyPI deployment validated for tag: ${{ github.ref }}"
+        elif [[ "${{ github.ref }}" =~ ^refs/tags/release-pypi- ]]; then
+          echo "✅ Automatic PyPI deployment triggered by tag: ${{ github.ref }}"
+        else
+          echo "❌ ERROR: PyPI deployment should only happen on release-pypi-* tags"
+          exit 1
+        fi
 
     - name: Set up Python ${{ env.PYTHON_VERSION }}
       uses: actions/setup-python@v5
@@ -436,7 +463,24 @@ jobs:
 
     - name: Show package version (from git tag)
       run: |
-        python -c "from mcp_platform import __version__; print(f'PyPI version from git tag: {__version__}')"
+        # Extract version from tag
+        if [[ "${{ github.ref }}" =~ ^refs/tags/release-pypi-(.+)$ ]]; then
+          TAG_VERSION="${BASH_REMATCH[1]}"
+          echo "Expected version from tag: $TAG_VERSION"
+        else
+          echo "❌ ERROR: Could not extract version from tag ${{ github.ref }}"
+          exit 1
+        fi
+
+        # Show package version detection
+        PACKAGE_VERSION=$(python -c "from mcp_platform import __version__; print(__version__)")
+        echo "Package version: $PACKAGE_VERSION"
+
+        # Verify versions match
+        if [[ "$PACKAGE_VERSION" != "$TAG_VERSION" ]]; then
+          echo "⚠️  WARNING: Package version ($PACKAGE_VERSION) doesn't match tag version ($TAG_VERSION)"
+          echo "This might be expected if using setuptools_scm dynamic versioning"
+        fi
 
     - name: Check version from setuptools_scm
       run: |
@@ -454,6 +498,32 @@ jobs:
     - name: Check package
       run: |
         python -m twine check dist/*
+
+    - name: Pre-deployment verification
+      run: |
+        echo "🔍 Pre-deployment verification..."
+
+        # Test package installation
+        pip install dist/*.whl
+
+        # Test basic functionality
+        python -c "
+        import mcp_platform
+        print(f'✅ Successfully imported mcp_platform version {mcp_platform.__version__}')
+
+        # Test core functionality
+        from mcp_platform import TemplateDiscovery, DeploymentManager
+        discovery = TemplateDiscovery()
+        templates = discovery.discover_templates()
+        print(f'✅ Template discovery works: found {len(templates)} templates')
+
+        manager = DeploymentManager(backend_type='mock')
+        print('✅ DeploymentManager initialization works')
+        "
+
+        # Test CLI
+        mcp-platform --version
+        echo "✅ CLI works correctly"
 
     - name: Publish to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
