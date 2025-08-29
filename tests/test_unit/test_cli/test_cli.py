@@ -353,7 +353,7 @@ class TestCLICommands:
         """Test main callback function."""
         result = self.runner.invoke(app, ["--help"])
         assert result.exit_code == 0
-        assert "MCP Template CLI" in result.output
+        assert "MCP Platform CLI" in result.output
 
     def test_install_completion_command(self):
         """Test install completion command."""

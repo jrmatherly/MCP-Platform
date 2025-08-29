@@ -217,8 +217,8 @@ class InteractiveSession:
     def get_prompt(self) -> str:
         """Get the interactive prompt based on current state."""
         if self.selected_template:
-            return f"mcpt({self.selected_template})> "
-        return "mcpt> "
+            return f"mcpp({self.selected_template})> "
+        return "mcpp> "
 
 
 # Global session instance
