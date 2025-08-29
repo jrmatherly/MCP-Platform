@@ -3,4 +3,11 @@ try:
 
     __version__ = get_version(root="..", relative_to=__file__)
 except (ImportError, LookupError, Exception):
-    __version__ = "0.0.0"
+    # Fallback for installed packages: try to get version from package metadata
+    try:
+        from importlib.metadata import version
+
+        __version__ = version("mcp-platform")
+    except Exception:
+        # Final fallback
+        __version__ = "0.0.0"

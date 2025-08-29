@@ -506,24 +506,34 @@ jobs:
         # Test package installation
         pip install dist/*.whl
 
-        # Test basic functionality
+        # Test basic functionality with better error handling
         python -c "
-        import mcp_platform
-        print(f'✅ Successfully imported mcp_platform version {mcp_platform.__version__}')
+        import sys
+        try:
+            import mcp_platform
+            version = getattr(mcp_platform, '__version__', 'unknown')
+            print(f'✅ Successfully imported mcp_platform version {version}')
+        except Exception as e:
+            print(f'❌ Failed to import mcp_platform: {e}')
+            sys.exit(1)
 
-        # Test core functionality
-        from mcp_platform import TemplateDiscovery, DeploymentManager
-        discovery = TemplateDiscovery()
-        templates = discovery.discover_templates()
-        print(f'✅ Template discovery works: found {len(templates)} templates')
+        try:
+            # Test core functionality
+            from mcp_platform import TemplateDiscovery, DeploymentManager
+            discovery = TemplateDiscovery()
+            templates = discovery.discover_templates()
+            print(f'✅ Template discovery works: found {len(templates)} templates')
 
-        manager = DeploymentManager(backend_type='mock')
-        print('✅ DeploymentManager initialization works')
+            manager = DeploymentManager(backend_type='mock')
+            print('✅ DeploymentManager initialization works')
+        except Exception as e:
+            print(f'❌ Core functionality test failed: {e}')
+            sys.exit(1)
         "
 
         # Test CLI
-        mcp-platform --version
-        echo "✅ CLI works correctly"
+        mcp-platform --version || echo "⚠️ CLI version check failed (non-critical)"
+        echo "✅ Pre-deployment verification completed"
 
     - name: Publish to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1

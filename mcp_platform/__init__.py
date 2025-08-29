@@ -22,6 +22,8 @@ Key Features:
 
 import logging
 
+# Import version
+from mcp_platform.__version__ import __version__
 from mcp_platform.backends.docker import DockerDeploymentService
 from mcp_platform.cli import app
 from mcp_platform.client import MCPClient
@@ -41,6 +43,7 @@ __all__ = [
     "TemplateManager",
     "CommonDeploymentManager",
     "ToolManager",
+    "__version__",
 ]
 
 # Constants
