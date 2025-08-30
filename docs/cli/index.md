@@ -139,8 +139,8 @@ mcpp connect demo --llm vscode
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `MCP_TEMPLATE_DEFAULT_BACKEND` | Default deployment backend | `docker` |
-| `MCP_TEMPLATE_CONFIG_PATH` | Default configuration directory | `~/.mcp-template` |
+| `MCP_PLATFORM_DEFAULT_BACKEND` | Default deployment backend | `docker` |
+| `MCP_PLATFORM_CONFIG_PATH` | Default configuration directory | `~/.mcp-platform` |
 | `MCP_DEBUG` | Enable debug logging | `false` |
 | `DOCKER_HOST` | Docker daemon host (for Docker backend) | `unix:///var/run/docker.sock` |
 

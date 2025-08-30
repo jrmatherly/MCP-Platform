@@ -25,11 +25,11 @@ Join our [Discord Community](https://discord.gg/55Cfxe9gnr) for support, discuss
 
 -   ⚡ **[Getting Started](getting-started/installation.md)**
 
-    Install MCP Templates and deploy your first server in under 2 minutes
+    Install MCP Platform and deploy your first server in under 2 minutes
 
 -   💻 **[CLI Reference](cli/index.md)**
 
-    Complete command reference for the `mcp-template` CLI tool
+    Complete command reference for the `mcpp` CLI tool
 
 -   📦 **[Server Templates](templates/index.md)**
 
@@ -49,13 +49,13 @@ Join our [Discord Community](https://discord.gg/55Cfxe9gnr) for support, discuss
 
 </div>
 
-## ⚡ What is MCP Templates?
+## ⚡ What is MCP Platform?
 
-MCP Server Templates is a **self-hosted deployment system** that enables rapid deployment, management, and scaling of Model Context Protocol servers on your own infrastructure.
+MCP Platform is a **self-hosted deployment system** that enables rapid deployment, management, and scaling of Model Context Protocol servers on your own infrastructure.
 
 ### Key Benefits
 
-| Traditional MCP Setup | With MCP Templates |
+| Traditional MCP Setup | With MCP Platform |
 |----------------------|-------------------|
 | ❌ Complex server configuration | ✅ One-command deployment |
 | ❌ Docker knowledge required | ✅ Zero configuration needed |
@@ -421,7 +421,7 @@ The system uses a simple architecture designed for self-hosted deployments:
 ```
 
 **Key Components:**
-- **CLI Interface** - Rich command-line interface (`mcp-template`)
+- **CLI Interface** - Rich command-line interface (`mcpp`)
 - **Template Discovery** - Automatic detection and validation of templates
 - **Docker Backend** - Container-based deployment with volume management
 - **Configuration System** - Multi-source configuration with type conversion
@@ -505,4 +505,4 @@ This project is licensed under the MIT License - see the [LICENSE](https://githu
 
 ---
 
-*MCP Server Templates - Deploy AI-connected services on your own infrastructure.*
+*MCP Platform - Deploy AI-connected services on your own infrastructure.*

@@ -291,12 +291,12 @@ def check_deployment_health():
 ## Configuration
 
 ### Default Settings
-- **Backend**: Docker (can be overridden with `MCP_TEMPLATE_DEFAULT_BACKEND`)
+- **Backend**: Docker (can be overridden with `MCP_PLATFORM_DEFAULT_BACKEND`)
 - **Format**: Table (can be overridden with `MCP_LIST_DEFAULT_FORMAT`)
 - **Refresh Interval**: 30 seconds for cached data
 
 ### Environment Variables
-- `MCP_TEMPLATE_DEFAULT_BACKEND`: Default backend to query
+- `MCP_PLATFORM_DEFAULT_BACKEND`: Default backend to query
 - `MCP_LIST_DEFAULT_FORMAT`: Default output format
 - `MCP_LIST_SHOW_STOPPED`: Include stopped deployments by default
 

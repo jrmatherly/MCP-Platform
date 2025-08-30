@@ -618,7 +618,7 @@ curl -X POST "http://localhost:8000/mcp/rpc" \\
             ],
             "support_resources": [
                 "MCP Protocol Documentation: https://modelcontextprotocol.io/docs",
-                "Template Issues: https://github.com/data-everything/mcp-server-templates/issues",
+                "Template Issues: https://github.com/Data-Everything/MCP-Platform/issues",
                 "Docker Documentation: https://docs.docker.com/",
                 "FastMCP Documentation: https://fastmcp.com/",
             ],

@@ -1,5 +1,5 @@
 """
-MCP Template Utilities
+MCP Platform Utilities
 """
 
 from pathlib import Path
