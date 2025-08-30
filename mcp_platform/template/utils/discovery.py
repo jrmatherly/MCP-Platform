@@ -1,5 +1,5 @@
 """
-Template discovery module for MCP server templates.
+Template discovery module for MCP Platform server templates.
 """
 
 import json

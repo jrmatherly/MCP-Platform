@@ -489,8 +489,8 @@ The configuration file is a JSON file that can be used with the `create` and `de
 
 ## Environment Variables
 
-- `MCP_TEMPLATE_DEFAULT_BACKEND` - Default deployment backend (docker, k8s, mock)
-- `MCP_TEMPLATE_CONFIG_PATH` - Default configuration file path
+- `MCP_PLATFORM_DEFAULT_BACKEND` - Default deployment backend (docker, k8s, mock)
+- `MCP_PLATFORM_CONFIG_PATH` - Default configuration file path
 - `DOCKER_HOST` - Docker daemon host (for Docker backend)
 
 ## Exit Codes

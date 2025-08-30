@@ -1,10 +1,10 @@
-# MCP Server Templates
+# MCP Platform Templates
 
-Welcome to the MCP Server Templates documentation! This section provides comprehensive information about available Model Context Protocol (MCP) server templates that you can use to quickly deploy MCP servers for various use cases.
+Welcome to the MCP Platform Templates documentation! This section provides comprehensive information about available Model Context Protocol (MCP) server templates that you can use to quickly deploy MCP servers for various use cases.
 
-## What are MCP Server Templates?
+## What are MCP Platform Templates?
 
-MCP Server Templates are pre-configured, production-ready templates that implement the Model Context Protocol specification. Each template is designed for specific use cases and comes with:
+MCP Platform Templates are pre-configured, production-ready templates that implement the Model Context Protocol specification. Each template is designed for specific use cases and comes with:
 
 - 🔧 **Complete configuration files**
 - 📖 **Comprehensive documentation**
