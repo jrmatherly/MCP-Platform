@@ -27,6 +27,7 @@ class TemplateManager:
 
     def __init__(self, backend_type: str = "docker"):
         """Initialize the template manager."""
+        # Use default initialization to get all template directories (built-in + custom)
         self.template_discovery = TemplateDiscovery()
         self.backend = get_backend(backend_type)
         self.cache_manager = CacheManager(

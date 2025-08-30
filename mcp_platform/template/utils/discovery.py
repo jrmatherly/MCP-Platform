@@ -5,9 +5,9 @@ Template discovery module for MCP Platform server templates.
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
-from mcp_platform.utils import TEMPLATES_DIR
+from mcp_platform.utils import TEMPLATES_DIR, get_all_template_directories
 
 logger = logging.getLogger(__name__)
 
@@ -20,33 +20,62 @@ DEFAULT_LOGS_PATH = "/logs"
 class TemplateDiscovery:
     """Dynamic template discovery from templates directory."""
 
-    def __init__(self, templates_dir: Optional[Path] = None):
-        """Initialize template discovery."""
-        if templates_dir is None:
-            # Default to templates directory relative to this file
-            self.templates_dir = TEMPLATES_DIR
+    def __init__(
+        self,
+        templates_dir: Optional[Path] = None,
+        templates_dirs: Optional[List[Path]] = None,
+    ):
+        """Initialize template discovery.
+
+        Args:
+            templates_dir: Single template directory (for backward compatibility)
+            templates_dirs: List of template directories (new functionality)
+        """
+        if templates_dirs is not None:
+            # Use provided list of directories
+            self.templates_dirs = templates_dirs
+        elif templates_dir is not None:
+            # Use single directory (backward compatibility)
+            self.templates_dirs = [templates_dir]
         else:
-            self.templates_dir = templates_dir
+            # Default to all template directories (built-in + custom)
+            self.templates_dirs = get_all_template_directories()
+
+        # Keep templates_dir for backward compatibility
+        self.templates_dir = (
+            self.templates_dirs[0] if self.templates_dirs else TEMPLATES_DIR
+        )
 
     def discover_templates(self) -> Dict[str, Dict[str, Any]]:
-        """Discover all valid templates in the templates directory."""
+        """Discover all valid templates in all template directories."""
         templates = {}
-        if not self.templates_dir.exists():
-            logger.warning("Templates directory not found: %s", self.templates_dir)
-            return templates
 
-        for template_dir in self.templates_dir.iterdir():
-            if not template_dir.is_dir():
+        # Iterate through directories in reverse order so first directory (custom) takes precedence
+        for templates_dir in reversed(self.templates_dirs):
+            if not templates_dir.exists():
+                logger.debug("Templates directory not found: %s", templates_dir)
                 continue
 
-            template_name = template_dir.name
-            template_config = self._load_template_config(template_dir)
+            for template_dir in templates_dir.iterdir():
+                if not template_dir.is_dir():
+                    continue
 
-            if template_config:
-                templates[template_name] = template_config
-                logger.debug("Discovered template: %s", template_name)
-            else:
-                logger.debug("Skipped invalid template: %s", template_name)
+                template_name = template_dir.name
+                template_config = self._load_template_config(template_dir)
+
+                if template_config:
+                    # Mark source of template for debugging
+                    template_config["source_directory"] = str(templates_dir)
+                    templates[template_name] = template_config
+                    logger.debug(
+                        "Discovered template: %s from %s", template_name, templates_dir
+                    )
+                else:
+                    logger.debug(
+                        "Skipped invalid template: %s from %s",
+                        template_name,
+                        templates_dir,
+                    )
 
         return templates
 
@@ -132,16 +161,20 @@ class TemplateDiscovery:
 
     def get_template_config(self, template_name: str) -> Optional[Dict[str, Any]]:
         """Get configuration for a specific template."""
-        template_dir = self.templates_dir / template_name
-        if not template_dir.exists():
-            return None
-        return self._load_template_config(template_dir)
+        # Search in all template directories, first match wins (custom overrides built-in)
+        for templates_dir in self.templates_dirs:
+            template_dir = templates_dir / template_name
+            if template_dir.exists():
+                return self._load_template_config(template_dir)
+        return None
 
     def get_template_path(self, template_name: str) -> Optional[Path]:
         """Get the path to a specific template."""
-        template_dir = self.templates_dir / template_name
-        if template_dir.exists() and template_dir.is_dir():
-            return template_dir
+        # Search in all template directories, first match wins (custom overrides built-in)
+        for templates_dir in self.templates_dirs:
+            template_dir = templates_dir / template_name
+            if template_dir.exists() and template_dir.is_dir():
+                return template_dir
         return None
 
     def _get_docker_image(
