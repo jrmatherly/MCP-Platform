@@ -104,7 +104,7 @@ class GatewayIntegration:
                 existing.container_id = instance.container_id
                 existing.deployment_id = instance.deployment_id
                 existing.env_vars = instance.env_vars
-                existing.metadata = instance.metadata
+                existing.instance_metadata = instance.instance_metadata
             else:
                 # Create load balancer config if template doesn't exist
                 lb_config = self._get_load_balancer_config(deployment_info)

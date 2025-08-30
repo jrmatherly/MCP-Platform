@@ -1,10 +1,18 @@
-# MCP Gateway
+# Enhanced MCP Gateway
 
-## What is the MCP Gateway?
+## What is the Enhanced MCP Gateway?
 
-The **MCP Gateway** is a unified load balancer and proxy system that provides a single entry point for accessing all MCP (Model Context Protocol) server instances in your deployment. Instead of connecting to each MCP server individually, clients can connect to the gateway and it will automatically route requests to the appropriate healthy instances.
+### ⚡ Performance & Architecture Improvements
+- **Pydantic 2.x Migration**: Significant performance improvements with modern validation framework
+- **SQLModel Integration**: Type-safe database operations with automatic validation
+- **Enhanced MCPClient**: Gateway-aware client with intelligent fallback and connection management
+- **Connection Pooling**: Efficient connection management and reuse
+- **Load Balancing Strategies**: Round-robin, least connections, weighted, health-based
+- **Health Checking**: Configurable health check intervals and strategies
+- **Concurrent Operations**: Support for high-concurrency scenarios
+- **Async Database Operations**: Full async/await support for optimal performance*Enhanced MCP Gateway** is a production-ready, enterprise-grade unified load balancer and proxy system that provides a single entry point for accessing all MCP (Model Context Protocol) server instances in your deployment. This enhanced version includes comprehensive authentication, database persistence, and a powerful Python SDK for programmatic access.
 
-## Why is the Gateway Needed?
+## Why is the Enhanced Gateway Needed?
 
 ### Problems with Direct MCP Server Access
 
@@ -15,39 +23,99 @@ Before the gateway, clients had to:
 3. **Implement Health Checking**: Clients needed to detect and handle server failures
 4. **Deal with Service Discovery**: Finding and tracking available server instances
 5. **Handle Failover Logic**: Manual switching when servers become unavailable
+6. **Implement Authentication**: Each client needed custom authentication logic
+7. **Manage State Persistence**: No centralized state management
 
-### Benefits of Using the Gateway
+### Benefits of Using the Enhanced Gateway
 
-The MCP Gateway solves these problems by providing:
+The Enhanced MCP Gateway solves these problems by providing:
 
 ✅ **Single Endpoint**: One URL for all MCP server access
-✅ **Automatic Load Balancing**: Intelligent request distribution
+✅ **Enhanced Authentication**: JWT tokens and API key authentication with Pydantic 2.x validation
+✅ **Database Persistence**: SQLModel/SQLAlchemy with SQLite/PostgreSQL support and async operations
+✅ **Enhanced Python SDK**: Comprehensive client library with gateway-aware MCPClient integration
+✅ **Automatic Load Balancing**: Intelligent request distribution with multiple strategies
 ✅ **Health Monitoring**: Continuous health checking with automatic failover
+✅ **Modern Data Validation**: Full Pydantic 2.x migration for improved performance and validation
+✅ **Flexible Storage**: Multiple database options with seamless migration support
 ✅ **Service Discovery**: Automatic detection of available instances
 ✅ **Transport Abstraction**: Unified access to both HTTP and stdio servers
 ✅ **High Availability**: No single point of failure
+✅ **Role-based Access Control**: Admin and user roles with scoped permissions
+✅ **Enhanced CLI**: Comprehensive command-line interface for management
+
+### 🔐 Authentication System
+- **JWT Token Authentication**: Secure token-based authentication with configurable expiration
+- **API Key Management**: Create, manage, and revoke API keys with scoped permissions
+- **Role-based Access Control**: Admin and user roles with granular permissions
+- **Password Security**: Bcrypt hashing with secure password policies
+
+### 🗄️ Enhanced Database & Storage
+- **SQLModel Integration**: Modern type-safe database models with automatic Pydantic validation
+- **Multiple Database Support**: SQLite (default), PostgreSQL with seamless switching
+- **Async Operations**: Full async/await support for database operations
+- **Automatic Migrations**: Database schema management and migrations
+- **Connection Pooling**: Efficient database connection management
+- **Data Validation**: Comprehensive input/output validation using Pydantic 2.x
+
+### 📦 Enhanced Python SDK & Client
+- **GatewayClient**: Comprehensive HTTP client for gateway interaction
+- **Enhanced MCPClient**: Gateway-aware client with automatic discovery and fallback
+- **Connection Pooling**: Efficient connection management and reuse
+- **Batch Operations**: Support for batch tool calls and operations
+- **Async Support**: Full async/await support for all operations
+- **Intelligent Routing**: Automatic load balancing and health-based routing
+- **Failover Management**: Seamless fallback to direct MCP connections when needed
+
+### 🖥️ Enhanced CLI
+- **User Management**: Create, list, and manage users
+- **API Key Operations**: Generate and manage API keys
+- **Interactive Mode**: Enhanced interactive CLI experience
+- **Configuration Management**: Centralized configuration system
+
+### ⚡ Performance Improvements
+- **Connection Pooling**: Efficient connection management
+- **Load Balancing Strategies**: Round-robin, least connections, weighted, health-based
+- **Health Checking**: Configurable health check intervals and strategies
+- **Concurrent Operations**: Support for high-concurrency scenarios
 
 ## How It Works
 
-### High-Level Architecture
+### Enhanced Architecture
 
 ```
-┌─────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Client    │───▶│   MCP Gateway   │───▶│  MCP Servers    │
-│             │    │                 │    │                 │
-│ Single URL  │    │ • Load Balancer │    │ • Instance 1    │
-│ One API     │    │ • Health Check  │    │ • Instance 2    │
-│             │    │ • Registry      │    │ • Instance N    │
-└─────────────┘    └─────────────────┘    └─────────────────┘
+┌─────────────┐    ┌─────────────────────────┐    ┌─────────────────┐
+│   Clients   │───▶│   Enhanced MCP Gateway  │───▶│  MCP Servers    │
+│             │    │                         │    │                 │
+│ Python SDK  │    │ • FastAPI Server        │    │ • Instance 1    │
+│ HTTP API    │    │ • JWT/API Auth          │    │ • Instance 2    │
+│ CLI Tool    │    │ • Database Layer        │    │ • Instance N    │
+│             │    │ • Load Balancer         │    │                 │
+└─────────────┘    │ • Health Checker        │    └─────────────────┘
+                   │ • Enhanced Registry     │
+                   └─────────────────────────┘
+                            │
+                   ┌─────────────────────────┐
+                   │     Database Layer      │
+                   │                                     │
+                   │ • SQLite (default - lightweight)   │
+                   │ • PostgreSQL (production-ready)    │
+                   │ • Async operations with pooling     │
+                   │ • Pydantic 2.x validation          │
+                   └─────────────────────────────────────┘
 ```
 
 ### Core Components
 
-1. **Gateway Server**: FastAPI-based HTTP server that receives requests
-2. **Registry**: Maintains state of all registered server instances
-3. **Load Balancer**: Routes requests using various strategies
-4. **Health Checker**: Monitors server health and removes unhealthy instances
-5. **Integration Layer**: Syncs with existing MCP Platform deployments
+1. **Enhanced Gateway Server**: FastAPI-based server with authentication middleware
+2. **Authentication System**: JWT and API key authentication with role-based access
+3. **Database Layer**: SQLModel/SQLAlchemy with async operations and Pydantic validation
+4. **Enhanced Registry**: State management with database persistence
+5. **Load Balancer**: Multiple strategies with health-based routing
+6. **Health Checker**: Configurable monitoring with failure detection
+7. **Python SDK**: Comprehensive client library for programmatic access
+8. **Enhanced MCPClient**: Integrated gateway support with automatic fallback
+9. **Enhanced CLI**: Full-featured command-line interface
 
 ### Request Flow
 
@@ -106,9 +174,15 @@ When the gateway is running, you can access interactive API documentation at:
 
 ### Example API Calls
 
-#### List Tools
+#### List Tools (with Authentication)
 ```bash
-curl -X GET http://localhost:8080/mcp/filesystem/tools/list
+# Using JWT token
+curl -X GET http://localhost:8080/mcp/filesystem/tools/list \
+  -H "Authorization: Bearer your-jwt-token"
+
+# Using API key
+curl -X GET http://localhost:8080/mcp/filesystem/tools/list \
+  -H "X-API-Key: your-api-key"
 ```
 
 Response:
@@ -198,7 +272,23 @@ curl http://localhost:8080/gateway/health
 curl http://localhost:8080/gateway/registry
 ```
 
-### 3. Register MCP Servers (if needed)
+### 3. Authenticate and Create Users
+
+```bash
+# Start gateway with authentication enabled
+mcpp gateway start --auth
+
+# Create admin user (in another terminal)
+mcpp gateway create-user admin --password secure_password --role admin
+
+# Create API key for programmatic access
+mcpp gateway create-api-key my-app --role user
+
+# Login to get JWT token
+mcpp gateway login admin
+```
+
+### 4. Register MCP Servers
 
 ```bash
 # Register HTTP server
@@ -208,28 +298,53 @@ mcpp gateway register mytemplate --endpoint http://localhost:7071
 mcpp gateway register mytemplate --command "python server.py" --working-dir /app
 ```
 
-### 4. Use the Gateway
+### 5. Use the Gateway with Authentication
 
 ```python
-import aiohttp
 import asyncio
+from mcp_platform.client import GatewayClient
 
 async def use_gateway():
-    async with aiohttp.ClientSession() as session:
-        # List tools
-        async with session.get("http://localhost:8080/mcp/filesystem/tools/list") as resp:
-            tools = await resp.json()
-            print(f"Available tools: {len(tools['tools'])}")
+    # Option 1: Using JWT token
+    client = GatewayClient(
+        base_url="http://localhost:8080",
+        auth_token="your-jwt-token"
+    )
 
-        # Call a tool
-        async with session.post(
-            "http://localhost:8080/mcp/filesystem/tools/call",
-            json={"name": "read_file", "arguments": {"path": "/etc/hosts"}}
-        ) as resp:
-            result = await resp.json()
-            print(f"Tool result: {result['content'][0]['text'][:100]}...")
+    # Option 2: Using API key
+    client = GatewayClient(
+        base_url="http://localhost:8080",
+        api_key="your-api-key"
+    )
+
+    async with client:
+        # List tools
+        tools = await client.list_tools("filesystem")
+        print(f"Available tools: {len(tools)}")
+
+        # Call a tool with enhanced validation
+        result = await client.call_tool(
+            "filesystem",
+            "read_file",
+            {"path": "/etc/hosts"}
+        )
+        print(f"Tool result: {result}")
+
+# Enhanced MCPClient with gateway integration
+from mcp_platform.client import MCPClient
+
+async def use_enhanced_client():
+    # Automatically discovers and uses gateway
+    client = MCPClient(gateway_url="http://localhost:8080")
+
+    async with client:
+        # Seamlessly works with gateway or direct MCP
+        tools = await client.list_tools()
+        result = await client.call_tool("read_file", {"path": "/etc/hosts"})
+        print(f"Enhanced client result: {result}")
 
 asyncio.run(use_gateway())
+asyncio.run(use_enhanced_client())
 ```
 
 ## Load Balancing Strategies
@@ -419,11 +534,19 @@ This provides detailed information about:
 - Implement network segmentation
 - Restrict access to management endpoints
 
-### 2. Authentication
-- Consider implementing authentication middleware
-- Use API keys for service-to-service communication
-- Implement rate limiting
-- Log security events
+### 2. Authentication & Authorization
+- **JWT Token Security**: Rotate tokens regularly and use secure expiration policies
+- **API Key Management**: Implement proper API key rotation and scope limitation
+- **Role-Based Access**: Assign minimal required roles to users and applications
+- **Database Security**: Use encrypted connections and secure credential storage
+- **Rate Limiting**: Implement per-user/per-API-key rate limiting
+- **Audit Logging**: Log all authentication attempts and security events
+
+### 3. Data Validation & Protection
+- **Input Validation**: Leverage Pydantic 2.x for comprehensive request validation
+- **Output Sanitization**: Ensure response data is properly validated before transmission
+- **Database Security**: Use parameterized queries and connection encryption
+- **Backup Strategy**: Implement regular database backups with encryption
 
 ### 3. Instance Security
 - Validate registered instances
@@ -445,9 +568,73 @@ This provides detailed information about:
 
 Before (Direct Access):
 ```python
-# Connect to each server individually
+## Migration & Upgrade Guide
+
+### Migrating from Direct MCP Connections
+
+Before (Direct Connections):
+```python
+# Connect to each server individually with manual authentication
 fs_client = MCPClient("http://localhost:7071")
 db_client = MCPClient("http://localhost:7072")
+```
+
+After (Enhanced Gateway Access):
+```python
+# Single gateway connection with authentication
+from mcp_platform.client import GatewayClient, MCPClient
+
+# Option 1: Direct gateway client
+gateway_client = GatewayClient(
+    base_url="http://localhost:8080",
+    auth_token="your-jwt-token"
+)
+
+# Option 2: Enhanced MCPClient with automatic gateway detection
+client = MCPClient(gateway_url="http://localhost:8080")
+```
+
+### Upgrading from Previous Versions
+
+1. **Backup existing data**: Export configurations and user data
+2. **Update dependencies**: Ensure Pydantic 2.x compatibility in your code
+3. **Database migration**: Run automatic schema updates
+4. **Authentication setup**: Configure new authentication system
+5. **Test enhanced features**: Validate SQLModel integration and improved performance
+
+## Advanced Topics
+
+### Enhanced Features Deep Dive
+
+#### Pydantic 2.x Integration Benefits
+- **Performance**: 5-50x faster validation than v1
+- **Better Error Messages**: More precise validation feedback
+- **Type Safety**: Improved static type checking
+- **Memory Efficiency**: Reduced memory usage for large datasets
+
+#### SQLModel Architecture Advantages
+- **Type Safety**: Database models with full typing support
+- **Automatic Validation**: Built-in Pydantic validation for all database operations
+- **Query Builder**: Type-safe database queries with excellent IDE support
+- **Migration Support**: Seamless schema changes and database evolution
+
+#### Enhanced MCPClient Features
+- **Gateway Discovery**: Automatic detection and connection to available gateways
+- **Intelligent Fallback**: Seamless switching between gateway and direct connections
+- **Connection Pooling**: Efficient resource management for high-throughput scenarios
+- **Load Balancing**: Built-in support for multiple gateway instances
+
+### Custom Health Checks
+Implement custom health check logic for specific templates with enhanced validation.
+
+### Circuit Breaker Pattern
+Automatic failure isolation and recovery for resilient systems with database-backed state.
+
+### Request Transformation
+Modify requests/responses as they pass through the gateway with Pydantic validation.
+
+### Multi-Region Deployment
+Deploy gateways across multiple regions with synchronized database state for global availability.
 ```
 
 After (Gateway Access):

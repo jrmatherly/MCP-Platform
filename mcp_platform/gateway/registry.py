@@ -1,220 +1,170 @@
 """
-Server Registry for MCP Gateway.
+Enhanced Server Registry for MCP Gateway using SQLModel and Pydantic.
 
-Manages registration, discovery, and metadata for MCP servers across different backends.
-Provides persistent storage and dynamic updates for server instances.
+Provides persistent storage using SQLAlchemy with fallback to JSON file storage,
+dynamic updates, and full CRUD operations for server instances and templates.
 """
 
 import json
 import logging
-from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
+from .database import DatabaseManager, ServerInstanceCRUD, ServerTemplateCRUD
+from .models import (
+    LoadBalancerConfig,
+    LoadBalancerConfigCreate,
+    ServerInstance,
+    ServerInstanceCreate,
+    ServerStatus,
+    ServerTemplate,
+    ServerTemplateCreate,
+)
+
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class ServerInstance:
-    """Represents a single MCP server instance."""
+class RegistryError(Exception):
+    """Registry related errors."""
 
-    id: str
-    template_name: str
-    endpoint: Optional[str] = None  # HTTP endpoint URL
-    command: Optional[List[str]] = None  # stdio command
-    transport: str = "http"  # "http" or "stdio"
-    status: str = "unknown"  # "healthy", "unhealthy", "unknown"
-    backend: str = "docker"  # "docker", "kubernetes", "mock"
-
-    # Container/deployment metadata
-    container_id: Optional[str] = None
-    deployment_id: Optional[str] = None
-    namespace: Optional[str] = None  # Kubernetes namespace
-
-    # Runtime configuration
-    working_dir: Optional[str] = None
-    env_vars: Optional[Dict[str, str]] = None
-
-    # Health tracking
-    last_health_check: Optional[str] = None
-    consecutive_failures: int = 0
-
-    # Metadata
-    metadata: Optional[Dict[str, Any]] = None
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary representation."""
-        return asdict(self)
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "ServerInstance":
-        """Create from dictionary representation."""
-        return cls(**data)
-
-    def is_healthy(self) -> bool:
-        """Check if server instance is healthy."""
-        return self.status == "healthy"
-
-    def update_health_status(self, is_healthy: bool):
-        """Update health status and tracking."""
-        if is_healthy:
-            self.status = "healthy"
-            self.consecutive_failures = 0
-        else:
-            self.status = "unhealthy"
-            self.consecutive_failures += 1
-
-        self.last_health_check = datetime.now(timezone.utc).isoformat()
-
-
-@dataclass
-class LoadBalancerConfig:
-    """Load balancer configuration for a template."""
-
-    strategy: str = (
-        "round_robin"  # "round_robin", "least_connections", "weighted", "health_based"
-    )
-    health_check_interval: int = 30  # seconds
-    max_retries: int = 3
-    pool_size: int = 3  # For stdio servers
-    timeout: int = 60  # Request timeout
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary representation."""
-        return asdict(self)
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "LoadBalancerConfig":
-        """Create from dictionary representation."""
-        return cls(**data)
-
-
-@dataclass
-class ServerTemplate:
-    """Represents a template with its instances and configuration."""
-
-    name: str
-    instances: List[ServerInstance]
-    load_balancer: LoadBalancerConfig
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary representation."""
-        return {
-            "instances": [instance.to_dict() for instance in self.instances],
-            "load_balancer": self.load_balancer.to_dict(),
-        }
-
-    @classmethod
-    def from_dict(cls, name: str, data: Dict[str, Any]) -> "ServerTemplate":
-        """Create from dictionary representation."""
-        instances = [
-            ServerInstance.from_dict(instance_data)
-            for instance_data in data.get("instances", [])
-        ]
-        load_balancer = LoadBalancerConfig.from_dict(data.get("load_balancer", {}))
-        return cls(name=name, instances=instances, load_balancer=load_balancer)
-
-    def get_healthy_instances(self) -> List[ServerInstance]:
-        """Get all healthy server instances."""
-        return [instance for instance in self.instances if instance.is_healthy()]
-
-    def get_instance_by_id(self, instance_id: str) -> Optional[ServerInstance]:
-        """Get instance by ID."""
-        for instance in self.instances:
-            if instance.id == instance_id:
-                return instance
-        return None
-
-    def add_instance(self, instance: ServerInstance):
-        """Add a new server instance."""
-        # Remove existing instance with same ID if exists
-        self.instances = [inst for inst in self.instances if inst.id != instance.id]
-        self.instances.append(instance)
-
-    def remove_instance(self, instance_id: str) -> bool:
-        """Remove server instance by ID."""
-        original_count = len(self.instances)
-        self.instances = [inst for inst in self.instances if inst.id != instance_id]
-        return len(self.instances) < original_count
+    pass
 
 
 class ServerRegistry:
     """
-    Central registry for managing MCP server instances across backends.
+    Enhanced server registry with database persistence and Pydantic models.
 
-    Provides persistent storage, dynamic updates, and metadata management
-    for all registered MCP servers.
+    Provides backward compatibility with the original registry while adding
+    new features like database persistence, better validation, and async operations.
     """
 
-    def __init__(self, registry_file: Optional[Union[str, Path]] = None):
+    def __init__(
+        self,
+        db: Optional[DatabaseManager] = None,
+        fallback_file: Optional[Union[str, Path]] = None,
+    ):
         """
-        Initialize server registry.
+        Initialize enhanced server registry.
 
         Args:
-            registry_file: Path to JSON file for persistence. If None, uses in-memory only.
+            db: Database manager for persistence. If None, falls back to file storage.
+            fallback_file: JSON file for fallback storage when database is unavailable.
         """
-        self.registry_file = Path(registry_file) if registry_file else None
-        self.templates: Dict[str, ServerTemplate] = {}
-        self._load_registry()
+        self.db = db
+        self.fallback_file = Path(fallback_file) if fallback_file else None
+        self.instance_crud = ServerInstanceCRUD(db) if db else None
+        self.template_crud = ServerTemplateCRUD(db) if db else None
 
-    def _load_registry(self):
-        """Load registry from persistent storage."""
-        if not self.registry_file or not self.registry_file.exists():
-            logger.info("No existing registry file found, starting with empty registry")
+        # In-memory cache for when database is not available
+        self._memory_templates: Dict[str, ServerTemplate] = {}
+        self._use_memory = db is None
+
+        if self._use_memory:
+            self._load_from_file()
+
+    async def _ensure_template_exists(self, template_name: str) -> ServerTemplate:
+        """Ensure template exists in database."""
+        if self._use_memory:
+            if template_name not in self._memory_templates:
+                template = ServerTemplate(
+                    name=template_name, instances=[], load_balancer=None
+                )
+                self._memory_templates[template_name] = template
+            return self._memory_templates[template_name]
+
+        template = await self.template_crud.get(template_name)
+        if not template:
+            template_create = ServerTemplateCreate(name=template_name)
+            template = await self.template_crud.create(
+                ServerTemplate(**template_create.dict())
+            )
+
+            # Create default load balancer config
+            lb_config = LoadBalancerConfig(template_name=template_name)
+            template.load_balancer = lb_config
+
+        return template
+
+    def _load_from_file(self):
+        """Load registry from JSON file (fallback mode)."""
+        if not self.fallback_file or not self.fallback_file.exists():
+            logger.info("No fallback registry file found, starting with empty registry")
             return
 
         try:
-            with open(self.registry_file, "r", encoding="utf-8") as f:
+            with open(self.fallback_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
 
+            # Convert old format to new Pydantic models
             servers_data = data.get("servers", {})
             for template_name, template_data in servers_data.items():
-                self.templates[template_name] = ServerTemplate.from_dict(
-                    template_name, template_data
-                )
+                instances = []
+                for instance_data in template_data.get("instances", []):
+                    # Convert old format to new model
+                    if "command" in instance_data and isinstance(
+                        instance_data["command"], str
+                    ):
+                        instance_data["command"] = [instance_data["command"]]
 
-            logger.info(f"Loaded registry with {len(self.templates)} templates")
+                    instance = ServerInstance(**instance_data)
+                    instances.append(instance)
+
+                template = ServerTemplate(
+                    name=template_name, instances=instances, load_balancer=None
+                )
+                self._memory_templates[template_name] = template
+
+            logger.info(
+                f"Loaded fallback registry with {len(self._memory_templates)} templates"
+            )
 
         except Exception as e:
-            logger.error(f"Failed to load registry from {self.registry_file}: {e}")
-            # Continue with empty registry
+            logger.error(
+                f"Failed to load fallback registry from {self.fallback_file}: {e}"
+            )
 
-    def _save_registry(self):
-        """Save registry to persistent storage."""
-        if not self.registry_file:
-            return  # In-memory only mode
+    def _save_to_file(self):
+        """Save registry to JSON file (fallback mode)."""
+        if not self.fallback_file or not self._use_memory:
+            return
 
         try:
-            # Ensure directory exists
-            self.registry_file.parent.mkdir(parents=True, exist_ok=True)
+            self.fallback_file.parent.mkdir(parents=True, exist_ok=True)
 
-            # Prepare data structure
             data = {
                 "servers": {
-                    name: template.to_dict()
-                    for name, template in self.templates.items()
+                    name: {
+                        "instances": [
+                            instance.dict() for instance in template.instances
+                        ],
+                        "load_balancer": (
+                            template.load_balancer.dict()
+                            if template.load_balancer
+                            else {}
+                        ),
+                    }
+                    for name, template in self._memory_templates.items()
                 },
                 "last_updated": datetime.now(timezone.utc).isoformat(),
             }
 
-            # Write to file atomically
-            temp_file = self.registry_file.with_suffix(".tmp")
+            temp_file = self.fallback_file.with_suffix(".tmp")
             with open(temp_file, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=2)
+                json.dump(data, f, indent=2, default=str)
 
-            temp_file.rename(self.registry_file)
-            logger.debug(f"Registry saved to {self.registry_file}")
+            temp_file.rename(self.fallback_file)
+            logger.debug(f"Registry saved to {self.fallback_file}")
 
         except Exception as e:
-            logger.error(f"Failed to save registry to {self.registry_file}: {e}")
+            logger.error(f"Failed to save registry to {self.fallback_file}: {e}")
 
-    def register_server(
+    async def register_server(
         self,
         template_name: str,
-        instance: ServerInstance,
-        load_balancer_config: Optional[LoadBalancerConfig] = None,
-    ):
+        instance: Union[ServerInstance, ServerInstanceCreate, Dict[str, Any]],
+        load_balancer_config: Optional[LoadBalancerConfigCreate] = None,
+    ) -> ServerInstance:
         """
         Register a new server instance.
 
@@ -222,28 +172,42 @@ class ServerRegistry:
             template_name: Name of the template/server type
             instance: Server instance to register
             load_balancer_config: Optional load balancer configuration
+
+        Returns:
+            The registered server instance
         """
+        # Convert to ServerInstance if needed
+        if isinstance(instance, dict):
+            instance = ServerInstanceCreate(**instance)
+        if isinstance(instance, ServerInstanceCreate):
+            instance = ServerInstance(**instance.dict())
+
         # Ensure instance has correct template name
         instance.template_name = template_name
 
-        # Get or create template
-        if template_name not in self.templates:
-            lb_config = load_balancer_config or LoadBalancerConfig()
-            self.templates[template_name] = ServerTemplate(
-                name=template_name, instances=[], load_balancer=lb_config
-            )
+        if self._use_memory:
+            # Memory mode
+            await self._ensure_template_exists(template_name)
+            template = self._memory_templates[template_name]
 
-        # Add instance to template
-        self.templates[template_name].add_instance(instance)
+            # Remove existing instance with same ID
+            template.instances = [
+                inst for inst in template.instances if inst.id != instance.id
+            ]
+            template.instances.append(instance)
 
-        # Save to persistence
-        self._save_registry()
+            self._save_to_file()
+        else:
+            # Database mode
+            await self._ensure_template_exists(template_name)
+            instance = await self.instance_crud.create(instance)
 
         logger.info(
             f"Registered server instance {instance.id} for template {template_name}"
         )
+        return instance
 
-    def deregister_server(self, template_name: str, instance_id: str) -> bool:
+    async def deregister_server(self, template_name: str, instance_id: str) -> bool:
         """
         Deregister a server instance.
 
@@ -254,63 +218,90 @@ class ServerRegistry:
         Returns:
             True if instance was removed, False if not found
         """
-        if template_name not in self.templates:
-            return False
+        if self._use_memory:
+            if template_name not in self._memory_templates:
+                return False
 
-        template = self.templates[template_name]
-        removed = template.remove_instance(instance_id)
+            template = self._memory_templates[template_name]
+            original_count = len(template.instances)
+            template.instances = [
+                inst for inst in template.instances if inst.id != instance_id
+            ]
+            removed = len(template.instances) < original_count
 
-        # Remove template if no instances remain
-        if not template.instances:
-            del self.templates[template_name]
+            if not template.instances:
+                del self._memory_templates[template_name]
+
+            if removed:
+                self._save_to_file()
+        else:
+            removed = await self.instance_crud.delete(instance_id)
 
         if removed:
-            self._save_registry()
             logger.info(
                 f"Deregistered server instance {instance_id} from template {template_name}"
             )
 
         return removed
 
-    def get_template(self, template_name: str) -> Optional[ServerTemplate]:
+    async def get_template(self, template_name: str) -> Optional[ServerTemplate]:
         """Get server template by name."""
-        return self.templates.get(template_name)
+        if self._use_memory:
+            return self._memory_templates.get(template_name)
+        else:
+            return await self.template_crud.get(template_name)
 
-    def get_healthy_instances(self, template_name: str) -> List[ServerInstance]:
+    async def get_healthy_instances(self, template_name: str) -> List[ServerInstance]:
         """Get all healthy instances for a template."""
-        template = self.get_template(template_name)
-        if not template:
-            return []
-        return template.get_healthy_instances()
+        if self._use_memory:
+            template = self._memory_templates.get(template_name)
+            if not template:
+                return []
+            return [inst for inst in template.instances if inst.is_healthy()]
+        else:
+            return await self.instance_crud.get_healthy_by_template(template_name)
 
-    def get_instance(
+    async def get_instance(
         self, template_name: str, instance_id: str
     ) -> Optional[ServerInstance]:
         """Get specific server instance."""
-        template = self.get_template(template_name)
-        if not template:
-            return None
-        return template.get_instance_by_id(instance_id)
+        if self._use_memory:
+            template = self._memory_templates.get(template_name)
+            if not template:
+                return None
+            return next(
+                (inst for inst in template.instances if inst.id == instance_id), None
+            )
+        else:
+            return await self.instance_crud.get(instance_id)
 
-    def list_templates(self) -> List[str]:
+    async def list_templates(self) -> List[str]:
         """List all registered template names."""
-        return list(self.templates.keys())
+        if self._use_memory:
+            return list(self._memory_templates.keys())
+        else:
+            templates = await self.template_crud.list_all()
+            return [template.name for template in templates]
 
-    def list_instances(self, template_name: str) -> List[ServerInstance]:
+    async def list_instances(self, template_name: str) -> List[ServerInstance]:
         """List all instances for a specific template."""
-        template = self.get_template(template_name)
-        if not template:
-            return []
-        return template.instances
+        if self._use_memory:
+            template = self._memory_templates.get(template_name)
+            return template.instances if template else []
+        else:
+            return await self.instance_crud.get_by_template(template_name)
 
-    def list_all_instances(self) -> List[ServerInstance]:
+    async def list_all_instances(self) -> List[ServerInstance]:
         """List all registered server instances across all templates."""
-        instances = []
-        for template in self.templates.values():
-            instances.extend(template.instances)
-        return instances
+        if self._use_memory:
+            instances = []
+            for template in self._memory_templates.values():
+                instances.extend(template.instances)
+            return instances
+        else:
+            return await self.instance_crud.list_all()
 
-    def update_instance_health(
+    async def update_instance_health(
         self, template_name: str, instance_id: str, is_healthy: bool
     ) -> bool:
         """
@@ -324,71 +315,127 @@ class ServerRegistry:
         Returns:
             True if instance was updated, False if not found
         """
-        instance = self.get_instance(template_name, instance_id)
-        if not instance:
-            return False
+        if self._use_memory:
+            instance = await self.get_instance(template_name, instance_id)
+            if not instance:
+                return False
 
-        instance.update_health_status(is_healthy)
-        self._save_registry()
-        return True
+            instance.update_health_status(is_healthy)
+            self._save_to_file()
+            return True
+        else:
+            updates = {
+                "status": (
+                    ServerStatus.HEALTHY if is_healthy else ServerStatus.UNHEALTHY
+                ),
+                "last_health_check": datetime.now(timezone.utc),
+                "consecutive_failures": 0 if is_healthy else None,
+            }
 
-    def get_registry_stats(self) -> Dict[str, Any]:
+            instance = await self.instance_crud.update(instance_id, updates)
+            return instance is not None
+
+    async def get_registry_stats(self) -> Dict[str, Any]:
         """Get registry statistics and overview."""
-        total_instances = sum(
-            len(template.instances) for template in self.templates.values()
-        )
-        healthy_instances = sum(
-            len(template.get_healthy_instances())
-            for template in self.templates.values()
-        )
+        if self._use_memory:
+            total_instances = sum(
+                len(template.instances) for template in self._memory_templates.values()
+            )
+            healthy_instances = sum(
+                len([inst for inst in template.instances if inst.is_healthy()])
+                for template in self._memory_templates.values()
+            )
+
+            templates_stats = {}
+            for name, template in self._memory_templates.items():
+                healthy_count = len(
+                    [inst for inst in template.instances if inst.is_healthy()]
+                )
+                templates_stats[name] = {
+                    "total_instances": len(template.instances),
+                    "healthy_instances": healthy_count,
+                    "load_balancer_strategy": (
+                        template.load_balancer.strategy
+                        if template.load_balancer
+                        else "round_robin"
+                    ),
+                }
+        else:
+            all_instances = await self.list_all_instances()
+            total_instances = len(all_instances)
+            healthy_instances = len(
+                [inst for inst in all_instances if inst.is_healthy()]
+            )
+
+            templates = await self.template_crud.list_all()
+            templates_stats = {}
+            for template in templates:
+                template_instances = await self.list_instances(template.name)
+                healthy_count = len(
+                    [inst for inst in template_instances if inst.is_healthy()]
+                )
+                templates_stats[template.name] = {
+                    "total_instances": len(template_instances),
+                    "healthy_instances": healthy_count,
+                    "load_balancer_strategy": (
+                        template.load_balancer.strategy
+                        if template.load_balancer
+                        else "round_robin"
+                    ),
+                }
 
         return {
-            "total_templates": len(self.templates),
+            "total_templates": len(templates_stats),
             "total_instances": total_instances,
             "healthy_instances": healthy_instances,
             "unhealthy_instances": total_instances - healthy_instances,
-            "templates": {
-                name: {
-                    "total_instances": len(template.instances),
-                    "healthy_instances": len(template.get_healthy_instances()),
-                    "load_balancer_strategy": template.load_balancer.strategy,
-                }
-                for name, template in self.templates.items()
-            },
+            "templates": templates_stats,
         }
 
-    def clear_unhealthy_instances(self, max_failures: int = 5):
+    async def clear_unhealthy_instances(self, max_failures: int = 5) -> int:
         """
         Remove instances that have exceeded maximum consecutive failures.
 
         Args:
             max_failures: Maximum consecutive failures before removal
+
+        Returns:
+            Number of instances removed
         """
         removed_count = 0
 
-        for template_name, template in list(self.templates.items()):
-            original_count = len(template.instances)
-            template.instances = [
-                instance
-                for instance in template.instances
-                if instance.consecutive_failures < max_failures
-            ]
+        if self._use_memory:
+            for template_name, template in list(self._memory_templates.items()):
+                original_count = len(template.instances)
+                template.instances = [
+                    instance
+                    for instance in template.instances
+                    if instance.consecutive_failures < max_failures
+                ]
 
-            removed_from_template = original_count - len(template.instances)
-            removed_count += removed_from_template
+                removed_from_template = original_count - len(template.instances)
+                removed_count += removed_from_template
 
-            if removed_from_template > 0:
-                logger.info(
-                    f"Removed {removed_from_template} unhealthy instances from template {template_name}"
-                )
+                if removed_from_template > 0:
+                    logger.info(
+                        f"Removed {removed_from_template} unhealthy instances from template {template_name}"
+                    )
 
-            # Remove template if no instances remain
-            if not template.instances:
-                del self.templates[template_name]
-                logger.info(f"Removed empty template {template_name}")
+                if not template.instances:
+                    del self._memory_templates[template_name]
+                    logger.info(f"Removed empty template {template_name}")
+
+            if removed_count > 0:
+                self._save_to_file()
+        else:
+            # For database mode, we need to query and delete unhealthy instances
+            all_instances = await self.list_all_instances()
+            for instance in all_instances:
+                if instance.consecutive_failures >= max_failures:
+                    await self.deregister_server(instance.template_name, instance.id)
+                    removed_count += 1
 
         if removed_count > 0:
-            self._save_registry()
             logger.info(f"Cleared {removed_count} unhealthy instances from registry")
 
         return removed_count

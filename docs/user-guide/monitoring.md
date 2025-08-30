@@ -370,7 +370,7 @@ import subprocess
 import requests
 import smtplib
 from email.mime.text import MIMEText
-from datetime import datetime
+from datetime import datetime, timezone
 
 class AlertManager:
     def __init__(self, config_file='alert-config.json'):
@@ -418,7 +418,7 @@ class AlertManager:
             'template': deployment['template']['name'],
             'status': deployment['status']['state'],
             'health': deployment['status']['health'],
-            'timestamp': datetime.utcnow().isoformat()
+            'timestamp': datetime.now(timezone.utc).isoformat()
         }
 
         self.send_notification('Critical: MCP Deployment Down', message)
@@ -430,7 +430,7 @@ class AlertManager:
             'deployment': deployment['deployment_id'],
             'template': deployment['template']['name'],
             'health': deployment['status']['health'],
-            'timestamp': datetime.utcnow().isoformat()
+            'timestamp': datetime.now(timezone.utc).isoformat()
         }
 
         self.send_notification('Warning: MCP Deployment Issue', message)
@@ -442,7 +442,7 @@ class AlertManager:
             'deployment': deployment['deployment_id'],
             'resource_type': resource_type,
             'usage_percent': usage_percent,
-            'timestamp': datetime.utcnow().isoformat()
+            'timestamp': datetime.now(timezone.utc).isoformat()
         }
 
         self.send_notification(f'High {resource_type.title()} Usage', message)

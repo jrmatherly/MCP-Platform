@@ -101,7 +101,7 @@ class HealthChecker:
 
     async def _perform_health_checks(self):
         """Perform health checks on all registered instances."""
-        instances = self.registry.list_all_instances()
+        instances = await self.registry.list_all_instances()
         if not instances:
             logger.debug("No instances to health check")
             return

@@ -1,427 +1,727 @@
 """
-Unit tests for gateway registry.
+Unit tests for the enhanced Gateway Registry.
 """
 
+import asyncio
 import json
-import tempfile
 from pathlib import Path
-from unittest.mock import patch
+from typing import Any, Dict
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from mcp_platform.gateway.registry import (
+from mcp_platform.gateway.database import DatabaseManager
+from mcp_platform.gateway.models import (
+    InstanceConfig,
     LoadBalancerConfig,
+    MCPConnection,
     ServerInstance,
-    ServerRegistry,
+    ServerStatus,
     ServerTemplate,
 )
+from mcp_platform.gateway.registry import (
+    GatewayRegistry,
+    HealthChecker,
+    InstanceManager,
+    LoadBalancer,
+    RegistryError,
+    TemplateManager,
+)
 
-pytestmark = pytest.mark.unit
 
+class TestGatewayRegistry:
+    """Test GatewayRegistry functionality."""
 
-class TestServerInstance:
-    """Unit tests for ServerInstance class."""
-
-    def test_server_instance_creation(self):
-        """Test creating a server instance."""
-        instance = ServerInstance(
-            id="test-instance-1",
-            template_name="demo",
-            endpoint="http://localhost:7071",
-            transport="http",
-            backend="docker",
+    def setup_method(self):
+        """Set up test fixtures."""
+        self.db_manager = Mock(spec=DatabaseManager)
+        self.registry = GatewayRegistry(
+            json_registry_path="/tmp/test_registry.json", db_manager=self.db_manager
         )
 
-        assert instance.id == "test-instance-1"
-        assert instance.template_name == "demo"
-        assert instance.endpoint == "http://localhost:7071"
-        assert instance.transport == "http"
-        assert instance.backend == "docker"
-        assert instance.status == "unknown"
-        assert instance.consecutive_failures == 0
+    async def test_registry_initialization(self):
+        """Test registry initialization."""
+        registry = GatewayRegistry()
 
-    def test_server_instance_stdio(self):
-        """Test creating a stdio server instance."""
-        instance = ServerInstance(
-            id="test-stdio-1",
-            template_name="filesystem",
-            command=["python", "server.py"],
-            transport="stdio",
-            backend="docker",
-            working_dir="/app",
-            env_vars={"DATA_DIR": "/data"},
+        # Should have default components
+        assert isinstance(registry.template_manager, TemplateManager)
+        assert isinstance(registry.instance_manager, InstanceManager)
+        assert isinstance(registry.health_checker, HealthChecker)
+        assert isinstance(registry.load_balancer, LoadBalancer)
+
+        # Should initialize with empty state
+        assert registry.templates == {}
+        assert registry.instances == {}
+
+    async def test_registry_with_database(self):
+        """Test registry with database backend."""
+        self.db_manager.health_check = AsyncMock(return_value=True)
+        self.db_manager.get_all_templates = AsyncMock(return_value=[])
+        self.db_manager.get_all_instances = AsyncMock(return_value=[])
+
+        await self.registry.initialize()
+
+        # Should check database health and load data
+        self.db_manager.health_check.assert_called_once()
+        self.db_manager.get_all_templates.assert_called_once()
+        self.db_manager.get_all_instances.assert_called_once()
+
+    async def test_registry_fallback_to_json(self):
+        """Test registry falls back to JSON when database unavailable."""
+        # Mock database as unavailable
+        self.db_manager = None
+        registry = GatewayRegistry(json_registry_path="/tmp/test_registry.json")
+
+        # Create mock JSON file
+        test_data = {"templates": {}, "instances": {}, "version": "2.0"}
+
+        with (
+            patch("pathlib.Path.exists", return_value=True),
+            patch("builtins.open", create=True) as mock_open,
+        ):
+            mock_open.return_value.__enter__.return_value.read.return_value = (
+                json.dumps(test_data)
+            )
+
+            await registry.initialize()
+
+            assert registry.templates == {}
+            assert registry.instances == {}
+
+    async def test_template_registration(self):
+        """Test template registration."""
+        template = ServerTemplate(
+            name="test_template",
+            command=["python", "-m", "test_server"],
+            args=[],
+            env={},
+            description="Test template",
+            category="testing",
         )
 
-        assert instance.command == ["python", "server.py"]
-        assert instance.transport == "stdio"
-        assert instance.working_dir == "/app"
-        assert instance.env_vars == {"DATA_DIR": "/data"}
+        # Mock database save
+        self.db_manager.create_template = AsyncMock(return_value=template)
 
-    def test_health_status_updates(self):
-        """Test health status updates."""
-        instance = ServerInstance(
-            id="test-health", template_name="demo", endpoint="http://localhost:7071"
+        await self.registry.register_template(template)
+
+        # Should store in memory and database
+        assert "test_template" in self.registry.templates
+        assert self.registry.templates["test_template"] == template
+        self.db_manager.create_template.assert_called_once_with(template)
+
+    async def test_template_registration_validation(self):
+        """Test template registration validation."""
+        # Invalid template (missing required field)
+        with pytest.raises(RegistryError, match="Template validation failed"):
+            await self.registry.register_template(
+                ServerTemplate(
+                    name="",  # Empty name should fail
+                    command=["python"],
+                    args=[],
+                    env={},
+                )
+            )
+
+    async def test_instance_creation(self):
+        """Test instance creation."""
+        # Register template first
+        template = ServerTemplate(
+            name="test_template",
+            command=["python", "-m", "test_server"],
+            args=[],
+            env={},
+            description="Test template",
         )
+        self.registry.templates["test_template"] = template
 
-        # Initially unknown
-        assert instance.status == "unknown"
-        assert not instance.is_healthy()
+        # Mock database operations
+        self.db_manager.create_instance = AsyncMock()
 
-        # Mark as healthy
-        instance.update_health_status(True)
-        assert instance.status == "healthy"
-        assert instance.is_healthy()
-        assert instance.consecutive_failures == 0
-        assert instance.last_health_check is not None
+        instance = await self.registry.create_instance("test_template", port=8080)
 
-        # Mark as unhealthy
-        instance.update_health_status(False)
-        assert instance.status == "unhealthy"
-        assert not instance.is_healthy()
-        assert instance.consecutive_failures == 1
+        assert instance.template_name == "test_template"
+        assert instance.port == 8080
+        assert instance.status == ServerStatus.CREATED
+        assert instance.id in self.registry.instances
 
-        # Another failure
-        instance.update_health_status(False)
-        assert instance.consecutive_failures == 2
+        self.db_manager.create_instance.assert_called_once()
 
-    def test_to_from_dict(self):
-        """Test serialization to/from dictionary."""
-        instance = ServerInstance(
-            id="test-dict",
-            template_name="demo",
-            endpoint="http://localhost:7071",
-            transport="http",
-            backend="docker",
-            metadata={"version": "1.0"},
+    async def test_instance_creation_nonexistent_template(self):
+        """Test instance creation with nonexistent template."""
+        with pytest.raises(RegistryError, match="Template 'nonexistent' not found"):
+            await self.registry.create_instance("nonexistent")
+
+    async def test_load_balancer_integration(self):
+        """Test load balancer integration."""
+        # Create instances
+        template = ServerTemplate(
+            name="test_template", command=["python"], args=[], env={}
         )
+        self.registry.templates["test_template"] = template
 
-        # Convert to dict
-        instance_dict = instance.to_dict()
-        assert isinstance(instance_dict, dict)
-        assert instance_dict["id"] == "test-dict"
-        assert instance_dict["template_name"] == "demo"
-        assert instance_dict["metadata"] == {"version": "1.0"}
-
-        # Convert back from dict
-        restored = ServerInstance.from_dict(instance_dict)
-        assert restored.id == instance.id
-        assert restored.template_name == instance.template_name
-        assert restored.endpoint == instance.endpoint
-        assert restored.metadata == instance.metadata
-
-
-class TestLoadBalancerConfig:
-    """Unit tests for LoadBalancerConfig class."""
-
-    def test_default_config(self):
-        """Test default load balancer configuration."""
-        config = LoadBalancerConfig()
-
-        assert config.strategy == "round_robin"
-        assert config.health_check_interval == 30
-        assert config.max_retries == 3
-        assert config.pool_size == 3
-        assert config.timeout == 60
-
-    def test_custom_config(self):
-        """Test custom load balancer configuration."""
-        config = LoadBalancerConfig(
-            strategy="least_connections",
-            health_check_interval=60,
-            max_retries=5,
-            pool_size=5,
-            timeout=120,
-        )
-
-        assert config.strategy == "least_connections"
-        assert config.health_check_interval == 60
-        assert config.max_retries == 5
-        assert config.pool_size == 5
-        assert config.timeout == 120
-
-    def test_to_from_dict(self):
-        """Test serialization to/from dictionary."""
-        config = LoadBalancerConfig(
-            strategy="weighted", health_check_interval=45, max_retries=4
-        )
-
-        # Convert to dict
-        config_dict = config.to_dict()
-        assert isinstance(config_dict, dict)
-        assert config_dict["strategy"] == "weighted"
-        assert config_dict["health_check_interval"] == 45
-
-        # Convert back from dict
-        restored = LoadBalancerConfig.from_dict(config_dict)
-        assert restored.strategy == config.strategy
-        assert restored.health_check_interval == config.health_check_interval
-        assert restored.max_retries == config.max_retries
-
-
-class TestServerTemplate:
-    """Unit tests for ServerTemplate class."""
-
-    def test_template_creation(self):
-        """Test creating a server template."""
         instance1 = ServerInstance(
-            id="demo-1", template_name="demo", endpoint="http://localhost:7071"
+            id="test-1",
+            template_name="test_template",
+            port=8080,
+            status=ServerStatus.RUNNING,
         )
         instance2 = ServerInstance(
-            id="demo-2", template_name="demo", endpoint="http://localhost:7072"
+            id="test-2",
+            template_name="test_template",
+            port=8081,
+            status=ServerStatus.RUNNING,
         )
 
+        self.registry.instances["test-1"] = instance1
+        self.registry.instances["test-2"] = instance2
+
+        # Test load balancer selection
+        selected = self.registry.load_balancer.select_instance(
+            "test_template", self.registry.instances
+        )
+        assert selected in [instance1, instance2]
+
+    async def test_health_checker_functionality(self):
+        """Test health checker functionality."""
+        # Create instance
+        instance = ServerInstance(
+            id="test-1",
+            template_name="test_template",
+            port=8080,
+            status=ServerStatus.RUNNING,
+        )
+        self.registry.instances["test-1"] = instance
+
+        # Mock health check
+        with patch.object(
+            self.registry.health_checker, "check_instance_health"
+        ) as mock_check:
+            mock_check.return_value = True
+
+            # Start health checking
+            await self.registry.start_health_checking()
+
+            # Simulate health check cycle
+            await asyncio.sleep(0.1)  # Small delay for async operations
+
+            # Stop health checking
+            await self.registry.stop_health_checking()
+
+    async def test_stats_collection(self):
+        """Test statistics collection."""
+        # Add some test data
         template = ServerTemplate(
-            name="demo",
-            instances=[instance1, instance2],
-            load_balancer=LoadBalancerConfig(),
+            name="test_template", command=["python"], args=[], env={}
         )
-
-        assert template.name == "demo"
-        assert len(template.instances) == 2
-        assert isinstance(template.load_balancer, LoadBalancerConfig)
-
-    def test_healthy_instances(self):
-        """Test getting healthy instances."""
-        instance1 = ServerInstance(id="healthy", template_name="demo")
-        instance1.update_health_status(True)
-
-        instance2 = ServerInstance(id="unhealthy", template_name="demo")
-        instance2.update_health_status(False)
-
-        template = ServerTemplate(
-            name="demo",
-            instances=[instance1, instance2],
-            load_balancer=LoadBalancerConfig(),
-        )
-
-        healthy = template.get_healthy_instances()
-        assert len(healthy) == 1
-        assert healthy[0].id == "healthy"
-
-    def test_add_remove_instances(self):
-        """Test adding and removing instances."""
-        template = ServerTemplate(
-            name="demo", instances=[], load_balancer=LoadBalancerConfig()
-        )
-
-        # Add instance
-        instance = ServerInstance(id="test", template_name="demo")
-        template.add_instance(instance)
-        assert len(template.instances) == 1
-        assert template.get_instance_by_id("test") == instance
-
-        # Add duplicate ID (should replace)
-        instance2 = ServerInstance(
-            id="test", template_name="demo", endpoint="http://new"
-        )
-        template.add_instance(instance2)
-        assert len(template.instances) == 1  # Still 1, replaced
-        assert template.get_instance_by_id("test").endpoint == "http://new"
-
-        # Remove instance
-        removed = template.remove_instance("test")
-        assert removed
-        assert len(template.instances) == 0
-        assert template.get_instance_by_id("test") is None
-
-        # Remove non-existent
-        removed = template.remove_instance("nonexistent")
-        assert not removed
-
-    def test_to_from_dict(self):
-        """Test template serialization."""
-        instance = ServerInstance(id="test", template_name="demo")
-        config = LoadBalancerConfig(strategy="least_connections")
-
-        template = ServerTemplate(
-            name="demo", instances=[instance], load_balancer=config
-        )
-
-        # Convert to dict
-        template_dict = template.to_dict()
-        assert "instances" in template_dict
-        assert "load_balancer" in template_dict
-        assert len(template_dict["instances"]) == 1
-
-        # Convert back from dict
-        restored = ServerTemplate.from_dict("demo", template_dict)
-        assert restored.name == "demo"
-        assert len(restored.instances) == 1
-        assert restored.instances[0].id == "test"
-        assert restored.load_balancer.strategy == "least_connections"
-
-
-class TestServerRegistry:
-    """Unit tests for ServerRegistry class."""
-
-    def test_in_memory_registry(self):
-        """Test registry without persistence."""
-        registry = ServerRegistry()
-
-        # Should start empty
-        assert len(registry.templates) == 0
-        assert registry.list_templates() == []
-        assert registry.list_all_instances() == []
-
-    def test_register_server(self):
-        """Test registering a server."""
-        registry = ServerRegistry()
+        self.registry.templates["test_template"] = template
 
         instance = ServerInstance(
-            id="test-1", template_name="demo", endpoint="http://localhost:7071"
+            id="test-1",
+            template_name="test_template",
+            port=8080,
+            status=ServerStatus.RUNNING,
+        )
+        self.registry.instances["test-1"] = instance
+
+        stats = await self.registry.get_stats()
+
+        assert stats["templates"]["test_template"]["total_instances"] == 1
+        assert stats["templates"]["test_template"]["healthy_instances"] == 1
+        assert stats["total_requests"] >= 0
+
+    async def test_cleanup_functionality(self):
+        """Test cleanup functionality."""
+        # Create stopped instance
+        instance = ServerInstance(
+            id="test-1",
+            template_name="test_template",
+            port=8080,
+            status=ServerStatus.STOPPED,
+        )
+        self.registry.instances["test-1"] = instance
+
+        # Mock database deletion
+        self.db_manager.delete_instance = AsyncMock()
+
+        await self.registry.cleanup_stopped_instances()
+
+        # Instance should be removed
+        assert "test-1" not in self.registry.instances
+        self.db_manager.delete_instance.assert_called_once_with("test-1")
+
+
+class TestTemplateManager:
+    """Test TemplateManager functionality."""
+
+    def setup_method(self):
+        """Set up test fixtures."""
+        self.manager = TemplateManager()
+
+    def test_template_validation(self):
+        """Test template validation."""
+        # Valid template
+        valid_template = ServerTemplate(
+            name="valid_template",
+            command=["python", "-m", "server"],
+            args=[],
+            env={"KEY": "value"},
         )
 
-        # Register server
-        registry.register_server("demo", instance)
+        assert self.manager.validate_template(valid_template) is True
 
-        # Verify registration
-        assert "demo" in registry.templates
-        template = registry.get_template("demo")
-        assert template is not None
-        assert len(template.instances) == 1
-        assert template.instances[0].id == "test-1"
+        # Invalid template (empty name)
+        invalid_template = ServerTemplate(name="", command=["python"], args=[], env={})
 
-        # Verify lists
-        assert registry.list_templates() == ["demo"]
-        instances = registry.list_all_instances()
-        assert len(instances) == 1
-        assert instances[0].id == "test-1"
+        assert self.manager.validate_template(invalid_template) is False
 
-    def test_deregister_server(self):
-        """Test deregistering a server."""
-        registry = ServerRegistry()
+    def test_template_normalization(self):
+        """Test template normalization."""
+        template = ServerTemplate(
+            name="Test Template", command=["python"], args=[], env={}  # Mixed case
+        )
 
-        instance = ServerInstance(id="test-1", template_name="demo")
-        registry.register_server("demo", instance)
+        normalized = self.manager.normalize_template(template)
 
-        # Deregister
-        success = registry.deregister_server("demo", "test-1")
-        assert success
+        # Name should be lowercase
+        assert normalized.name == "test template"
 
-        # Verify removal
-        assert len(registry.templates) == 0  # Template removed when empty
-        assert registry.list_templates() == []
+    def test_template_categorization(self):
+        """Test automatic template categorization."""
+        # Python template
+        python_template = ServerTemplate(
+            name="python_server", command=["python", "-m", "server"], args=[], env={}
+        )
 
-        # Deregister non-existent
-        success = registry.deregister_server("demo", "nonexistent")
-        assert not success
+        category = self.manager.categorize_template(python_template)
+        assert category == "python"
 
-    def test_health_updates(self):
-        """Test health status updates."""
-        registry = ServerRegistry()
+        # Node.js template
+        node_template = ServerTemplate(
+            name="node_server", command=["node", "server.js"], args=[], env={}
+        )
 
-        instance = ServerInstance(id="test-1", template_name="demo")
-        registry.register_server("demo", instance)
+        category = self.manager.categorize_template(node_template)
+        assert category == "nodejs"
 
-        # Update health
-        success = registry.update_instance_health("demo", "test-1", True)
-        assert success
+    def test_template_defaults(self):
+        """Test template default values."""
+        template = ServerTemplate(name="test", command=["python"], args=[], env={})
 
-        # Verify update
-        updated_instance = registry.get_instance("demo", "test-1")
-        assert updated_instance.is_healthy()
+        with_defaults = self.manager.apply_defaults(template)
 
-        # Update non-existent
-        success = registry.update_instance_health("demo", "nonexistent", True)
-        assert not success
+        assert with_defaults.description is not None
+        assert with_defaults.category is not None
+        assert isinstance(with_defaults.load_balancer, LoadBalancerConfig)
 
-    def test_healthy_instances(self):
-        """Test getting healthy instances."""
-        registry = ServerRegistry()
 
-        # Add healthy instance
-        healthy = ServerInstance(id="healthy", template_name="demo")
-        healthy.update_health_status(True)
-        registry.register_server("demo", healthy)
+class TestInstanceManager:
+    """Test InstanceManager functionality."""
 
-        # Add unhealthy instance
-        unhealthy = ServerInstance(id="unhealthy", template_name="demo")
-        unhealthy.update_health_status(False)
-        registry.register_server("demo", unhealthy)
+    def setup_method(self):
+        """Set up test fixtures."""
+        self.manager = InstanceManager()
 
-        # Get healthy instances
-        healthy_instances = registry.get_healthy_instances("demo")
-        assert len(healthy_instances) == 1
-        assert healthy_instances[0].id == "healthy"
+    def test_instance_id_generation(self):
+        """Test instance ID generation."""
+        id1 = self.manager.generate_instance_id("test_template")
+        id2 = self.manager.generate_instance_id("test_template")
 
-        # Non-existent template
-        assert registry.get_healthy_instances("nonexistent") == []
+        # IDs should be unique
+        assert id1 != id2
 
-    def test_registry_stats(self):
-        """Test registry statistics."""
-        registry = ServerRegistry()
+        # IDs should contain template name
+        assert "test_template" in id1
+        assert "test_template" in id2
 
-        # Empty registry
-        stats = registry.get_registry_stats()
-        assert stats["total_templates"] == 0
-        assert stats["total_instances"] == 0
-        assert stats["healthy_instances"] == 0
+    def test_port_allocation(self):
+        """Test port allocation."""
+        existing_instances = {
+            "test-1": ServerInstance(
+                id="test-1",
+                template_name="test",
+                port=8080,
+                status=ServerStatus.RUNNING,
+            )
+        }
 
-        # Add instances
-        healthy = ServerInstance(id="healthy", template_name="demo")
-        healthy.update_health_status(True)
-        registry.register_server("demo", healthy)
+        port = self.manager.allocate_port(existing_instances)
+        assert port != 8080  # Should not conflict
+        assert 8000 <= port <= 65535  # Should be in valid range
 
-        unhealthy = ServerInstance(id="unhealthy", template_name="demo")
-        unhealthy.update_health_status(False)
-        registry.register_server("demo", unhealthy)
+    def test_instance_validation(self):
+        """Test instance validation."""
+        # Valid instance
+        valid_instance = ServerInstance(
+            id="test-1", template_name="test", port=8080, status=ServerStatus.CREATED
+        )
 
-        # Check stats
-        stats = registry.get_registry_stats()
-        assert stats["total_templates"] == 1
-        assert stats["total_instances"] == 2
-        assert stats["healthy_instances"] == 1
-        assert stats["unhealthy_instances"] == 1
-        assert "demo" in stats["templates"]
-        assert stats["templates"]["demo"]["total_instances"] == 2
-        assert stats["templates"]["demo"]["healthy_instances"] == 1
+        assert self.manager.validate_instance(valid_instance) is True
 
-    def test_clear_unhealthy_instances(self):
-        """Test clearing unhealthy instances."""
-        registry = ServerRegistry()
+        # Invalid instance (invalid port)
+        invalid_instance = ServerInstance(
+            id="test-1",
+            template_name="test",
+            port=70000,  # Invalid port
+            status=ServerStatus.CREATED,
+        )
 
-        # Add instances with failures
-        instance1 = ServerInstance(id="failing-1", template_name="demo")
-        instance1.consecutive_failures = 6  # Above threshold
-        registry.register_server("demo", instance1)
+        assert self.manager.validate_instance(invalid_instance) is False
 
-        instance2 = ServerInstance(id="failing-2", template_name="demo")
-        instance2.consecutive_failures = 3  # Below threshold
-        registry.register_server("demo", instance2)
+    def test_instance_config_generation(self):
+        """Test instance configuration generation."""
+        template = ServerTemplate(
+            name="test_template",
+            command=["python", "-m", "server"],
+            args=[],
+            env={"ENV": "test"},
+        )
 
-        instance3 = ServerInstance(id="healthy", template_name="demo")
-        instance3.consecutive_failures = 0
-        registry.register_server("demo", instance3)
+        instance = ServerInstance(
+            id="test-1",
+            template_name="test_template",
+            port=8080,
+            status=ServerStatus.CREATED,
+        )
 
-        # Clear unhealthy (max_failures = 5)
-        removed_count = registry.clear_unhealthy_instances(max_failures=5)
+        config = self.manager.generate_instance_config(template, instance)
 
-        assert removed_count == 1
-        assert len(registry.get_template("demo").instances) == 2
-        assert registry.get_instance("demo", "failing-1") is None
-        assert registry.get_instance("demo", "failing-2") is not None
-        assert registry.get_instance("demo", "healthy") is not None
+        assert isinstance(config, InstanceConfig)
+        assert config.command == template.command
+        assert config.env["ENV"] == "test"
+        assert config.env["PORT"] == "8080"  # Port should be added to env
 
-    def test_persistence(self):
-        """Test registry persistence to file."""
-        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".json") as f:
-            registry_file = f.name
 
-        try:
-            # Create registry with file
-            registry = ServerRegistry(registry_file)
+class TestHealthChecker:
+    """Test HealthChecker functionality."""
 
-            instance = ServerInstance(id="persistent", template_name="demo")
-            registry.register_server("demo", instance)
+    def setup_method(self):
+        """Set up test fixtures."""
+        self.health_checker = HealthChecker()
 
-            # Create new registry with same file
-            registry2 = ServerRegistry(registry_file)
+    async def test_instance_health_check(self):
+        """Test individual instance health check."""
+        instance = ServerInstance(
+            id="test-1", template_name="test", port=8080, status=ServerStatus.RUNNING
+        )
 
-            # Should load existing data
-            assert len(registry2.templates) == 1
-            assert "demo" in registry2.templates
-            assert registry2.get_instance("demo", "persistent") is not None
+        # Mock successful health check
+        with patch("aiohttp.ClientSession.get") as mock_get:
+            mock_response = Mock()
+            mock_response.status = 200
+            mock_response.__aenter__ = AsyncMock(return_value=mock_response)
+            mock_response.__aexit__ = AsyncMock(return_value=None)
+            mock_get.return_value = mock_response
 
-        finally:
-            # Cleanup
-            Path(registry_file).unlink(missing_ok=True)
+            result = await self.health_checker.check_instance_health(instance)
+            assert result is True
+
+    async def test_health_check_failure(self):
+        """Test health check failure handling."""
+        instance = ServerInstance(
+            id="test-1", template_name="test", port=8080, status=ServerStatus.RUNNING
+        )
+
+        # Mock failed health check
+        with patch("aiohttp.ClientSession.get") as mock_get:
+            mock_get.side_effect = Exception("Connection failed")
+
+            result = await self.health_checker.check_instance_health(instance)
+            assert result is False
+
+    async def test_batch_health_checks(self):
+        """Test batch health checking."""
+        instances = {
+            "test-1": ServerInstance(
+                id="test-1",
+                template_name="test",
+                port=8080,
+                status=ServerStatus.RUNNING,
+            ),
+            "test-2": ServerInstance(
+                id="test-2",
+                template_name="test",
+                port=8081,
+                status=ServerStatus.RUNNING,
+            ),
+        }
+
+        # Mock health checks
+        with patch.object(self.health_checker, "check_instance_health") as mock_check:
+            mock_check.side_effect = [True, False]  # First healthy, second unhealthy
+
+            results = await self.health_checker.check_all_instances(instances)
+
+            assert results["test-1"] is True
+            assert results["test-2"] is False
+            assert mock_check.call_count == 2
+
+    def test_health_check_timeout_configuration(self):
+        """Test health check timeout configuration."""
+        health_checker = HealthChecker(timeout=5.0)
+        assert health_checker.timeout == 5.0
+
+        # Default timeout
+        default_checker = HealthChecker()
+        assert default_checker.timeout > 0
+
+
+class TestLoadBalancer:
+    """Test LoadBalancer functionality."""
+
+    def setup_method(self):
+        """Set up test fixtures."""
+        self.load_balancer = LoadBalancer()
+
+    def test_round_robin_strategy(self):
+        """Test round-robin load balancing strategy."""
+        instances = {
+            "test-1": ServerInstance(
+                id="test-1",
+                template_name="test",
+                port=8080,
+                status=ServerStatus.RUNNING,
+            ),
+            "test-2": ServerInstance(
+                id="test-2",
+                template_name="test",
+                port=8081,
+                status=ServerStatus.RUNNING,
+            ),
+            "test-3": ServerInstance(
+                id="test-3",
+                template_name="test",
+                port=8082,
+                status=ServerStatus.RUNNING,
+            ),
+        }
+
+        # Configure round-robin
+        config = LoadBalancerConfig(strategy="round_robin")
+        self.load_balancer.configure("test", config)
+
+        # Test round-robin selection
+        selections = []
+        for _ in range(6):  # Two full rounds
+            selected = self.load_balancer.select_instance("test", instances)
+            selections.append(selected.id)
+
+        # Should cycle through instances
+        assert selections[:3] == selections[3:]  # Second round same as first
+
+    def test_least_connections_strategy(self):
+        """Test least connections load balancing strategy."""
+        instances = {
+            "test-1": ServerInstance(
+                id="test-1",
+                template_name="test",
+                port=8080,
+                status=ServerStatus.RUNNING,
+            ),
+            "test-2": ServerInstance(
+                id="test-2",
+                template_name="test",
+                port=8081,
+                status=ServerStatus.RUNNING,
+            ),
+        }
+
+        # Configure least connections
+        config = LoadBalancerConfig(strategy="least_connections")
+        self.load_balancer.configure("test", config)
+
+        # Simulate connections
+        self.load_balancer.record_request("test-1")
+        self.load_balancer.record_request("test-1")
+        self.load_balancer.record_request("test-2")
+
+        # Should select instance with fewer connections
+        selected = self.load_balancer.select_instance("test", instances)
+        assert selected.id == "test-2"
+
+    def test_weighted_strategy(self):
+        """Test weighted load balancing strategy."""
+        instances = {
+            "test-1": ServerInstance(
+                id="test-1",
+                template_name="test",
+                port=8080,
+                status=ServerStatus.RUNNING,
+                config=InstanceConfig(weight=1),
+            ),
+            "test-2": ServerInstance(
+                id="test-2",
+                template_name="test",
+                port=8081,
+                status=ServerStatus.RUNNING,
+                config=InstanceConfig(weight=3),
+            ),
+        }
+
+        # Configure weighted strategy
+        config = LoadBalancerConfig(strategy="weighted")
+        self.load_balancer.configure("test", config)
+
+        # Test weighted selection over many requests
+        selections = []
+        for _ in range(100):
+            selected = self.load_balancer.select_instance("test", instances)
+            selections.append(selected.id)
+
+        # test-2 should be selected more often (3:1 ratio)
+        test2_count = selections.count("test-2")
+        test1_count = selections.count("test-1")
+
+        # Should be roughly 3:1 ratio (allowing for randomness)
+        assert test2_count > test1_count * 2
+
+    def test_health_filtering(self):
+        """Test filtering unhealthy instances."""
+        instances = {
+            "test-1": ServerInstance(
+                id="test-1",
+                template_name="test",
+                port=8080,
+                status=ServerStatus.RUNNING,
+            ),
+            "test-2": ServerInstance(
+                id="test-2",
+                template_name="test",
+                port=8081,
+                status=ServerStatus.UNHEALTHY,
+            ),
+            "test-3": ServerInstance(
+                id="test-3",
+                template_name="test",
+                port=8082,
+                status=ServerStatus.STOPPED,
+            ),
+        }
+
+        selected = self.load_balancer.select_instance("test", instances)
+
+        # Should only select healthy instance
+        assert selected.id == "test-1"
+
+    def test_no_healthy_instances(self):
+        """Test behavior when no healthy instances available."""
+        instances = {
+            "test-1": ServerInstance(
+                id="test-1",
+                template_name="test",
+                port=8080,
+                status=ServerStatus.UNHEALTHY,
+            )
+        }
+
+        selected = self.load_balancer.select_instance("test", instances)
+        assert selected is None
+
+    def test_request_tracking(self):
+        """Test request tracking and statistics."""
+        # Record some requests
+        self.load_balancer.record_request("test-1")
+        self.load_balancer.record_request("test-1")
+        self.load_balancer.record_request("test-2")
+
+        stats = self.load_balancer.get_stats()
+
+        assert stats["requests_per_instance"]["test-1"] == 2
+        assert stats["requests_per_instance"]["test-2"] == 1
+        assert stats["total_requests"] == 3
+
+    def test_configuration_per_template(self):
+        """Test per-template load balancer configuration."""
+        # Configure different strategies for different templates
+        config1 = LoadBalancerConfig(strategy="round_robin")
+        config2 = LoadBalancerConfig(strategy="least_connections")
+
+        self.load_balancer.configure("template1", config1)
+        self.load_balancer.configure("template2", config2)
+
+        # Configurations should be independent
+        assert self.load_balancer.configs["template1"].strategy == "round_robin"
+        assert self.load_balancer.configs["template2"].strategy == "least_connections"
+
+
+class TestRegistryPersistence:
+    """Test registry persistence functionality."""
+
+    async def test_json_backup_creation(self):
+        """Test JSON backup creation."""
+        registry = GatewayRegistry(json_registry_path="/tmp/test_backup.json")
+
+        # Add some data
+        template = ServerTemplate(
+            name="test_template", command=["python"], args=[], env={}
+        )
+        registry.templates["test_template"] = template
+
+        # Create backup
+        with patch("builtins.open", create=True) as mock_open:
+            mock_file = Mock()
+            mock_open.return_value.__enter__.return_value = mock_file
+
+            await registry._save_to_json()
+
+            # Should have written JSON data
+            mock_file.write.assert_called_once()
+            written_data = mock_file.write.call_args[0][0]
+            data = json.loads(written_data)
+
+            assert "templates" in data
+            assert "test_template" in data["templates"]
+
+    async def test_json_recovery(self):
+        """Test recovery from JSON backup."""
+        test_data = {
+            "templates": {
+                "test_template": {
+                    "name": "test_template",
+                    "command": ["python"],
+                    "args": [],
+                    "env": {},
+                    "description": "Test template",
+                    "category": "testing",
+                }
+            },
+            "instances": {},
+            "version": "2.0",
+        }
+
+        registry = GatewayRegistry(json_registry_path="/tmp/test_recovery.json")
+
+        with (
+            patch("pathlib.Path.exists", return_value=True),
+            patch("builtins.open", create=True) as mock_open,
+        ):
+            mock_open.return_value.__enter__.return_value.read.return_value = (
+                json.dumps(test_data)
+            )
+
+            await registry._load_from_json()
+
+            assert "test_template" in registry.templates
+            assert registry.templates["test_template"].name == "test_template"
+
+    async def test_concurrent_access(self):
+        """Test concurrent access to registry."""
+        registry = GatewayRegistry()
+
+        # Simulate concurrent template registrations
+        templates = [
+            ServerTemplate(name=f"template_{i}", command=["python"], args=[], env={})
+            for i in range(10)
+        ]
+
+        # Mock database operations
+        registry.db_manager = Mock(spec=DatabaseManager)
+        registry.db_manager.create_template = AsyncMock()
+
+        # Register templates concurrently
+        tasks = [registry.register_template(template) for template in templates]
+
+        await asyncio.gather(*tasks)
+
+        # All templates should be registered
+        assert len(registry.templates) == 10
+        assert registry.db_manager.create_template.call_count == 10

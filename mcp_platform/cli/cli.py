@@ -34,7 +34,8 @@ from mcp_platform.core.response_formatter import (
     format_deployment_summary,
     get_backend_indicator,
 )
-from mcp_platform.gateway.cli import gateway_app
+
+# from mcp_platform.gateway.cli import gateway_app
 
 response_formatter = ResponseFormatter()
 
@@ -1224,7 +1225,7 @@ def install_completion_command():
 
 
 # Add gateway subcommand
-app.add_typer(gateway_app, name="gateway")
+# app.add_typer(gateway_app, name="gateway")
 
 
 if __name__ == "__main__":

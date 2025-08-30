@@ -141,9 +141,9 @@ class WeightedRoundRobinStrategy(BaseBalancingStrategy):
 
     def _get_instance_weight(self, instance: ServerInstance) -> int:
         """Get weight for an instance from metadata."""
-        if not instance.metadata:
+        if not instance.instance_metadata:
             return 1
-        return instance.metadata.get("weight", 1)
+        return instance.instance_metadata.get("weight", 1)
 
     def select_instance(
         self, instances: List[ServerInstance]
