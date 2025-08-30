@@ -8,8 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
-from mcp_platform.utils.image_utils import (get_default_registry,
-                                            normalize_image_name)
+from mcp_platform.utils.image_utils import get_default_registry, normalize_image_name
 
 pytestmark = pytest.mark.unit
 

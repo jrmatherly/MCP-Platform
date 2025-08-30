@@ -110,8 +110,7 @@ class TestCommandWorkflows:
         self, mock_get_session, mock_mcp_client
     ):
         """Test selecting a template and listing its tools."""
-        from mcp_platform.cli.interactive_cli import (list_tools,
-                                                      select_template)
+        from mcp_platform.cli.interactive_cli import list_tools, select_template
 
         # Setup mocks
         mock_session = Mock()
@@ -316,12 +315,14 @@ class TestComplexWorkflows:
     @patch("mcp_platform.cli.interactive_cli.get_session")
     def test_complete_user_session(self, mock_get_session):
         """Test a complete user session from start to finish."""
-        from mcp_platform.cli.interactive_cli import (call_tool,
-                                                      configure_template,
-                                                      deploy_template,
-                                                      list_tools,
-                                                      select_template,
-                                                      unselect_template)
+        from mcp_platform.cli.interactive_cli import (
+            call_tool,
+            configure_template,
+            deploy_template,
+            list_tools,
+            select_template,
+            unselect_template,
+        )
 
         # Setup session
         mock_session = Mock()
@@ -398,9 +399,11 @@ class TestComplexWorkflows:
     @patch("mcp_platform.cli.interactive_cli.get_session")
     def test_multi_template_workflow(self, mock_get_session):
         """Test working with multiple templates in one session."""
-        from mcp_platform.cli.interactive_cli import (configure_template,
-                                                      list_tools,
-                                                      select_template)
+        from mcp_platform.cli.interactive_cli import (
+            configure_template,
+            list_tools,
+            select_template,
+        )
 
         mock_session = Mock()
         mock_client = Mock()

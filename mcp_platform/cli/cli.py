@@ -28,9 +28,12 @@ from mcp_platform.backends import available_valid_backends
 from mcp_platform.cli.interactive_cli import run_interactive_shell
 from mcp_platform.client import MCPClient
 from mcp_platform.core.multi_backend_manager import MultiBackendManager
-from mcp_platform.core.response_formatter import (ResponseFormatter, console,
-                                                  format_deployment_summary,
-                                                  get_backend_indicator)
+from mcp_platform.core.response_formatter import (
+    ResponseFormatter,
+    console,
+    format_deployment_summary,
+    get_backend_indicator,
+)
 
 response_formatter = ResponseFormatter()
 
@@ -1009,7 +1012,7 @@ def install_completion():
             console.print("[bold]python -m mcp_platform --install-completion[/bold]")
             console.print("\n[yellow]Then add this to your ~/.zshrc:[/yellow]")
             console.print(
-                '[bold]eval "$(_MCPP_COMPLETE=zsh_source python -m mcp_platform)"[/bold]'
+                '[bold]eval "$(_MCPT_COMPLETE=zsh_source python -m mcp_platform)"[/bold]'
             )
 
         elif shell == "bash":
@@ -1018,7 +1021,7 @@ def install_completion():
             console.print("[bold]python -m mcp_platform --install-completion[/bold]")
             console.print("\n[yellow]Then add this to your ~/.bashrc:[/yellow]")
             console.print(
-                '[bold]eval "$(_MCPP_COMPLETE=bash_source python -m mcp_platform)"[/bold]'
+                '[bold]eval "$(_MCPT_COMPLETE=bash_source python -m mcp_platform)"[/bold]'
             )
 
         elif shell == "fish":
@@ -1027,19 +1030,19 @@ def install_completion():
             console.print("[bold]python -m mcp_platform --install-completion[/bold]")
             console.print("\n[yellow]Then add this to your config.fish:[/yellow]")
             console.print(
-                "[bold]eval (env _MCPP_COMPLETE=fish_source python -m mcp_platform)[/bold]"
+                "[bold]eval (env _MCPT_COMPLETE=fish_source python -m mcp_platform)[/bold]"
             )
 
         else:
             console.print(f"[yellow]Shell '{shell}' detected. Manual setup:[/yellow]")
             console.print(
-                'For zsh: eval "$(_MCPP_COMPLETE=zsh_source python -m mcp_platform)"'
+                'For zsh: eval "$(_MCPT_COMPLETE=zsh_source python -m mcp_platform)"'
             )
             console.print(
-                'For bash: eval "$(_MCPP_COMPLETE=bash_source python -m mcp_platform)"'
+                'For bash: eval "$(_MCPT_COMPLETE=bash_source python -m mcp_platform)"'
             )
             console.print(
-                "For fish: eval (env _MCPP_COMPLETE=fish_source python -m mcp_platform)"
+                "For fish: eval (env _MCPT_COMPLETE=fish_source python -m mcp_platform)"
             )
 
         console.print(
