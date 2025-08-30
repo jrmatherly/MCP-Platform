@@ -22,7 +22,13 @@ class TestSlackTemplate:
     def test_template_structure(self, template_dir):
         """Test Slack template has required files and structure."""
         # Required files
-        required_files = ["template.json", "README.md", "USAGE.md", "Dockerfile", "script.sh"]
+        required_files = [
+            "template.json",
+            "README.md",
+            "USAGE.md",
+            "Dockerfile",
+            "script.sh",
+        ]
 
         for file_path in required_files:
             assert (
@@ -89,14 +95,14 @@ class TestSlackTemplate:
         # Test key Slack-specific configuration properties
         slack_core_props = [
             "slack_mcp_xoxc_token",
-            "slack_mcp_xoxd_token", 
+            "slack_mcp_xoxd_token",
             "slack_mcp_xoxp_token",
             "slack_mcp_port",
             "slack_mcp_host",
             "slack_mcp_log_level",
             "slack_mcp_add_message_tool",
             "slack_mcp_users_cache",
-            "slack_mcp_channels_cache"
+            "slack_mcp_channels_cache",
         ]
 
         for prop in slack_core_props:
@@ -152,7 +158,7 @@ class TestSlackTemplate:
             "conversations_add_message",
             "search_messages",
             "channel_management",
-            "user_management"
+            "user_management",
         ]
 
         for expected in expected_caps:
@@ -176,7 +182,7 @@ class TestSlackTemplate:
             "## Authentication Modes",
             "## Safety Features",
             "## Transport Modes",
-            "## Troubleshooting"
+            "## Troubleshooting",
         ]
 
         for section in readme_sections:
@@ -193,7 +199,7 @@ class TestSlackTemplate:
             "## Tool Usage Examples",
             "## Docker Usage",
             "## Integration Examples",
-            "## Troubleshooting Guide"
+            "## Troubleshooting Guide",
         ]
 
         for section in usage_sections:
@@ -210,8 +216,12 @@ class TestSlackTemplate:
         assert "examples" in config
         examples = config["examples"]
 
-        # Should have examples for different authentication modes
-        example_sections = ["oauth_mode", "stealth_mode", "safety_features"]
+        # Should have examples for different authentication modes using korotovsky naming
+        example_sections = [
+            "cookie_authentication",
+            "oauth_authentication",
+            "message_posting",
+        ]
         for section in example_sections:
             assert section in examples, f"Missing example section: {section}"
 
@@ -231,25 +241,34 @@ class TestSlackTemplate:
 
         properties = config["config_schema"]["properties"]
 
-        # Test sensitive configuration is marked properly
-        sensitive_props = ["slack_token", "slack_user_token", "slack_app_token", "slack_cookie"]
+        # Test sensitive configuration is marked properly using korotovsky naming
+        sensitive_props = [
+            "slack_mcp_xoxc_token",
+            "slack_mcp_xoxd_token",
+            "slack_mcp_xoxp_token",
+            "slack_mcp_sse_api_key",
+        ]
         for prop in sensitive_props:
             if prop in properties:
                 prop_config = properties[prop]
-                assert prop_config.get("sensitive", False), f"Property {prop} should be marked as sensitive"
+                assert prop_config.get(
+                    "sensitive", False
+                ), f"Property {prop} should be marked as sensitive"
 
-        # Test boolean defaults
+        # Test boolean defaults using actual properties
         boolean_props = {
-            "stealth_mode": False,
-            "enable_message_posting": False,
-            "cache_enabled": True,
-            "read_only_mode": False
+            "slack_mcp_custom_tls": False,
+            "slack_mcp_server_ca_toolkit": False,
+            "slack_mcp_server_ca_insecure": False,
+            "slack_mcp_add_message_mark": False,
         }
 
         for prop, expected_default in boolean_props.items():
             if prop in properties:
                 prop_config = properties[prop]
-                assert prop_config.get("default") == expected_default, f"Property {prop} has incorrect default"
+                assert (
+                    prop_config.get("default") == expected_default
+                ), f"Property {prop} has incorrect default"
 
     def test_docker_configuration(self, template_dir):
         """Test Docker configuration is present and valid."""
@@ -263,15 +282,16 @@ class TestSlackTemplate:
             dockerfile_content = f.read()
 
         dockerfile_requirements = [
-            "FROM python:",
+            "FROM ghcr.io/korotovsky/slack-mcp-server",
             "WORKDIR /app",
-            "RUN pip install",
             "EXPOSE 3003",
-            "CMD"
+            "CMD",
         ]
 
         for requirement in dockerfile_requirements:
-            assert requirement in dockerfile_content, f"Missing Dockerfile requirement: {requirement}"
+            assert (
+                requirement in dockerfile_content
+            ), f"Missing Dockerfile requirement: {requirement}"
 
         # Check script.sh exists and is executable
         assert script_file.exists()
@@ -280,16 +300,12 @@ class TestSlackTemplate:
         with open(script_file, "r") as f:
             script_content = f.read()
 
-        script_requirements = [
-            "#!/bin/bash",
-            "set -e",
-            "MCP_TRANSPORT",
-            "SLACK_TOKEN",
-            "exec python -m slack_mcp_server"
-        ]
+        script_requirements = ["#!/bin/bash", "set -e", "MCP_TRANSPORT"]
 
         for requirement in script_requirements:
-            assert requirement in script_content, f"Missing script requirement: {requirement}"
+            assert (
+                requirement in script_content
+            ), f"Missing script requirement: {requirement}"
 
     def test_template_origin_and_metadata(self, template_dir):
         """Test template metadata and origin information."""
@@ -322,16 +338,25 @@ class TestSlackTemplate:
         # Message posting should be disabled by default
         assert "slack_mcp_add_message_tool" in properties
         posting_config = properties["slack_mcp_add_message_tool"]
-        assert "default" not in posting_config, "Message posting should be disabled by default (no default)"
+        assert (
+            "default" not in posting_config
+        ), "Message posting should be disabled by default (no default)"
 
         # Security features should be available
         security_fields = ["slack_mcp_custom_tls", "slack_mcp_server_ca_insecure"]
         for field in security_fields:
             if field in properties:
-                assert properties[field]["default"] is False, f"{field} should default to False for security"
+                assert (
+                    properties[field]["default"] is False
+                ), f"{field} should default to False for security"
 
         # Sensitive tokens should be marked
-        sensitive_fields = ["slack_mcp_xoxc_token", "slack_mcp_xoxd_token", "slack_mcp_xoxp_token", "slack_mcp_sse_api_key"]
+        sensitive_fields = [
+            "slack_mcp_xoxc_token",
+            "slack_mcp_xoxd_token",
+            "slack_mcp_xoxp_token",
+            "slack_mcp_sse_api_key",
+        ]
         for field in sensitive_fields:
             if field in properties:
                 assert properties[field].get("sensitive", False) is True
