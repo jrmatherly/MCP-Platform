@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM ghcr.io/korotovsky/slack-mcp-server:v1.1.24
 
 LABEL org.opencontainers.image.title="Slack MCP Server"
 LABEL org.opencontainers.image.description="Enhanced Slack MCP server for comprehensive workspace integration"
@@ -10,39 +10,18 @@ LABEL org.opencontainers.image.documentation="https://github.com/Data-Everything
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    git \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install the slack-mcp-server directly from GitHub
-RUN pip install git+https://github.com/korotovsky/slack-mcp-server.git
-
-# Create necessary directories
+# Create necessary directories for caching and logs
 RUN mkdir -p /app/logs /app/config /app/cache
 
-# Set environment variables with defaults
-ENV PYTHONPATH=/app
-ENV PYTHONUNBUFFERED=1
-ENV MCP_TRANSPORT=stdio
-ENV MCP_PORT=3003
-ENV LOG_LEVEL=INFO
-ENV CACHE_ENABLED=true
-ENV CACHE_TTL=3600
-ENV EMBED_USER_INFO=true
-ENV MAX_HISTORY_LIMIT=30d
-ENV READ_ONLY_MODE=false
-ENV ENABLE_MESSAGE_POSTING=false
-ENV STEALTH_MODE=false
+# Set environment variables with defaults matching korotovsky/slack-mcp-server
+ENV SLACK_MCP_PORT=3003
+ENV SLACK_MCP_HOST=127.0.0.1
+ENV SLACK_MCP_LOG_LEVEL=info
+ENV SLACK_MCP_USERS_CACHE=/app/cache/.users_cache.json
+ENV SLACK_MCP_CHANNELS_CACHE=/app/cache/.channels_cache_v2.json
 
 # Expose the default port
 EXPOSE 3003
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:3003/health')" || exit 1
-
-# Default command - start the slack MCP server
-# The slack-mcp-server package should provide an entry point
-CMD ["python", "-m", "slack_mcp_server"]
+# Default command - use the original entrypoint but with stdio transport
+CMD ["mcp-server", "--transport", "stdio"]

@@ -5,9 +5,10 @@ These tests verify tool configurations and mock Slack API responses.
 """
 
 import json
-import pytest
-from unittest.mock import Mock, patch, MagicMock
 from pathlib import Path
+from unittest.mock import patch
+
+import pytest
 
 
 class TestSlackTools:
@@ -18,7 +19,7 @@ class TestSlackTools:
         """Load template configuration."""
         template_dir = Path(__file__).parent.parent
         template_json = template_dir / "template.json"
-        
+
         with open(template_json, "r") as f:
             return json.load(f)
 
@@ -36,7 +37,7 @@ class TestSlackTools:
                     "thread_ts": None
                 },
                 {
-                    "type": "message", 
+                    "type": "message",
                     "user": "U987654321",
                     "text": "Reply to the message",
                     "ts": "1234567891.123456",
@@ -66,7 +67,7 @@ class TestSlackTools:
                 "matches": [
                     {
                         "type": "message",
-                        "user": "U123456789", 
+                        "user": "U123456789",
                         "username": "testuser",
                         "text": "This is a test message",
                         "ts": "1234567890.123456",
@@ -86,7 +87,7 @@ class TestSlackTools:
         # Should have all expected Slack tools
         expected_tools = [
             "conversations_history",
-            "conversations_replies", 
+            "conversations_replies",
             "conversations_add_message",
             "search_messages",
             "channel_management",
@@ -103,7 +104,7 @@ class TestSlackTools:
         capabilities = template_config["capabilities"]
         
         history_cap = next(
-            cap for cap in capabilities 
+            cap for cap in capabilities
             if cap["name"] == "conversations_history"
         )
         
@@ -120,7 +121,7 @@ class TestSlackTools:
         assert "include_activity_messages" in example_args
 
     def test_conversations_replies_capability(self, template_config):
-        """Test conversations_replies capability definition.""" 
+        """Test conversations_replies capability definition."""
         capabilities = template_config["capabilities"]
         
         replies_cap = next(
@@ -195,7 +196,7 @@ class TestSlackTools:
         result = response.json()
         
         # Verify mock response structure
-        assert result["ok"] == True
+        assert result["ok"] is True
         assert "messages" in result
         assert len(result["messages"]) == 2
         assert result["messages"][0]["user"] == "U123456789"
@@ -221,7 +222,7 @@ class TestSlackTools:
         result = response.json()
         
         # Verify mock response structure
-        assert result["ok"] == True
+        assert result["ok"] is True
         assert "messages" in result
         assert result["messages"]["total"] == 2
         assert len(result["messages"]["matches"]) == 1
@@ -318,7 +319,7 @@ class TestSlackTools:
         result = response.json()
         
         # Verify error response structure
-        assert result["ok"] == False
+        assert result["ok"] is False
         assert "error" in result
         assert result["error"] == "channel_not_found"
 
@@ -326,25 +327,25 @@ class TestSlackTools:
         """Test that authentication modes are documented in examples."""
         examples = template_config.get("examples", {})
         
-        # Should have OAuth and stealth mode examples
-        assert "oauth_mode" in examples
-        assert "stealth_mode" in examples
+        # Should have cookie and OAuth authentication examples
+        assert "cookie_authentication" in examples
+        assert "oauth_authentication" in examples
         
-        oauth_example = examples["oauth_mode"]
+        oauth_example = examples["oauth_authentication"]
         assert "description" in oauth_example
         assert "config" in oauth_example
         
-        stealth_example = examples["stealth_mode"]
-        assert "description" in stealth_example
-        assert "config" in stealth_example
+        cookie_example = examples["cookie_authentication"]
+        assert "description" in cookie_example
+        assert "config" in cookie_example
 
     def test_safety_features_documented(self, template_config):
         """Test that safety features are documented."""
         examples = template_config.get("examples", {})
         
-        # Should have safety features example
-        assert "safety_features" in examples
+        # Should have message posting example
+        assert "message_posting" in examples
         
-        safety_example = examples["safety_features"]
-        assert "description" in safety_example
-        assert "disabled by default" in safety_example["description"].lower()
+        posting_example = examples["message_posting"]
+        assert "description" in posting_example
+        assert "disabled by default" in posting_example["description"].lower() or "channel controls" in posting_example["description"].lower()

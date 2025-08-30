@@ -16,8 +16,8 @@ This template extends the powerful [korotovsky/slack-mcp-server](https://github.
 ## Key Capabilities
 
 ### 🔐 Dual Authentication Modes
-- **OAuth Mode**: Use standard Slack OAuth tokens (xoxb-, xoxp-, xapp-)
-- **Stealth Mode**: Use browser cookies for access without bot permissions
+- **XOXC/XOXD Mode**: Use browser cookies (xoxc-... and xoxd-...) for access without bot permissions
+- **XOXP Mode**: Use user OAuth tokens (xoxp-...) for standard API access
 
 ### 💬 Comprehensive Messaging
 - Fetch message history with smart pagination (by date or count)
@@ -28,121 +28,192 @@ This template extends the powerful [korotovsky/slack-mcp-server](https://github.
 ### 🚀 Advanced Features
 - Support for channels, DMs, and group DMs
 - Channel and user lookup by name or ID (e.g., #general, @username)
-- Embedded user information for better context
-- Caching for improved performance
+- Intelligent caching with configurable cache files
 - Proxy support for enterprise environments
+- Custom TLS support for Enterprise Slack
 
 ## Quick Start
 
-### Local Development
+### Using Docker with XOXP Token
 
 ```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Run with OAuth token (stdio transport)
-python server.py --slack-token xoxb-your-token
-
-# Run with stealth mode
-python server.py --stealth-mode --slack-cookie "d=xoxd-..." --slack-workspace yourteam
-
-# Run with SSE transport
-python server.py --mcp-transport sse --mcp-port 3003
+docker run -i --rm \
+  -e SLACK_MCP_XOXP_TOKEN=xoxp-your-token \
+  ghcr.io/korotovsky/slack-mcp-server:v1.1.24 \
+  mcp-server --transport stdio
 ```
 
-### Docker Deployment
+### Using Docker with XOXC/XOXD Tokens
 
 ```bash
-# Build the image
-docker build -t dataeverything/mcp-slack:latest .
-
-# Run with OAuth token
-docker run -p 3003:3003 \
-  -e SLACK_TOKEN=xoxb-your-token \
-  dataeverything/mcp-slack:latest
-
-# Run with stealth mode
-docker run -p 3003:3003 \
-  -e STEALTH_MODE=true \
-  -e SLACK_COOKIE="d=xoxd-..." \
-  -e SLACK_WORKSPACE=yourteam \
-  dataeverything/mcp-slack:latest
-
-# Join MCP Platform network
-docker network create mcp-platform
-docker run --network mcp-platform --name slack \
-  -p 3003:3003 -e SLACK_TOKEN=xoxb-your-token \
-  dataeverything/mcp-slack:latest
+docker run -i --rm \
+  -e SLACK_MCP_XOXC_TOKEN=xoxc-your-token \
+  -e SLACK_MCP_XOXD_TOKEN=xoxd-your-cookie \
+  ghcr.io/korotovsky/slack-mcp-server:v1.1.24 \
+  mcp-server --transport stdio
 ```
 
-### MCP Platform CLI
+### Using MCP Platform CLI
 
 ```bash
-# Deploy with OAuth token
-python -m mcp_platform deploy slack --config slack_token=xoxb-your-token
+# With XOXP token
+python -m mcp_platform deploy slack --config slack_mcp_xoxp_token=xoxp-your-token
 
-# Deploy with stealth mode
+# With XOXC/XOXD tokens
 python -m mcp_platform deploy slack \
-  --config stealth_mode=true \
-  --config slack_cookie="d=xoxd-..." \
-  --config slack_workspace=yourteam
+  --config slack_mcp_xoxc_token=xoxc-your-token \
+  --config slack_mcp_xoxd_token=xoxd-your-cookie
 
-# Deploy with SSE transport
+# With SSE transport
 python -m mcp_platform deploy slack \
-  --config mcp_transport=sse \
-  --config mcp_port=3003
+  --transport sse \
+  --config slack_mcp_port=13080 \
+  --config slack_mcp_xoxp_token=xoxp-your-token
+```
+
+### Claude Desktop Integration
+
+Add to your `claude_desktop_config.json`:
+
+**Using XOXP Token:**
+```json
+{
+  "mcpServers": {
+    "slack": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "SLACK_MCP_XOXP_TOKEN",
+        "ghcr.io/korotovsky/slack-mcp-server:v1.1.24",
+        "mcp-server",
+        "--transport",
+        "stdio"
+      ],
+      "env": {
+        "SLACK_MCP_XOXP_TOKEN": "xoxp-your-token"
+      }
+    }
+  }
+}
+```
+
+**Using XOXC/XOXD Tokens:**
+```json
+{
+  "mcpServers": {
+    "slack": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "SLACK_MCP_XOXC_TOKEN",
+        "-e",
+        "SLACK_MCP_XOXD_TOKEN",
+        "ghcr.io/korotovsky/slack-mcp-server:v1.1.24",
+        "mcp-server",
+        "--transport",
+        "stdio"
+      ],
+      "env": {
+        "SLACK_MCP_XOXC_TOKEN": "xoxc-your-token",
+        "SLACK_MCP_XOXD_TOKEN": "xoxd-your-cookie"
+      }
+    }
+  }
+}
+```
+
+### SSE Transport for Web Applications
+
+```bash
+# Start SSE server
+docker run -p 13080:13080 \
+  -e SLACK_MCP_XOXP_TOKEN=xoxp-your-token \
+  ghcr.io/korotovsky/slack-mcp-server:v1.1.24 \
+  mcp-server --transport sse --host 0.0.0.0
+
+# Connect via mcp-remote
+npx mcp-remote http://localhost:13080/sse
 ```
 
 ## Configuration
 
+### Authentication Methods
+
+The server supports multiple authentication methods:
+
+1. **XOXP Token (User OAuth)**: Standard user token for full API access
+2. **XOXC/XOXD Tokens (Browser Cookies)**: Extract from browser for stealth access
+
 ### Environment Variables
+
+All environment variables from the [korotovsky/slack-mcp-server](https://github.com/korotovsky/slack-mcp-server) are supported:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `SLACK_TOKEN` | Slack OAuth bot token (xoxb-...) | - |
-| `SLACK_USER_TOKEN` | Slack user token (xoxp-...) | - |
-| `SLACK_APP_TOKEN` | Slack app token (xapp-...) | - |
-| `SLACK_COOKIE` | Browser cookie for stealth mode | - |
-| `SLACK_WORKSPACE` | Workspace domain (yourteam.slack.com) | - |
-| `STEALTH_MODE` | Enable stealth mode authentication | false |
-| `ENABLE_MESSAGE_POSTING` | Allow posting messages | false |
-| `ALLOWED_CHANNELS` | Comma-separated allowed channels | - |
-| `CACHE_ENABLED` | Enable user/channel caching | true |
-| `CACHE_TTL` | Cache time-to-live in seconds | 3600 |
-| `MAX_HISTORY_LIMIT` | Maximum history fetch limit | 30d |
-| `READ_ONLY_MODE` | Restrict to read-only operations | false |
-| `LOG_LEVEL` | Logging level (DEBUG, INFO, WARNING, ERROR) | INFO |
-| `MCP_TRANSPORT` | Transport mode (stdio, sse) | stdio |
-| `MCP_PORT` | Port for SSE transport | 3003 |
+| `SLACK_MCP_XOXC_TOKEN` | Slack browser token (xoxc-...) | - |
+| `SLACK_MCP_XOXD_TOKEN` | Slack browser cookie d (xoxd-...) | - |
+| `SLACK_MCP_XOXP_TOKEN` | User OAuth token (xoxp-...) | - |
+| `SLACK_MCP_PORT` | Port for the MCP server | 13080 |
+| `SLACK_MCP_HOST` | Host for the MCP server | 127.0.0.1 |
+| `SLACK_MCP_SSE_API_KEY` | Bearer token for SSE transport | - |
+| `SLACK_MCP_PROXY` | Proxy URL for outgoing requests | - |
+| `SLACK_MCP_USER_AGENT` | Custom User-Agent (for Enterprise Slack) | - |
+| `SLACK_MCP_CUSTOM_TLS` | Enable custom TLS-handshake | false |
+| `SLACK_MCP_SERVER_CA` | Path to CA certificate | - |
+| `SLACK_MCP_SERVER_CA_TOOLKIT` | Inject HTTPToolkit CA certificate | false |
+| `SLACK_MCP_SERVER_CA_INSECURE` | Trust insecure requests (NOT RECOMMENDED) | false |
+| `SLACK_MCP_ADD_MESSAGE_TOOL` | Enable message posting control | - |
+| `SLACK_MCP_ADD_MESSAGE_MARK` | Auto-mark posted messages as read | false |
+| `SLACK_MCP_ADD_MESSAGE_UNFURLING` | Enable link unfurling | - |
+| `SLACK_MCP_USERS_CACHE` | Path to users cache file | .users_cache.json |
+| `SLACK_MCP_CHANNELS_CACHE` | Path to channels cache file | .channels_cache_v2.json |
+| `SLACK_MCP_LOG_LEVEL` | Log level (debug, info, warn, error, panic, fatal) | info |
 
-### Configuration Options
+### Message Posting Control
+
+The `SLACK_MCP_ADD_MESSAGE_TOOL` variable controls message posting:
+
+- **`true`**: Enable posting to all channels
+- **`C1234567890,C0987654321`**: Comma-separated channel IDs to whitelist
+- **`!C1234567890`**: Allow all channels except specified ones
+- **Empty/unset**: Disable posting (default for safety)
+
+### Enterprise Slack Configuration
+
+For Enterprise Slack environments, you may need:
 
 ```bash
-# Direct configuration (for config_schema properties)
---config slack_token="xoxb-your-token"
---config stealth_mode=true
---config enable_message_posting=true
-
-# Environment variables
---env SLACK_TOKEN="xoxb-your-token"
---env STEALTH_MODE=true
---env ENABLE_MESSAGE_POSTING=true
-
-# Double-underscore notation (for nested configs)
---config slack__workspace="yourteam"
---config slack__max_history="90d"
+export SLACK_MCP_USER_AGENT="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36..."
+export SLACK_MCP_CUSTOM_TLS=true
 ```
 
-### Configuration Files
+### Configuration Examples
 
-**JSON Configuration (`slack-config.json`):**
-```json
-{
-  "slack_token": "xoxb-your-token",
-  "slack_workspace": "yourteam",
-  "enable_message_posting": false,
-  "allowed_channels": "#test,#bot-testing",
-  "cache_enabled": true,
+**Basic XOXP Authentication:**
+```bash
+export SLACK_MCP_XOXP_TOKEN=xoxp-your-token
+docker run -i --rm -e SLACK_MCP_XOXP_TOKEN ghcr.io/korotovsky/slack-mcp-server:v1.1.24
+```
+
+**Browser Cookie Authentication:**
+```bash
+export SLACK_MCP_XOXC_TOKEN=xoxc-your-token
+export SLACK_MCP_XOXD_TOKEN=xoxd-your-cookie
+docker run -i --rm -e SLACK_MCP_XOXC_TOKEN -e SLACK_MCP_XOXD_TOKEN ghcr.io/korotovsky/slack-mcp-server:v1.1.24
+```
+
+**With Message Posting Enabled:**
+```bash
+export SLACK_MCP_XOXP_TOKEN=xoxp-your-token
+export SLACK_MCP_ADD_MESSAGE_TOOL=C1234567890,C0987654321
+docker run -i --rm -e SLACK_MCP_XOXP_TOKEN -e SLACK_MCP_ADD_MESSAGE_TOOL ghcr.io/korotovsky/slack-mcp-server:v1.1.24
+```
   "log_level": "INFO"
 }
 ```

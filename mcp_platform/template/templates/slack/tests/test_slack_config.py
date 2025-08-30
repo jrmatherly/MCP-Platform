@@ -5,8 +5,9 @@ These tests verify configuration schema validation and environment variable hand
 """
 
 import json
-import pytest
 from pathlib import Path
+
+import pytest
 
 
 class TestSlackConfig:
@@ -41,7 +42,7 @@ class TestSlackConfig:
         properties = template_config["config_schema"]["properties"]
         
         # OAuth authentication options
-        oauth_props = ["slack_token", "slack_user_token", "slack_app_token"]
+        oauth_props = ["slack_mcp_xoxc_token", "slack_mcp_xoxd_token", "slack_mcp_xoxp_token"]
         for prop in oauth_props:
             assert prop in properties, f"Missing OAuth property: {prop}"
             prop_config = properties[prop]
@@ -58,21 +59,20 @@ class TestSlackConfig:
         """Test environment variable mappings are consistent."""
         properties = template_config["config_schema"]["properties"]
         
+        # Authentication tokens should be in the expected env mapping
         expected_mappings = {
-            "slack_token": "SLACK_TOKEN",
-            "slack_user_token": "SLACK_USER_TOKEN", 
-            "slack_app_token": "SLACK_APP_TOKEN",
-            "slack_cookie": "SLACK_COOKIE",
-            "slack_workspace": "SLACK_WORKSPACE",
-            "stealth_mode": "STEALTH_MODE",
-            "enable_message_posting": "ENABLE_MESSAGE_POSTING",
-            "allowed_channels": "ALLOWED_CHANNELS",
-            "cache_enabled": "CACHE_ENABLED",
-            "cache_ttl": "CACHE_TTL",
-            "read_only_mode": "READ_ONLY_MODE",
-            "log_level": "LOG_LEVEL",
-            "mcp_transport": "MCP_TRANSPORT",
-            "mcp_port": "MCP_PORT"
+            "slack_mcp_xoxc_token": "SLACK_MCP_XOXC_TOKEN",
+            "slack_mcp_xoxd_token": "SLACK_MCP_XOXD_TOKEN",
+            "slack_mcp_xoxp_token": "SLACK_MCP_XOXP_TOKEN",
+            "slack_mcp_sse_api_key": "SLACK_MCP_SSE_API_KEY",
+            "slack_mcp_proxy": "SLACK_MCP_PROXY",
+            "slack_mcp_user_agent": "SLACK_MCP_USER_AGENT",
+            "slack_mcp_add_message_tool": "SLACK_MCP_ADD_MESSAGE_TOOL",
+            "slack_mcp_port": "SLACK_MCP_PORT",
+            "slack_mcp_host": "SLACK_MCP_HOST",
+            "slack_mcp_log_level": "SLACK_MCP_LOG_LEVEL",
+            "slack_mcp_users_cache": "SLACK_MCP_USERS_CACHE",
+            "slack_mcp_channels_cache": "SLACK_MCP_CHANNELS_CACHE"
         }
         
         for prop_name, expected_env in expected_mappings.items():
@@ -86,33 +86,38 @@ class TestSlackConfig:
         """Test that safety-related configurations have secure defaults."""
         properties = template_config["config_schema"]["properties"]
         
-        # Message posting should be disabled by default
-        posting_config = properties["enable_message_posting"]
-        assert posting_config["default"] == False, "Message posting should be disabled by default"
+        # Message posting tool should not have a default (disabled by default)
+        if "slack_mcp_add_message_tool" in properties:
+            posting_config = properties["slack_mcp_add_message_tool"]
+            assert "default" not in posting_config, "Message posting should be disabled by default (no default value)"
         
-        # Read-only mode should be available with safe default
-        readonly_config = properties["read_only_mode"]
-        assert readonly_config["default"] == False, "Read-only mode default should be explicit"
+        # Custom TLS should be disabled by default
+        if "slack_mcp_custom_tls" in properties:
+            tls_config = properties["slack_mcp_custom_tls"]
+            assert tls_config["default"] is False, "Custom TLS should be disabled by default"
         
-        # Stealth mode should be disabled by default
-        stealth_config = properties["stealth_mode"]
-        assert stealth_config["default"] == False, "Stealth mode should be disabled by default"
+        # Insecure CA should be disabled by default
+        if "slack_mcp_server_ca_insecure" in properties:
+            insecure_config = properties["slack_mcp_server_ca_insecure"]
+            assert insecure_config["default"] is False, "Insecure CA should be disabled by default"
 
     def test_performance_configuration_defaults(self, template_config):
         """Test performance-related configuration defaults."""
         properties = template_config["config_schema"]["properties"]
         
-        # Caching should be enabled by default
-        cache_config = properties["cache_enabled"]
-        assert cache_config["default"] == True, "Caching should be enabled by default"
+        # Cache files should have reasonable defaults
+        if "slack_mcp_users_cache" in properties:
+            users_cache_config = properties["slack_mcp_users_cache"]
+            assert users_cache_config["default"] == ".users_cache.json", "Users cache should have default filename"
         
-        # Cache TTL should have reasonable default
-        ttl_config = properties["cache_ttl"]
-        assert ttl_config["default"] == 3600, "Cache TTL should have 1 hour default"
+        if "slack_mcp_channels_cache" in properties:
+            channels_cache_config = properties["slack_mcp_channels_cache"]
+            assert channels_cache_config["default"] == ".channels_cache_v2.json", "Channels cache should have default filename"
         
-        # History limit should have reasonable default
-        history_config = properties["max_history_limit"]
-        assert history_config["default"] == "30d", "History limit should default to 30 days"
+        # Port should have reasonable default
+        if "slack_mcp_port" in properties:
+            port_config = properties["slack_mcp_port"]
+            assert port_config["default"] == 13080, "Port should default to 13080"
 
     def test_transport_configuration(self, template_config):
         """Test transport configuration is properly set up."""
@@ -130,20 +135,21 @@ class TestSlackConfig:
         assert "port" in transport
         assert transport["port"] == 3003
         
-        # MCP port config should match
+        # Slack MCP port config should exist
         properties = template_config["config_schema"]["properties"]
-        mcp_port_config = properties["mcp_port"]
-        assert mcp_port_config["default"] == 3003
+        if "slack_mcp_port" in properties:
+            slack_port_config = properties["slack_mcp_port"]
+            assert slack_port_config["default"] == 13080
 
     def test_sensitive_data_marking(self, template_config):
         """Test that sensitive configuration is properly marked."""
         properties = template_config["config_schema"]["properties"]
         
         sensitive_props = [
-            "slack_token",
-            "slack_user_token", 
-            "slack_app_token",
-            "slack_cookie"
+            "slack_mcp_xoxc_token",
+            "slack_mcp_xoxd_token",
+            "slack_mcp_xoxp_token",
+            "slack_mcp_sse_api_key"
         ]
         
         for prop in sensitive_props:

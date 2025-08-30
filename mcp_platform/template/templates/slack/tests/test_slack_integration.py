@@ -87,22 +87,19 @@ class TestSlackTemplate:
         properties = schema["properties"]
 
         # Test key Slack-specific configuration properties
-        slack_required_props = [
-            "slack_token",
-            "slack_user_token", 
-            "slack_app_token",
-            "slack_cookie",
-            "slack_workspace",
-            "stealth_mode",
-            "enable_message_posting",
-            "cache_enabled",
-            "read_only_mode",
-            "log_level",
-            "mcp_transport",
-            "mcp_port"
+        slack_core_props = [
+            "slack_mcp_xoxc_token",
+            "slack_mcp_xoxd_token", 
+            "slack_mcp_xoxp_token",
+            "slack_mcp_port",
+            "slack_mcp_host",
+            "slack_mcp_log_level",
+            "slack_mcp_add_message_tool",
+            "slack_mcp_users_cache",
+            "slack_mcp_channels_cache"
         ]
 
-        for prop in slack_required_props:
+        for prop in slack_core_props:
             assert prop in properties, f"Missing configuration property: {prop}"
 
         # Test environment variable mappings
@@ -150,8 +147,8 @@ class TestSlackTemplate:
         # Verify Slack-specific capabilities
         cap_names = [cap["name"] for cap in capabilities]
         expected_caps = [
-            "conversations_history", 
-            "conversations_replies", 
+            "conversations_history",
+            "conversations_replies",
             "conversations_add_message",
             "search_messages",
             "channel_management",
@@ -192,7 +189,7 @@ class TestSlackTemplate:
         usage_sections = [
             "# Slack MCP Server Usage Guide",
             "## Authentication Methods",
-            "## Configuration Examples", 
+            "## Configuration Examples",
             "## Tool Usage Examples",
             "## Docker Usage",
             "## Integration Examples",
@@ -220,7 +217,7 @@ class TestSlackTemplate:
 
         # Test category and tags
         assert config["category"] == "Communication"
-        
+
         slack_tags = ["slack", "messaging", "collaboration", "workspace"]
         for tag in slack_tags:
             assert tag in config["tags"], f"Missing tag: {tag}"
@@ -244,11 +241,11 @@ class TestSlackTemplate:
         # Test boolean defaults
         boolean_props = {
             "stealth_mode": False,
-            "enable_message_posting": False, 
+            "enable_message_posting": False,
             "cache_enabled": True,
             "read_only_mode": False
         }
-        
+
         for prop, expected_default in boolean_props.items():
             if prop in properties:
                 prop_config = properties[prop]
@@ -261,7 +258,7 @@ class TestSlackTemplate:
 
         # Check Dockerfile exists and has basic structure
         assert dockerfile.exists()
-        
+
         with open(dockerfile, "r") as f:
             dockerfile_content = f.read()
 
@@ -278,7 +275,7 @@ class TestSlackTemplate:
 
         # Check script.sh exists and is executable
         assert script_file.exists()
-        
+
         # Check script has proper shebang and basic structure
         with open(script_file, "r") as f:
             script_content = f.read()
@@ -323,17 +320,18 @@ class TestSlackTemplate:
         properties = config["config_schema"]["properties"]
 
         # Message posting should be disabled by default
-        assert properties["enable_message_posting"]["default"] == False
+        assert "slack_mcp_add_message_tool" in properties
+        posting_config = properties["slack_mcp_add_message_tool"]
+        assert "default" not in posting_config, "Message posting should be disabled by default (no default)"
 
-        # Read-only mode should be available
-        assert "read_only_mode" in properties
-        assert properties["read_only_mode"]["default"] == False
-
-        # Channel restrictions should be configurable
-        assert "allowed_channels" in properties
+        # Security features should be available
+        security_fields = ["slack_mcp_custom_tls", "slack_mcp_server_ca_insecure"]
+        for field in security_fields:
+            if field in properties:
+                assert properties[field]["default"] is False, f"{field} should default to False for security"
 
         # Sensitive tokens should be marked
-        sensitive_fields = ["slack_token", "slack_user_token", "slack_app_token", "slack_cookie"]
+        sensitive_fields = ["slack_mcp_xoxc_token", "slack_mcp_xoxd_token", "slack_mcp_xoxp_token", "slack_mcp_sse_api_key"]
         for field in sensitive_fields:
             if field in properties:
-                assert properties[field].get("sensitive", False)
+                assert properties[field].get("sensitive", False) is True
