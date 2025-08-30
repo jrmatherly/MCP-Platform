@@ -1,0 +1,250 @@
+{
+  "name": "Slack MCP Server",
+  "description": "Enhanced Slack MCP server for comprehensive workspace integration with channels, DMs, and message management",
+  "version": "1.0.0",
+  "author": "Data Everything (extends korotovsky/slack-mcp-server)",
+  "category": "Communication",
+  "tags": [
+    "slack",
+    "messaging",
+    "collaboration",
+    "workspace",
+    "channels",
+    "communication",
+    "api"
+  ],
+  "docker_image": "dataeverything/mcp-slack",
+  "docker_tag": "latest",
+  "ports": {
+    "3003": 3003
+  },
+  "command": [],
+  "transport": {
+    "default": "stdio",
+    "supported": [
+      "stdio",
+      "sse"
+    ],
+    "port": 3003
+  },
+  "capabilities": [
+    {
+      "name": "conversations_history",
+      "description": "Get messages from channels, DMs, or group DMs with smart pagination",
+      "example": "Fetch recent messages from #general channel",
+      "example_args": {
+        "channel_id": "#general",
+        "limit": "1d",
+        "include_activity_messages": false
+      },
+      "example_response": "List of messages with user information, timestamps, and pagination cursor"
+    },
+    {
+      "name": "conversations_replies",
+      "description": "Get thread messages for a specific conversation",
+      "example": "Get all replies in a thread",
+      "example_args": {
+        "channel_id": "#general",
+        "thread_ts": "1234567890.123456",
+        "limit": "50"
+      },
+      "example_response": "Thread messages with full conversation context"
+    },
+    {
+      "name": "conversations_add_message",
+      "description": "Post messages to channels or DMs (safety controls apply)",
+      "example": "Send a message to a channel",
+      "example_args": {
+        "channel_id": "#general",
+        "text": "Hello from MCP Slack server!",
+        "thread_ts": null
+      },
+      "example_response": "Message posted successfully with timestamp"
+    },
+    {
+      "name": "search_messages",
+      "description": "Search messages across channels and DMs with filters",
+      "example": "Search for messages containing specific terms",
+      "example_args": {
+        "query": "MCP platform",
+        "sort": "timestamp",
+        "count": 20
+      },
+      "example_response": "Matching messages with relevance scores and context"
+    },
+    {
+      "name": "channel_management",
+      "description": "List, lookup, and manage channel information",
+      "example": "Get channel information by name or ID",
+      "example_args": {
+        "channel_name": "#general"
+      },
+      "example_response": "Channel details including members, topic, and metadata"
+    },
+    {
+      "name": "user_management",
+      "description": "Lookup user information and manage DM conversations",
+      "example": "Get user details by username or ID",
+      "example_args": {
+        "user": "@username"
+      },
+      "example_response": "User profile information and DM channel details"
+    }
+  ],
+  "config_schema": {
+    "type": "object",
+    "properties": {
+      "log_level": {
+        "type": "string",
+        "title": "Log Level",
+        "description": "Logging level (DEBUG, INFO, WARNING, ERROR)",
+        "enum": ["DEBUG", "INFO", "WARNING", "ERROR"],
+        "default": "INFO",
+        "env_mapping": "LOG_LEVEL"
+      },
+      "mcp_transport": {
+        "type": "string",
+        "title": "MCP Transport Mode",
+        "description": "Transport protocol for MCP communication",
+        "enum": ["stdio", "sse"],
+        "default": "stdio",
+        "env_mapping": "MCP_TRANSPORT"
+      },
+      "mcp_port": {
+        "type": "integer",
+        "title": "MCP Server Port",
+        "description": "Port for SSE transport mode",
+        "default": 3003,
+        "env_mapping": "MCP_PORT"
+      },
+      "slack_token": {
+        "type": "string",
+        "title": "Slack OAuth Token",
+        "description": "Slack OAuth token for API access (xoxb-... or xoxp-...)",
+        "env_mapping": "SLACK_TOKEN",
+        "sensitive": true
+      },
+      "slack_user_token": {
+        "type": "string",
+        "title": "Slack User Token",
+        "description": "Slack user token for enhanced permissions (xoxp-...)",
+        "env_mapping": "SLACK_USER_TOKEN",
+        "sensitive": true
+      },
+      "slack_app_token": {
+        "type": "string",
+        "title": "Slack App Token",
+        "description": "Slack app-level token for socket mode (xapp-...)",
+        "env_mapping": "SLACK_APP_TOKEN",
+        "sensitive": true
+      },
+      "slack_cookie": {
+        "type": "string",
+        "title": "Slack Browser Cookie",
+        "description": "Slack browser cookie for stealth mode authentication",
+        "env_mapping": "SLACK_COOKIE",
+        "sensitive": true
+      },
+      "slack_workspace": {
+        "type": "string",
+        "title": "Slack Workspace",
+        "description": "Slack workspace/team domain (e.g., yourteam.slack.com)",
+        "env_mapping": "SLACK_WORKSPACE"
+      },
+      "stealth_mode": {
+        "type": "boolean",
+        "title": "Stealth Mode",
+        "description": "Enable stealth mode using browser cookies (no bot permissions required)",
+        "default": false,
+        "env_mapping": "STEALTH_MODE"
+      },
+      "enable_message_posting": {
+        "type": "boolean",
+        "title": "Enable Message Posting",
+        "description": "Allow posting messages (disabled by default for safety)",
+        "default": false,
+        "env_mapping": "ENABLE_MESSAGE_POSTING"
+      },
+      "allowed_channels": {
+        "type": "string",
+        "title": "Allowed Channels",
+        "description": "Comma-separated list of channels where message posting is allowed",
+        "env_mapping": "ALLOWED_CHANNELS",
+        "env_separator": ","
+      },
+      "cache_enabled": {
+        "type": "boolean",
+        "title": "Enable Caching",
+        "description": "Cache users and channels for better performance",
+        "default": true,
+        "env_mapping": "CACHE_ENABLED"
+      },
+      "cache_ttl": {
+        "type": "integer",
+        "title": "Cache TTL",
+        "description": "Cache time-to-live in seconds",
+        "default": 3600,
+        "env_mapping": "CACHE_TTL"
+      },
+      "embed_user_info": {
+        "type": "boolean",
+        "title": "Embed User Info",
+        "description": "Include user information in message responses",
+        "default": true,
+        "env_mapping": "EMBED_USER_INFO"
+      },
+      "max_history_limit": {
+        "type": "string",
+        "title": "Max History Limit",
+        "description": "Maximum history fetch limit (e.g., 90d, 1000)",
+        "default": "30d",
+        "env_mapping": "MAX_HISTORY_LIMIT"
+      },
+      "http_proxy": {
+        "type": "string",
+        "title": "HTTP Proxy",
+        "description": "HTTP proxy URL for API requests",
+        "env_mapping": "HTTP_PROXY"
+      },
+      "https_proxy": {
+        "type": "string",
+        "title": "HTTPS Proxy",
+        "description": "HTTPS proxy URL for API requests",
+        "env_mapping": "HTTPS_PROXY"
+      },
+      "read_only_mode": {
+        "type": "boolean",
+        "title": "Read-Only Mode",
+        "description": "Restrict to read-only operations for enhanced security",
+        "default": false,
+        "env_mapping": "READ_ONLY_MODE"
+      }
+    },
+    "required": []
+  },
+  "tool_discovery": "dynamic",
+  "tool_endpoint": "/tools",
+  "has_image": true,
+  "origin": "external",
+  "examples": {
+    "stdio_usage": "docker run -i --rm -e SLACK_TOKEN=xoxb-your-token dataeverything/mcp-slack",
+    "sse_endpoint": "http://localhost:3003/sse",
+    "cli_usage": [
+      "python -m mcp_platform deploy slack --config slack_token=xoxb-your-token",
+      "python -m mcp_platform deploy slack --config stealth_mode=true --config slack_cookie=your-cookie",
+      "python -m mcp_platform deploy slack --config mcp_transport=sse --config mcp_port=3003"
+    ],
+    "stealth_mode": {
+      "description": "Use browser cookies for authentication without bot permissions",
+      "config": "stealth_mode=true slack_cookie=d=xoxd-...; slack_workspace=yourteam"
+    },
+    "oauth_mode": {
+      "description": "Use OAuth tokens for standard API access",
+      "config": "slack_token=xoxb-... slack_user_token=xoxp-..."
+    },
+    "safety_features": {
+      "description": "Message posting disabled by default, can be enabled with channel restrictions",
+      "config": "enable_message_posting=true allowed_channels=#test,#bot-testing"
+    }
+  }
+}
