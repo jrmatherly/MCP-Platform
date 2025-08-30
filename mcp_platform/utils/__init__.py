@@ -46,7 +46,8 @@ def get_all_template_directories() -> List[Path]:
     return directories
 
 
-# Note: Visual formatting utilities have been moved to mcp_platform.core.response_formatter
+# Note: Visual formatting utilities have been moved to
+# mcp_platform.core.response_formatter
 # Import them directly from there to avoid circular dependencies
 
 
@@ -64,5 +65,6 @@ class SubProcessRunDummyResult:
     def check_returncode(self):
         if self.returncode != 0:
             raise RuntimeError(
-                f"Command '{self.args}' returned non-zero exit status {self.returncode}."
+                f"Command '{self.args}' returned non-zero exit status "
+                f"{self.returncode}."
             )

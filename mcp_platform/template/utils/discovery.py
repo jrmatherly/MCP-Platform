@@ -50,7 +50,8 @@ class TemplateDiscovery:
         """Discover all valid templates in all template directories."""
         templates = {}
 
-        # Iterate through directories in reverse order so first directory (custom) takes precedence
+        # Iterate through directories in reverse order so first directory
+        # (custom) takes precedence
         for templates_dir in reversed(self.templates_dirs):
             if not templates_dir.exists():
                 logger.debug("Templates directory not found: %s", templates_dir)
@@ -161,7 +162,8 @@ class TemplateDiscovery:
 
     def get_template_config(self, template_name: str) -> Optional[Dict[str, Any]]:
         """Get configuration for a specific template."""
-        # Search in all template directories, first match wins (custom overrides built-in)
+        # Search in all template directories, first match wins
+        # (custom overrides built-in)
         for templates_dir in self.templates_dirs:
             template_dir = templates_dir / template_name
             if template_dir.exists():
@@ -170,7 +172,8 @@ class TemplateDiscovery:
 
     def get_template_path(self, template_name: str) -> Optional[Path]:
         """Get the path to a specific template."""
-        # Search in all template directories, first match wins (custom overrides built-in)
+        # Search in all template directories, first match wins
+        # (custom overrides built-in)
         for templates_dir in self.templates_dirs:
             template_dir = templates_dir / template_name
             if template_dir.exists() and template_dir.is_dir():
