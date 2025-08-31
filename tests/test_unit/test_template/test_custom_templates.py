@@ -11,8 +11,7 @@ from unittest.mock import patch
 import pytest
 
 from mcp_platform.template.utils.discovery import TemplateDiscovery
-from mcp_platform.utils import (get_all_template_directories,
-                                get_custom_templates_dir)
+from mcp_platform.utils import get_all_template_directories, get_custom_templates_dir
 
 
 @pytest.mark.unit
