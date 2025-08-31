@@ -64,7 +64,7 @@ class BigQueryServerConfig(ServerConfig):
             project_id = os.getenv("GOOGLE_CLOUD_PROJECT")
             if not project_id:
                 # Allow test project IDs that start with "test-"
-                if not (hasattr(self, '_is_test_mode') and self._is_test_mode):
+                if not (hasattr(self, "_is_test_mode") and self._is_test_mode):
                     raise ValueError(
                         "project_id is required. Set it in config or GOOGLE_CLOUD_PROJECT environment variable."
                     )
@@ -95,7 +95,9 @@ class BigQueryServerConfig(ServerConfig):
                 config["service_account_path"] = service_account_path
 
             # In test mode, skip file existence check
-            if not (hasattr(self, '_is_test_mode') and self._is_test_mode) and not os.path.exists(service_account_path):
+            if not (
+                hasattr(self, "_is_test_mode") and self._is_test_mode
+            ) and not os.path.exists(service_account_path):
                 raise ValueError(
                     f"Service account key file not found: {service_account_path}"
                 )

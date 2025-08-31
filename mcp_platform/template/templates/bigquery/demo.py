@@ -7,8 +7,8 @@ to show how the server would work in a real environment.
 """
 
 import json
-import sys
 import os
+import sys
 
 # Add the parent directory to sys.path for imports
 sys.path.append(os.path.dirname(__file__))

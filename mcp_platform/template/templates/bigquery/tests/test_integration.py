@@ -74,7 +74,9 @@ class TestBigQueryIntegration:
             mock_config.logger = Mock()
             mock_config_class.return_value = mock_config
 
-            server = BigQueryMCPServer(config_dict=self.integration_config, skip_validation=True)
+            server = BigQueryMCPServer(
+                config_dict=self.integration_config, skip_validation=True
+            )
 
             # Step 1: List datasets
             mock_dataset1 = Mock()
@@ -223,7 +225,9 @@ class TestBigQueryIntegration:
             mock_config.logger = Mock()
             mock_config_class.return_value = mock_config
 
-            server = BigQueryMCPServer(config_dict=self.integration_config, skip_validation=True)
+            server = BigQueryMCPServer(
+                config_dict=self.integration_config, skip_validation=True
+            )
 
             query = """
             SELECT 
@@ -313,7 +317,9 @@ class TestBigQueryIntegration:
             mock_config.logger = Mock()
             mock_config_class.return_value = mock_config
 
-            server = BigQueryMCPServer(config_dict=restricted_config, skip_validation=True)
+            server = BigQueryMCPServer(
+                config_dict=restricted_config, skip_validation=True
+            )
 
             # Mock datasets with mixed access levels
             mock_allowed_dataset1 = Mock()
@@ -416,7 +422,9 @@ class TestBigQueryIntegration:
                 mock_config.logger = Mock()
                 mock_config_class.return_value = mock_config
 
-                server = BigQueryMCPServer(config_dict=service_account_config, skip_validation=True)
+                server = BigQueryMCPServer(
+                    config_dict=service_account_config, skip_validation=True
+                )
 
                 # Verify service account credentials were used
                 sys.modules[
@@ -468,7 +476,9 @@ class TestBigQueryIntegration:
             mock_config.logger = Mock()
             mock_config_class.return_value = mock_config
 
-            server = BigQueryMCPServer(config_dict=self.integration_config, skip_validation=True)
+            server = BigQueryMCPServer(
+                config_dict=self.integration_config, skip_validation=True
+            )
 
             # Test BigQuery API errors
             mock_api_error = Exception("BigQuery API: Access Denied")
@@ -521,7 +531,9 @@ class TestBigQueryIntegration:
             mock_config.logger = Mock()
             mock_config_class.return_value = mock_config
 
-            server = BigQueryMCPServer(config_dict=custom_limits_config, skip_validation=True)
+            server = BigQueryMCPServer(
+                config_dict=custom_limits_config, skip_validation=True
+            )
 
             # Mock a large result set (1000 rows)
             large_results = [{"id": i, "value": f"value_{i}"} for i in range(1000)]
@@ -631,7 +643,9 @@ class TestBigQueryIntegration:
             mock_config.logger = Mock()
             mock_config_class.return_value = mock_config
 
-            server = BigQueryMCPServer(config_dict=self.integration_config, skip_validation=True)
+            server = BigQueryMCPServer(
+                config_dict=self.integration_config, skip_validation=True
+            )
 
             # Mock successful BigQuery connection test
             mock_dataset = Mock()

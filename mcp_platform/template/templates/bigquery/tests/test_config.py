@@ -304,16 +304,16 @@ class TestBigQueryServerConfig:
         """Test get_auth_config method."""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             f.write('{"type": "service_account"}')
-            
+
             config = BigQueryServerConfig(
                 {
                     "project_id": "test-project",
                     "auth_method": "service_account",
                     "service_account_path": f.name,
                 },
-                skip_validation=False  # Enable validation since we have a real file
+                skip_validation=False,  # Enable validation since we have a real file
             )
-            
+
             try:
                 auth_config = config.get_auth_config()
 
