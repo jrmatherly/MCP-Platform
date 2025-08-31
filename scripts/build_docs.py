@@ -4,17 +4,19 @@ Documentation builder for MCP Platform.
 
 This script:
 1. Uses the existing TemplateDiscovery utility to find usable templates
-2. Generates navigation for template documentation
-3. Copies template docs to the main docs directory
-4. Builds the documentation with mkdocs
+2. Dynamically generates Templates navigation for mkdocs.yml
+3. Uses MCPClient for dynamic tool discovery instead of static configs
+4. Generates documentation with tabbed examples for CLI/MCPClient
+5. Builds the documentation with mkdocs
 """
 
+import asyncio
 import json
 import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List
 
 import yaml
 
@@ -52,6 +54,16 @@ except ImportError as e:
             
             return templates
 
+# Try to import MCPClient for dynamic tool discovery
+try:
+    from mcp_platform.client import MCPClient
+    from mcp_platform.core.tool_manager import ToolManager
+    MCP_CLIENT_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: Could not import MCPClient: {e}")
+    print("Falling back to static tool discovery...")
+    MCP_CLIENT_AVAILABLE = False
+
 try:
     from mcp_platform.utils import ROOT_DIR, TEMPLATES_DIR
 except ImportError:
@@ -69,9 +81,53 @@ def cleanup_old_docs(docs_dir: Path):
         for item in templates_docs_dir.iterdir():
             if item.is_dir():
                 shutil.rmtree(item)
-            else:
+            elif item.name != "index.md":  # Keep the main index.md
                 item.unlink()
         print("  🗑️  Cleaned up old server-templates docs")
+
+
+async def discover_tools_dynamically(template_id: str) -> List[Dict]:
+    """
+    Discover tools dynamically using MCPClient if available.
+    Falls back to static discovery if MCPClient is not available.
+    """
+    if not MCP_CLIENT_AVAILABLE:
+        print(f"  ⚠️  MCPClient not available, using static discovery for {template_id}")
+        return []
+    
+    try:
+        print(f"  🔍 Attempting dynamic tool discovery for {template_id}...")
+        
+        # Use ToolManager directly for better control
+        tool_manager = ToolManager(backend_type="docker")
+        
+        # Try to discover tools dynamically with a short timeout
+        result = tool_manager.list_tools(
+            template_id,
+            static=False,  # Only use dynamic discovery
+            dynamic=True,
+            timeout=60,  # Longer timeout for CI environment
+            force_refresh=True
+        )
+        
+        tools = result.get("tools", [])
+        discovery_method = result.get("discovery_method", "unknown")
+        
+        if tools:
+            print(f"  ✅ Dynamic discovery found {len(tools)} tools via {discovery_method}")
+            return tools
+        else:
+            print(f"  ⚠️  Dynamic discovery found no tools for {template_id}")
+            return []
+            
+    except Exception as e:
+        print(f"  ⚠️  Dynamic tool discovery failed for {template_id}: {e}")
+        return []
+
+
+def discover_tools_static(template_config: Dict) -> List[Dict]:
+    """Fallback to static tool discovery from template config."""
+    return template_config.get("tools", [])
 
 
 def scan_template_docs(templates_dir: Path) -> Dict[str, Dict]:
@@ -108,11 +164,20 @@ def scan_template_docs(templates_dir: Path) -> Dict[str, Dict]:
     return template_docs
 
 
-def generate_usage_md(template_id: str, template_info: Dict) -> str:
-    """Generate standardized usage.md content for a template."""
+async def generate_usage_md(template_id: str, template_info: Dict) -> str:
+    """Generate standardized usage.md content for a template using dynamic tool discovery."""
     template_config = template_info["config"]
     template_name = template_config.get("name", template_id.title())
-    tools = template_config.get("tools", [])
+    
+    # Try dynamic tool discovery first, fall back to static
+    tools = await discover_tools_dynamically(template_id)
+    discovery_method = "dynamic"
+    
+    if not tools:
+        tools = discover_tools_static(template_config)
+        discovery_method = "static"
+        
+    print(f"  📝 Generating usage.md for {template_id} using {discovery_method} discovery ({len(tools)} tools)")
     
     usage_content = f"""# {template_name} Usage Guide
 
@@ -122,31 +187,34 @@ This guide shows how to use the {template_name} with different MCP clients and i
 
 ## Tool Discovery
 
-### Interactive CLI
-```bash
-# Start interactive mode
-python -m mcp_platform interactive
+=== "Interactive CLI"
 
-# List available tools
-mcpp> tools {template_id}
-```
+    ```bash
+    # Start interactive mode
+    python -m mcp_platform interactive
 
-### Regular CLI
-```bash
-# Discover tools using CLI
-python -m mcp_platform tools {template_id}
-```
+    # List available tools
+    mcpp> tools {template_id}
+    ```
 
-### Python Client
-```python
-from mcp_platform.client import MCPClient
+=== "Regular CLI"
 
-async def discover_tools():
-    async with MCPClient() as client:
-        tools = await client.list_tools("{template_id}")
+    ```bash
+    # Discover tools using CLI
+    python -m mcp_platform tools {template_id}
+    ```
+
+=== "Python Client"
+
+    ```python
+    from mcp_platform.client import MCPClient
+
+    async def discover_tools():
+        client = MCPClient()
+        tools = client.list_tools("{template_id}")
         for tool in tools:
             print(f"Tool: {{tool['name']}} - {{tool['description']}}")
-```
+    ```
 
 ## Available Tools
 
@@ -157,7 +225,25 @@ async def discover_tools():
         for tool in tools:
             tool_name = tool.get("name", "unknown_tool")
             tool_desc = tool.get("description", "No description available")
-            tool_params = tool.get("parameters", [])
+            
+            # Handle different parameter formats
+            tool_params = []
+            if "parameters" in tool:
+                # Handle parameters as list of objects
+                if isinstance(tool["parameters"], list):
+                    tool_params = tool["parameters"]
+                # Handle parameters as schema with properties
+                elif isinstance(tool["parameters"], dict) and "properties" in tool["parameters"]:
+                    properties = tool["parameters"]["properties"]
+                    required = tool["parameters"].get("required", [])
+                    for param_name, param_def in properties.items():
+                        param_obj = {
+                            "name": param_name,
+                            "type": param_def.get("type", "string"),
+                            "description": param_def.get("description", "No description"),
+                            "required": param_name in required
+                        }
+                        tool_params.append(param_obj)
             
             usage_content += f"""### {tool_name}
 
@@ -184,30 +270,43 @@ Use the tool discovery methods above to see the full list of available tools for
 
 """
     
-    # Add usage examples section
+    # Add usage examples section with tabs
     usage_content += f"""## Usage Examples
 
-### Interactive CLI
+=== "Interactive CLI"
 
-```bash
-# Start interactive mode
-python -m mcp_platform interactive
+    ```bash
+    # Start interactive mode
+    python -m mcp_platform interactive
 
-# Deploy the template (if not already deployed)
-mcpp> deploy {template_id}
+    # Deploy the template (if not already deployed)
+    mcpp> deploy {template_id}
 
-# List available tools after deployment
-mcpp> tools {template_id}
-```
+    # List available tools after deployment
+    mcpp> tools {template_id}
+    ```
 
 """
     
     if tools:
-        usage_content += "Then call tools:\n"
+        usage_content += "    Then call tools:\n\n"
         # Add interactive CLI examples for each tool
         for tool in tools[:3]:  # Show examples for first 3 tools
             tool_name = tool.get("name", "unknown_tool")
-            tool_params = tool.get("parameters", [])
+            
+            # Handle different parameter formats for examples
+            tool_params = []
+            if "parameters" in tool:
+                if isinstance(tool["parameters"], list):
+                    tool_params = tool["parameters"]
+                elif isinstance(tool["parameters"], dict) and "properties" in tool["parameters"]:
+                    properties = tool["parameters"]["properties"]
+                    for param_name, param_def in properties.items():
+                        param_obj = {
+                            "name": param_name,
+                            "type": param_def.get("type", "string")
+                        }
+                        tool_params.append(param_obj)
             
             if tool_params:
                 # Create example parameters
@@ -219,67 +318,69 @@ mcpp> tools {template_id}
                         example_params[param_name] = "example_value"
                     elif param_type == "boolean":
                         example_params[param_name] = True
-                    elif param_type == "number":
+                    elif param_type == "number" or param_type == "integer":
                         example_params[param_name] = 123
                     else:
                         example_params[param_name] = "example_value"
                 
                 params_json = json.dumps(example_params)
-                usage_content += f"""```bash
-mcpp> call {template_id} {tool_name} '{params_json}'
-```
+                usage_content += f"""    ```bash
+    mcpp> call {template_id} {tool_name} '{params_json}'
+    ```
 
 """
             else:
-                usage_content += f"""```bash
-mcpp> call {template_id} {tool_name}
-```
+                usage_content += f"""    ```bash
+    mcpp> call {template_id} {tool_name}
+    ```
 
 """
     else:
         # Generic example for templates without predefined tools
-        usage_content += f"""Example tool calls (replace with actual tool names discovered above):
-```bash
-# Example - replace 'tool_name' with actual tool from discovery
-mcpp> call {template_id} tool_name '{{"param": "value"}}'
-```
+        usage_content += f"""    Example tool calls (replace with actual tool names discovered above):
+    
+    ```bash
+    # Example - replace 'tool_name' with actual tool from discovery
+    mcpp> call {template_id} tool_name '{{"param": "value"}}'
+    ```
 
 """
     
-    # Add CLI deployment section
-    usage_content += f"""### Regular CLI
+    # Add CLI deployment section with tabs
+    usage_content += f"""=== "Regular CLI"
 
-```bash
-# Deploy the template
-python -m mcp_platform deploy {template_id}
+    ```bash
+    # Deploy the template
+    python -m mcp_platform deploy {template_id}
 
-# Check deployment status
-python -m mcp_platform status
+    # Check deployment status
+    python -m mcp_platform status
 
-# View logs
-python -m mcp_platform logs {template_id}
+    # View logs
+    python -m mcp_platform logs {template_id}
 
-# Stop the template
-python -m mcp_platform stop {template_id}
-```
+    # Stop the template
+    python -m mcp_platform stop {template_id}
+    ```
 
-### Python Client
+=== "Python Client"
 
-```python
-import asyncio
-from mcp_platform.client import MCPClient
+    ```python
+    import asyncio
+    from mcp_platform.client import MCPClient
 
-async def use_{template_id.replace('-', '_')}():
-    async with MCPClient() as client:
+    async def use_{template_id.replace('-', '_')}():
+        client = MCPClient()
+        
         # Start the server
-        deployment = await client.start_server("{template_id}", {{}})
+        deployment = client.start_server("{template_id}", {{}})
         
         if deployment["success"]:
             deployment_id = deployment["deployment_id"]
             
             try:
                 # Discover available tools
-                tools = await client.list_tools("{template_id}")
+                tools = client.list_tools("{template_id}")
                 print(f"Available tools: {{[t['name'] for t in tools]}}")
                 
 """
@@ -288,7 +389,20 @@ async def use_{template_id.replace('-', '_')}():
     if tools:
         for tool in tools[:2]:  # Show examples for first 2 tools
             tool_name = tool.get("name", "unknown_tool")
-            tool_params = tool.get("parameters", [])
+            
+            # Handle different parameter formats for examples  
+            tool_params = []
+            if "parameters" in tool:
+                if isinstance(tool["parameters"], list):
+                    tool_params = tool["parameters"]
+                elif isinstance(tool["parameters"], dict) and "properties" in tool["parameters"]:
+                    properties = tool["parameters"]["properties"]
+                    for param_name, param_def in properties.items():
+                        param_obj = {
+                            "name": param_name,
+                            "type": param_def.get("type", "string")
+                        }
+                        tool_params.append(param_obj)
             
             if tool_params:
                 example_params = {}
@@ -299,103 +413,116 @@ async def use_{template_id.replace('-', '_')}():
                         example_params[param_name] = "example_value"
                     elif param_type == "boolean":
                         example_params[param_name] = True
-                    elif param_type == "number":
+                    elif param_type == "number" or param_type == "integer":
                         example_params[param_name] = 123
                     else:
                         example_params[param_name] = "example_value"
                 
                 usage_content += f"""                # Call {tool_name}
-                result = await client.call_tool("{template_id}", "{tool_name}", {example_params})
+                result = client.call_tool("{template_id}", "{tool_name}", {example_params})
                 print(f"{tool_name} result: {{result}}")
                 
 """
             else:
                 usage_content += f"""                # Call {tool_name}
-                result = await client.call_tool("{template_id}", "{tool_name}", {{}})
+                result = client.call_tool("{template_id}", "{tool_name}", {{}})
                 print(f"{tool_name} result: {{result}}")
                 
 """
     else:
         # Generic example for templates without predefined tools
         usage_content += f"""                # Example tool call (replace with actual tool name)
-                # result = await client.call_tool("{template_id}", "tool_name", {{"param": "value"}})
+                # result = client.call_tool("{template_id}", "tool_name", {{"param": "value"}})
                 # print(f"Tool result: {{result}}")
                 
 """
     
     usage_content += f"""            finally:
                 # Clean up
-                await client.stop_server(deployment_id)
+                client.stop_server(deployment_id)
         else:
             print("Failed to start server")
 
-# Run the example
-asyncio.run(use_{template_id.replace('-', '_')}())
-```
+    # Run the example
+    asyncio.run(use_{template_id.replace('-', '_')}())
+    ```
 
 ## Integration Examples
 
-### Claude Desktop
+=== "Claude Desktop"
 
-Add this configuration to your Claude Desktop configuration file:
+    Add this configuration to your Claude Desktop configuration file:
 
-**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
-**Windows**: `%APPDATA%\\Claude\\claude_desktop_config.json`
+    **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+    **Windows**: `%APPDATA%\\Claude\\claude_desktop_config.json`
 
-```json
-{{
-  "mcpServers": {{
-    "{template_id}": {{
-      "command": "python",
-      "args": ["-m", "mcp_platform", "connect", "{template_id}", "--stdio"],
-      "env": {{
-        "LOG_LEVEL": "info"
+    ```json
+    {{
+      "mcpServers": {{
+        "{template_id}": {{
+          "command": "python",
+          "args": ["-m", "mcp_platform", "connect", "{template_id}", "--stdio"],
+          "env": {{
+            "LOG_LEVEL": "info"
+          }}
+        }}
       }}
     }}
-  }}
-}}
-```
+    ```
 
-### VS Code
+=== "VS Code"
 
-Install the MCP extension and add this to your VS Code settings (`.vscode/settings.json`):
+    Install the MCP extension and add this to your VS Code settings (`.vscode/settings.json`):
 
-```json
-{{
-  "mcp.servers": {{
-    "{template_id}": {{
-      "command": "python",
-      "args": ["-m", "mcp_platform", "connect", "{template_id}", "--stdio"],
-      "env": {{
-        "LOG_LEVEL": "info"
+    ```json
+    {{
+      "mcp.servers": {{
+        "{template_id}": {{
+          "command": "python",
+          "args": ["-m", "mcp_platform", "connect", "{template_id}", "--stdio"],
+          "env": {{
+            "LOG_LEVEL": "info"
+          }}
+        }}
       }}
     }}
-  }}
-}}
-```
+    ```
 
-### Manual Connection
+=== "Manual Connection"
 
-```bash
-# Get connection details for other integrations
-python -m mcp_platform connect {template_id} --llm claude
-python -m mcp_platform connect {template_id} --llm vscode
-```
+    ```bash
+    # Get connection details for other integrations
+    python -m mcp_platform connect {template_id} --llm claude
+    python -m mcp_platform connect {template_id} --llm vscode
+    ```
 
 ## Configuration
 
 For template-specific configuration options, see the main template documentation. Common configuration methods:
 
-```bash
-# Deploy with configuration
-python -m mcp_platform deploy {template_id} --config key=value
+=== "Environment Variables"
 
-# Deploy with environment variables  
-python -m mcp_platform deploy {template_id} --env KEY=VALUE
+    ```bash
+    # Deploy with environment variables  
+    python -m mcp_platform deploy {template_id} --env KEY=VALUE
+    ```
 
-# Deploy with config file
-python -m mcp_platform deploy {template_id} --config-file config.json
-```
+=== "CLI Configuration"
+
+    ```bash
+    # Deploy with configuration
+    python -m mcp_platform deploy {template_id} --config key=value
+    
+    # Deploy with nested configuration
+    python -m mcp_platform deploy {template_id} --config category__property=value
+    ```
+
+=== "Config File"
+
+    ```bash
+    # Deploy with config file
+    python -m mcp_platform deploy {template_id} --config-file config.json
+    ```
 
 ## Troubleshooting
 
@@ -420,13 +547,19 @@ python -m mcp_platform deploy {template_id} --config-file config.json
 
 Enable debug logging for troubleshooting:
 
-```bash
-# Interactive CLI with debug
-LOG_LEVEL=debug python -m mcp_platform interactive
+=== "Interactive CLI"
 
-# Deploy with debug logging
-python -m mcp_platform deploy {template_id} --config log_level=debug
-```
+    ```bash
+    # Interactive CLI with debug
+    LOG_LEVEL=debug python -m mcp_platform interactive
+    ```
+
+=== "Deploy with Debug"
+
+    ```bash
+    # Deploy with debug logging
+    python -m mcp_platform deploy {template_id} --config log_level=debug
+    ```
 
 For more help, see the [main documentation](../../) or open an issue in the repository.
 """
@@ -434,7 +567,7 @@ For more help, see the [main documentation](../../) or open an issue in the repo
     return usage_content
 
 
-def copy_template_docs(template_docs: Dict[str, Dict], docs_dir: Path):
+async def copy_template_docs(template_docs: Dict[str, Dict], docs_dir: Path):
     """Copy template documentation to docs directory and fix CLI commands."""
     print("📄 Copying template documentation...")
 
@@ -446,7 +579,7 @@ def copy_template_docs(template_docs: Dict[str, Dict], docs_dir: Path):
         template_doc_dir.mkdir(exist_ok=True)
 
         # Generate usage.md file
-        usage_content = generate_usage_md(template_id, template_info)
+        usage_content = await generate_usage_md(template_id, template_info)
         with open(template_doc_dir / "usage.md", "w", encoding="utf-8") as f:
             f.write(usage_content)
         print(f"  📝 Generated usage.md for {template_id}")
@@ -700,8 +833,8 @@ This page lists all available MCP Platform server templates.
 
 
 def update_mkdocs_nav(template_docs: Dict[str, Dict], mkdocs_file: Path):
-    """Update mkdocs.yml navigation with template pages."""
-    print("⚙️  Updating mkdocs navigation...")
+    """Update mkdocs.yml navigation with template pages dynamically."""
+    print("⚙️  Updating mkdocs navigation dynamically...")
 
     with open(mkdocs_file, "r", encoding="utf-8") as f:
         mkdocs_config = yaml.safe_load(f)
@@ -709,24 +842,41 @@ def update_mkdocs_nav(template_docs: Dict[str, Dict], mkdocs_file: Path):
     # Find the Templates section in nav
     nav = mkdocs_config.get("nav", [])
 
-    # Build template navigation
+    # Build template navigation dynamically
     template_nav_items = [
         {"Overview": "server-templates/index.md"},
         {"Available Templates": "server-templates/available.md"},
     ]
 
-    # Add individual template pages
+    # Add individual template pages sorted by name
     sorted_templates = sorted(template_docs.items(), key=lambda x: x[1]["name"])
     for template_id, template_info in sorted_templates:
         template_nav_items.append(
             {template_info["name"]: f"server-templates/{template_id}/index.md"}
         )
 
-    # Update the nav structure
+    # Find and update the Templates section, or create it if not found
+    templates_section_found = False
     for i, section in enumerate(nav):
         if isinstance(section, dict) and "Templates" in section:
             nav[i]["Templates"] = template_nav_items
+            templates_section_found = True
+            print(f"  ✅ Updated existing Templates section with {len(template_nav_items)} items")
             break
+
+    # If Templates section not found, add it after Getting Started
+    if not templates_section_found:
+        templates_section = {"Templates": template_nav_items}
+        
+        # Find where to insert (after Getting Started if it exists)
+        insert_index = 1  # Default to after Home
+        for i, section in enumerate(nav):
+            if isinstance(section, dict) and "Getting Started" in section:
+                insert_index = i + 1
+                break
+        
+        nav.insert(insert_index, templates_section)
+        print(f"  ✅ Created new Templates section with {len(template_nav_items)} items")
 
     # Write back the updated config
     with open(mkdocs_file, "w", encoding="utf-8") as f:
@@ -739,7 +889,7 @@ def update_mkdocs_nav(template_docs: Dict[str, Dict], mkdocs_file: Path):
             width=1000,
         )
 
-    print("✅ MkDocs navigation updated")
+    print("✅ MkDocs navigation updated dynamically")
 
 
 def build_docs():
@@ -764,7 +914,7 @@ def build_docs():
         return False
 
 
-def main():
+async def main():
     """Main function to build documentation."""
     project_root = ROOT_DIR
     templates_dir = TEMPLATES_DIR
@@ -786,13 +936,13 @@ def main():
         print("❌ No template documentation found. Exiting.")
         sys.exit(1)
 
-    # Copy template docs
-    copy_template_docs(template_docs, docs_dir)
+    # Copy template docs (now with async tool discovery)
+    await copy_template_docs(template_docs, docs_dir)
 
     # Generate templates index
     generate_templates_index(template_docs, docs_dir)
 
-    # Update mkdocs navigation
+    # Update mkdocs navigation dynamically
     update_mkdocs_nav(template_docs, mkdocs_file)
 
     # Build documentation
@@ -805,4 +955,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
