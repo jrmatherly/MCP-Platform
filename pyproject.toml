@@ -29,7 +29,32 @@ dependencies = [
     "python-jose[cryptography]>=3.3.0",
     "passlib[bcrypt]>=1.7.4",
     "python-multipart>=0.0.6",
+    # Default SQLite support for gateway
+    "aiosqlite>=0.21.0",
 ]
+
+[project.optional-dependencies]
+# Database drivers for gateway (SQLite included by default)
+postgresql = [
+    "asyncpg>=0.29.0",
+]
+mysql = [
+    "aiomysql>=0.2.0",
+]
+oracle = [
+    "cx_Oracle_async>=0.4.0",
+]
+mssql = [
+    "aioodbc>=0.4.0",
+]
+# All database drivers
+all-databases = [
+    "asyncpg>=0.29.0",
+    "aiomysql>=0.2.0",
+    "cx_Oracle_async>=0.4.0",
+    "aioodbc>=0.4.0",
+]
+
 keywords = ["MCP", "Model Context Protocol", "AI Platform", "Server Deployment", "Docker", "Kubernetes", "MCP Platform"]
 classifiers = [
     "Development Status :: 4 - Beta",

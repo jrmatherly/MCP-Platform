@@ -146,25 +146,28 @@ class TestUserCRUD:
     @pytest.mark.asyncio
     async def test_create_user(self):
         """Test user creation."""
-        user_data = UserCreate(username="testuser", email="test@example.com")
-
-        # Mock session behavior
-        self.mock_db.get_session.return_value.__aenter__ = AsyncMock(
-            return_value=self.mock_session
+        user_data = UserCreate(
+            username="testuser", email="test@example.com", password="password123"
         )
-        self.mock_db.get_session.return_value.__aexit__ = AsyncMock(return_value=None)
 
-        # Mock session.add and session.commit
-        self.mock_session.add = Mock()
-        self.mock_session.commit = AsyncMock()
-        self.mock_session.refresh = AsyncMock()
+        # Mock the DatabaseManager's create_user method
+        expected_user = User(
+            id=1,
+            username="testuser",
+            email="test@example.com",
+            hashed_password="hashed_pass",
+        )
+        self.mock_db.create_user = AsyncMock(return_value=expected_user)
 
         result = await self.user_crud.create(user_data, hashed_password="hashed_pass")
 
-        # Verify session operations
-        self.mock_session.add.assert_called_once()
-        self.mock_session.commit.assert_called_once()
-        self.mock_session.refresh.assert_called_once()
+        # Verify the DatabaseManager's create_user was called with correct data
+        self.mock_db.create_user.assert_called_once()
+        call_args = self.mock_db.create_user.call_args[0][0]
+        assert call_args["username"] == "testuser"
+        assert call_args["email"] == "test@example.com"
+        assert call_args["hashed_password"] == "hashed_pass"
+        assert "password" not in call_args  # Plain password should be removed
 
         # Verify user creation
         assert isinstance(result, User)
@@ -325,24 +328,28 @@ class TestServerInstanceCRUD:
     async def test_create_server_instance(self):
         """Test server instance creation."""
         server_data = ServerInstanceCreate(
-            name="test-server", command=["python", "-m", "server"], template_id=1
+            id="test-server-1",
+            command=["python", "-m", "server"],
+            template_name="test-template",
         )
 
-        # Mock session behavior
-        self.mock_db.get_session.return_value.__aenter__ = AsyncMock(
-            return_value=self.mock_session
+        # Mock the DatabaseManager's create_server_instance method
+        expected_server = ServerInstance(
+            id="test-server-1",
+            command=["python", "-m", "server"],
+            template_name="test-template",
         )
-        self.mock_db.get_session.return_value.__aexit__ = AsyncMock(return_value=None)
-
-        self.mock_session.add = Mock()
-        self.mock_session.commit = AsyncMock()
-        self.mock_session.refresh = AsyncMock()
+        self.mock_db.create_server_instance = AsyncMock(return_value=expected_server)
 
         result = await self.server_crud.create(server_data)
 
+        # Verify the DatabaseManager's create_server_instance was called
+        self.mock_db.create_server_instance.assert_called_once()
+
         assert isinstance(result, ServerInstance)
-        assert result.name == "test-server"
+        assert result.id == "test-server-1"
         assert result.command == ["python", "-m", "server"]
+        assert result.template_name == "test-template"
 
     @pytest.mark.asyncio
     async def test_get_active_servers(self):

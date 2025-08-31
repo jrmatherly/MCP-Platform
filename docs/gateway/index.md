@@ -384,6 +384,40 @@ Request → Random(Instance 1, Instance 2, Instance 3)
 
 ## Configuration
 
+### Database Configuration
+
+The gateway supports multiple database backends for flexible deployment. See [Database Support](database-support.md) for detailed information on:
+
+- **SQLite** (default): Zero-configuration local database
+- **PostgreSQL**: Recommended for production deployments
+- **MySQL**: MySQL/MariaDB support
+- **Oracle**: Enterprise Oracle Database support
+- **SQL Server**: Microsoft SQL Server support
+
+Quick database setup examples:
+```bash
+# Default SQLite (included)
+pip install mcp-platform
+
+# PostgreSQL for production
+pip install mcp-platform[postgresql]
+
+# All database support
+pip install mcp-platform[all-databases]
+```
+
+## Configuration
+
+### Database Configuration
+
+The Enhanced MCP Gateway supports multiple database backends for flexible deployment scenarios. See [Database Support](database-support.md) for detailed configuration options.
+
+**Quick Setup:**
+- **SQLite (Default)**: `pip install mcp-platform` - Zero configuration required
+- **PostgreSQL**: `pip install mcp-platform[postgresql]` - Production recommended
+- **MySQL**: `pip install mcp-platform[mysql]` - MySQL/MariaDB environments
+- **All Databases**: `pip install mcp-platform[all-databases]` - Full support
+
 ### Template Configuration
 
 Templates can be configured with specific load balancing settings:

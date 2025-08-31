@@ -413,7 +413,7 @@ class DatabaseConfig(SQLModel):
 class AuthConfig(SQLModel):
     """Authentication configuration model."""
 
-    secret_key: str
+    secret_key: str = "change-this-in-production"  # Default for development
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     api_key_expire_days: int = 30

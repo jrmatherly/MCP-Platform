@@ -49,28 +49,39 @@ class GatewayClient:
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.timeout = ClientTimeout(total=timeout)
+        self.max_connections = max_connections
+        self.max_connections_per_host = max_connections_per_host
 
-        # Connection pooling configuration
-        connector = aiohttp.TCPConnector(
-            limit=max_connections,
-            limit_per_host=max_connections_per_host,
-            enable_cleanup_closed=True,
-        )
-
-        # Setup headers
-        headers = {"Content-Type": "application/json"}
-        if api_key:
-            headers["Authorization"] = f"Bearer {api_key}"
-
-        self._session = ClientSession(
-            connector=connector,
-            timeout=self.timeout,
-            headers=headers,
-        )
+        # Session will be created lazily
+        self._session: Optional[ClientSession] = None
         self._closed = False
+
+    def _get_headers(self) -> Dict[str, str]:
+        """Get request headers."""
+        headers = {"Content-Type": "application/json"}
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+        return headers
+
+    async def _ensure_session(self):
+        """Ensure session is created."""
+        if self._session is None and not self._closed:
+            # Connection pooling configuration
+            connector = aiohttp.TCPConnector(
+                limit=self.max_connections,
+                limit_per_host=self.max_connections_per_host,
+                enable_cleanup_closed=True,
+            )
+
+            self._session = ClientSession(
+                connector=connector,
+                timeout=self.timeout,
+                headers=self._get_headers(),
+            )
 
     async def __aenter__(self):
         """Async context manager entry."""
+        await self._ensure_session()
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
@@ -79,9 +90,9 @@ class GatewayClient:
 
     async def close(self):
         """Close the client session."""
-        if not self._closed:
+        if not self._closed and self._session is not None:
             await self._session.close()
-            self._closed = True
+        self._closed = True
 
     def _check_closed(self):
         """Check if client is closed."""
@@ -93,6 +104,7 @@ class GatewayClient:
     ) -> aiohttp.ClientResponse:
         """Make HTTP request to gateway."""
         self._check_closed()
+        await self._ensure_session()
 
         url = f"{self.base_url}{path}"
         try:

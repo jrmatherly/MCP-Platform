@@ -120,10 +120,18 @@ class AuthManager:
     ) -> User:
         """Create a new user."""
         hashed_password = self.get_password_hash(password)
-        user = User(
-            username=username, email=email, hashed_password=hashed_password, **kwargs
+
+        # Create UserCreate object with the provided data
+        from .models import UserCreate
+
+        user_create = UserCreate(
+            username=username,
+            password=password,  # This will be ignored in the CRUD method
+            email=email,
+            **kwargs,
         )
-        return await self.user_crud.create(user)
+
+        return await self.user_crud.create(user_create, hashed_password)
 
     async def create_api_key(
         self,

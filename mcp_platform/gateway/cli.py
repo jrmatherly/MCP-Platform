@@ -13,6 +13,7 @@ import secrets
 from pathlib import Path
 from typing import Optional
 
+import aiohttp
 import typer
 from rich.console import Console
 from rich.panel import Panel
@@ -411,7 +412,6 @@ def gateway_status(
     """
     Check the status of a running gateway server.
     """
-    import aiohttp
 
     async def _check_status():
         gateway_url = f"http://{host}:{port}"
@@ -483,8 +483,6 @@ def test_authentication(
     """
     if not password:
         password = getpass.getpass("Password: ")
-
-    import aiohttp
 
     async def _test_auth():
         gateway_url = f"http://{host}:{port}"

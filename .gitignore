@@ -222,3 +222,6 @@ Thumbs.db
 mcp_instances/
 user_data/
 site/
+
+# DB
+*.db

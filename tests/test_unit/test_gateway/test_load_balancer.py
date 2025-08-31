@@ -1,5 +1,15 @@
 """
-Unit tests for gateway load balancer.
+Unit tesfrom mcp_platform.gateway.load_balancer import (
+    BaseBalancingStrategy,
+    HealthBasedStrategy,
+    LeastConnectionsStrategy,
+    LoadBalancer,
+    LoadBalancingStrategy,
+    RandomStrategy,
+    RoundRobinStrategy,
+    WeightedRoundRobinStrategy,
+)
+from mcp_platform.gateway.models import ServerInstance, ServerStatus
 
 Tests load balancing strategies, connection tracking, and instance selection.
 """
@@ -218,22 +228,23 @@ class TestLoadBalancer:
     def test_get_instance_success(self):
         """Test successful instance selection."""
         healthy_instances = [
-            ServerInstance(id=1, name="server1", status="running"),
-            ServerInstance(id=2, name="server2", status="running"),
+            ServerInstance(
+                id="server1", template_name="test", status=ServerStatus.HEALTHY
+            ),
+            ServerInstance(
+                id="server2", template_name="test", status=ServerStatus.HEALTHY
+            ),
         ]
 
-        self.mock_registry.get_healthy_instances.return_value = healthy_instances
-
-        selected = self.load_balancer.get_instance()
+        selected = self.load_balancer.select_instance(healthy_instances)
 
         assert selected in healthy_instances
-        self.mock_registry.get_healthy_instances.assert_called_once()
 
     def test_get_instance_no_healthy_instances(self):
         """Test instance selection when no healthy instances available."""
         self.mock_registry.get_healthy_instances.return_value = []
 
-        selected = self.load_balancer.get_instance()
+        selected = self.load_balancer.select_instance()
 
         assert selected is None
 
@@ -295,14 +306,14 @@ class TestLoadBalancer:
         self.mock_registry.get_healthy_instances.return_value = instances
 
         # First call should return an instance
-        selected1 = lb.get_instance()
+        selected1 = lb.select_instance()
         assert selected1 is not None
 
         # Max out connections on first instance
         lb.track_connection(selected1)
 
         # Second call should return the other instance
-        selected2 = lb.get_instance()
+        selected2 = lb.select_instance()
         assert selected2 is not None
         assert selected2 != selected1
 
@@ -408,7 +419,7 @@ class TestLoadBalancerIntegration:
             mock_healthy.return_value = [instance1, instance2]
 
             # Test instance selection
-            selected = load_balancer.get_instance()
+            selected = load_balancer.select_instance()
             assert selected in [instance1, instance2]
 
             # Test connection tracking
@@ -429,7 +440,7 @@ class TestLoadBalancerIntegration:
         lb.registry.get_healthy_instances.return_value = healthy_instances
 
         # Get an instance
-        selected1 = lb.get_instance()
+        selected1 = lb.select_instance()
         assert selected1 is not None
 
         # Simulate server failure - only one instance left
@@ -437,12 +448,12 @@ class TestLoadBalancerIntegration:
         lb.registry.get_healthy_instances.return_value = failed_instances
 
         # Should still get a valid instance
-        selected2 = lb.get_instance()
+        selected2 = lb.select_instance()
         assert selected2 == failed_instances[0]
 
         # Simulate complete failure
         lb.registry.get_healthy_instances.return_value = []
 
         # Should return None when no instances available
-        selected3 = lb.get_instance()
+        selected3 = lb.select_instance()
         assert selected3 is None

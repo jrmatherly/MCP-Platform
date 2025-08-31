@@ -1,22 +1,118 @@
-"""
-Database module for MCP Gateway.
-
-Provides database connectivity, session management, and CRUD operations
-using SQLModel and SQLAlchemy.
-"""
+"""Database management for the MCP Platform Gateway."""
 
 import logging
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, List, Optional
 
-from sqlalchemy import event, select
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.sql import text
+from sqlalchemy import select, text
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
+from sqlalchemy.orm import sessionmaker
 from sqlmodel import SQLModel
 
-from .models import APIKey, GatewayConfig, ServerInstance, ServerTemplate, User
+from .models import (
+    APIKey,
+    GatewayConfig,
+    LoadBalancerConfig,
+    ServerInstance,
+    ServerInstanceCreate,
+    ServerTemplate,
+    User,
+    UserCreate,
+)
 
 logger = logging.getLogger(__name__)
+
+# Database URL constants
+SQLITE_PREFIX = "sqlite://"
+SQLITE_PREFIX_FULL = "sqlite:///"
+POSTGRESQL_PREFIX = "postgresql://"
+MYSQL_PREFIX = "mysql://"
+ORACLE_PREFIX = "oracle://"
+MSSQL_PREFIX = "mssql://"
+
+
+def _validate_postgresql_driver():
+    """Validate PostgreSQL driver availability."""
+    try:
+        import asyncpg  # noqa: F401
+    except ImportError:
+        raise ImportError(
+            "PostgreSQL support requires asyncpg. Install with: "
+            "pip install mcp-platform[postgresql]"
+        )
+
+
+def _validate_mysql_driver():
+    """Validate MySQL driver availability."""
+    try:
+        import aiomysql  # noqa: F401
+    except ImportError:
+        raise ImportError(
+            "MySQL support requires aiomysql. Install with: "
+            "pip install mcp-platform[mysql]"
+        )
+
+
+def _validate_oracle_driver():
+    """Validate Oracle driver availability."""
+    try:
+        import cx_Oracle_async  # noqa: F401
+    except ImportError:
+        raise ImportError(
+            "Oracle support requires cx_Oracle_async. Install with: "
+            "pip install mcp-platform[oracle]"
+        )
+
+
+def _validate_mssql_driver():
+    """Validate SQL Server driver availability."""
+    try:
+        import aioodbc  # noqa: F401
+    except ImportError:
+        raise ImportError(
+            "SQL Server support requires aioodbc. Install with: "
+            "pip install mcp-platform[mssql]"
+        )
+
+
+def _convert_database_url_and_validate_driver(db_url: str) -> str:
+    """Convert database URL to async format and validate driver availability."""
+    if db_url.startswith(SQLITE_PREFIX_FULL):
+        return db_url.replace(SQLITE_PREFIX_FULL, "sqlite+aiosqlite:///")
+    elif db_url.startswith(SQLITE_PREFIX):
+        return db_url.replace(SQLITE_PREFIX, "sqlite+aiosqlite://")
+    elif db_url.startswith(POSTGRESQL_PREFIX):
+        _validate_postgresql_driver()
+        return db_url.replace(POSTGRESQL_PREFIX, "postgresql+asyncpg://")
+    elif db_url.startswith("postgresql+"):
+        _validate_postgresql_driver()
+        return db_url
+    elif db_url.startswith(MYSQL_PREFIX):
+        _validate_mysql_driver()
+        return db_url.replace(MYSQL_PREFIX, "mysql+aiomysql://")
+    elif db_url.startswith("mysql+"):
+        _validate_mysql_driver()
+        return db_url
+    elif db_url.startswith(ORACLE_PREFIX):
+        _validate_oracle_driver()
+        return db_url.replace(ORACLE_PREFIX, "oracle+cx_oracle_async://")
+    elif db_url.startswith("oracle+"):
+        _validate_oracle_driver()
+        return db_url
+    elif db_url.startswith(MSSQL_PREFIX):
+        _validate_mssql_driver()
+        return db_url.replace(MSSQL_PREFIX, "mssql+aioodbc://")
+    elif db_url.startswith("mssql+"):
+        _validate_mssql_driver()
+        return db_url
+
+    # Return original URL if no conversion needed
+    return db_url
 
 
 class DatabaseManager:
@@ -24,8 +120,8 @@ class DatabaseManager:
 
     def __init__(self, config: GatewayConfig):
         self.config = config
-        self.engine = None
-        self.session_factory = None
+        self.engine: Optional[AsyncEngine] = None
+        self.session_factory: Optional[sessionmaker] = None
         self._initialized = False
 
     async def initialize(self):
@@ -33,47 +129,58 @@ class DatabaseManager:
         if self._initialized:
             return
 
-        # Convert SQLite URL to async if needed
-        db_url = self.config.database.url
-        if db_url.startswith("sqlite:///"):
-            db_url = db_url.replace("sqlite:///", "sqlite+aiosqlite:///")
-        elif db_url.startswith("sqlite://"):
-            db_url = db_url.replace("sqlite://", "sqlite+aiosqlite://")
+        try:
+            # Convert database URL to async format and validate driver availability
+            db_url = _convert_database_url_and_validate_driver(self.config.database.url)
 
-        self.engine = create_async_engine(
-            db_url,
-            echo=self.config.database.echo,
-            pool_size=self.config.database.pool_size,
-            max_overflow=self.config.database.max_overflow,
-            future=True,
-        )
+            self.engine = create_async_engine(
+                db_url,
+                echo=self.config.database.echo,
+                pool_size=self.config.database.pool_size,
+                max_overflow=self.config.database.max_overflow,
+                future=True,
+            )
 
-        # Enable foreign keys for SQLite
-        if "sqlite" in db_url:
-
-            @event.listens_for(self.engine.sync_engine, "connect")
-            def set_sqlite_pragma(dbapi_connection, connection_record):
-                cursor = dbapi_connection.cursor()
-                cursor.execute("PRAGMA foreign_keys=ON")
-                cursor.close()
+        except Exception as e:
+            logger.error(f"Failed to create database engine: {e}")
+            raise
 
         self.session_factory = async_sessionmaker(
-            self.engine, class_=AsyncSession, expire_on_commit=False
+            bind=self.engine,
+            class_=AsyncSession,
+            expire_on_commit=False,
         )
 
-        # Create tables
+        await self._create_tables()
+
+        self._initialized = True
+        logger.info("Database initialized successfully")
+
+    async def _create_tables(self):
+        """Create database tables."""
         async with self.engine.begin() as conn:
             await conn.run_sync(SQLModel.metadata.create_all)
 
-        self._initialized = True
-        logger.info(f"Database initialized with URL: {db_url}")
-
     async def close(self):
-        """Close database connection."""
+        """Close database connections."""
         if self.engine:
             await self.engine.dispose()
             self._initialized = False
-            logger.info("Database connection closed")
+            logger.info("Database connections closed")
+
+    async def health_check(self) -> bool:
+        """Check database health by performing a simple query."""
+        try:
+            if not self._initialized:
+                return False
+
+            async with self.get_session() as session:
+                # Simple query to test database connectivity
+                await session.execute(text("SELECT 1"))
+                return True
+        except Exception as e:
+            logger.warning(f"Database health check failed: {e}")
+            return False
 
     @asynccontextmanager
     async def get_session(self) -> AsyncGenerator[AsyncSession, None]:
@@ -90,14 +197,249 @@ class DatabaseManager:
             finally:
                 await session.close()
 
-    async def health_check(self) -> bool:
-        """Check database health."""
-        try:
-            async with self.get_session() as session:
-                await session.execute(text("SELECT 1"))
+    # Server operations
+    async def create_server_instance(self, server_data: dict) -> ServerInstance:
+        """Create a new server instance."""
+        async with self.get_session() as session:
+            server = ServerInstance(**server_data)
+            session.add(server)
+            await session.commit()
+            await session.refresh(server)
+            return server
+
+    async def get_server_instance(self, server_id: str) -> Optional[ServerInstance]:
+        """Get server instance by ID."""
+        async with self.get_session() as session:
+            result = await session.get(ServerInstance, server_id)
+            return result
+
+    async def get_server_instances(
+        self, skip: int = 0, limit: int = 100
+    ) -> List[ServerInstance]:
+        """Get all server instances with pagination."""
+        async with self.get_session() as session:
+            from sqlalchemy import select
+
+            result = await session.execute(
+                select(ServerInstance).offset(skip).limit(limit)
+            )
+            return result.scalars().all()
+
+    async def update_server_instance(
+        self, server_id: str, server_data: dict
+    ) -> Optional[ServerInstance]:
+        """Update server instance."""
+        async with self.get_session() as session:
+            server = await session.get(ServerInstance, server_id)
+            if server:
+                for key, value in server_data.items():
+                    setattr(server, key, value)
+                await session.commit()
+                await session.refresh(server)
+            return server
+
+    async def delete_server_instance(self, server_id: str) -> bool:
+        """Delete server instance."""
+        async with self.get_session() as session:
+            server = await session.get(ServerInstance, server_id)
+            if server:
+                await session.delete(server)
+                await session.commit()
                 return True
-        except Exception as e:
-            logger.error(f"Database health check failed: {e}")
+            return False
+
+    # Template operations
+    async def create_server_template(self, template_data: dict) -> ServerTemplate:
+        """Create a new server template."""
+        async with self.get_session() as session:
+            template = ServerTemplate(**template_data)
+            session.add(template)
+            await session.commit()
+            await session.refresh(template)
+            return template
+
+    async def get_server_template(self, template_id: str) -> Optional[ServerTemplate]:
+        """Get server template by ID."""
+        async with self.get_session() as session:
+            result = await session.get(ServerTemplate, template_id)
+            return result
+
+    async def get_server_templates(
+        self, skip: int = 0, limit: int = 100
+    ) -> List[ServerTemplate]:
+        """Get all server templates with pagination."""
+        async with self.get_session() as session:
+            from sqlalchemy import select
+
+            result = await session.execute(
+                select(ServerTemplate).offset(skip).limit(limit)
+            )
+            return result.scalars().all()
+
+    async def update_server_template(
+        self, template_id: str, template_data: dict
+    ) -> Optional[ServerTemplate]:
+        """Update server template."""
+        async with self.get_session() as session:
+            template = await session.get(ServerTemplate, template_id)
+            if template:
+                for key, value in template_data.items():
+                    setattr(template, key, value)
+                await session.commit()
+                await session.refresh(template)
+            return template
+
+    async def delete_server_template(self, template_id: str) -> bool:
+        """Delete server template."""
+        async with self.get_session() as session:
+            template = await session.get(ServerTemplate, template_id)
+            if template:
+                await session.delete(template)
+                await session.commit()
+                return True
+            return False
+
+    # User operations
+    async def create_user(self, user_data: dict) -> User:
+        """Create a new user."""
+        async with self.get_session() as session:
+            user = User(**user_data)
+            session.add(user)
+            await session.commit()
+            await session.refresh(user)
+            return user
+
+    async def get_user(self, user_id: str) -> Optional[User]:
+        """Get user by ID."""
+        async with self.get_session() as session:
+            result = await session.get(User, user_id)
+            return result
+
+    async def get_users(self, skip: int = 0, limit: int = 100) -> List[User]:
+        """Get all users with pagination."""
+        async with self.get_session() as session:
+            from sqlalchemy import select
+
+            result = await session.execute(select(User).offset(skip).limit(limit))
+            return result.scalars().all()
+
+    async def update_user(self, user_id: str, user_data: dict) -> Optional[User]:
+        """Update user."""
+        async with self.get_session() as session:
+            user = await session.get(User, user_id)
+            if user:
+                for key, value in user_data.items():
+                    setattr(user, key, value)
+                await session.commit()
+                await session.refresh(user)
+            return user
+
+    async def delete_user(self, user_id: str) -> bool:
+        """Delete user."""
+        async with self.get_session() as session:
+            user = await session.get(User, user_id)
+            if user:
+                await session.delete(user)
+                await session.commit()
+                return True
+            return False
+
+    # API Key operations
+    async def create_api_key(self, api_key_data: dict) -> APIKey:
+        """Create a new API key."""
+        async with self.get_session() as session:
+            api_key = APIKey(**api_key_data)
+            session.add(api_key)
+            await session.commit()
+            await session.refresh(api_key)
+            return api_key
+
+    async def get_api_key(self, key_id: str) -> Optional[APIKey]:
+        """Get API key by ID."""
+        async with self.get_session() as session:
+            result = await session.get(APIKey, key_id)
+            return result
+
+    async def get_api_keys(self, skip: int = 0, limit: int = 100) -> List[APIKey]:
+        """Get all API keys with pagination."""
+        async with self.get_session() as session:
+            from sqlalchemy import select
+
+            result = await session.execute(select(APIKey).offset(skip).limit(limit))
+            return result.scalars().all()
+
+    async def update_api_key(self, key_id: str, api_key_data: dict) -> Optional[APIKey]:
+        """Update API key."""
+        async with self.get_session() as session:
+            api_key = await session.get(APIKey, key_id)
+            if api_key:
+                for key, value in api_key_data.items():
+                    setattr(api_key, key, value)
+                await session.commit()
+                await session.refresh(api_key)
+            return api_key
+
+    async def delete_api_key(self, key_id: str) -> bool:
+        """Delete API key."""
+        async with self.get_session() as session:
+            api_key = await session.get(APIKey, key_id)
+            if api_key:
+                await session.delete(api_key)
+                await session.commit()
+                return True
+            return False
+
+    # Load balancer config operations
+    async def create_load_balancer_config(self, lb_data: dict) -> LoadBalancerConfig:
+        """Create a new load balancer config."""
+        async with self.get_session() as session:
+            load_balancer = LoadBalancerConfig(**lb_data)
+            session.add(load_balancer)
+            await session.commit()
+            await session.refresh(load_balancer)
+            return load_balancer
+
+    async def get_load_balancer_config(
+        self, lb_id: str
+    ) -> Optional[LoadBalancerConfig]:
+        """Get load balancer config by ID."""
+        async with self.get_session() as session:
+            result = await session.get(LoadBalancerConfig, lb_id)
+            return result
+
+    async def get_load_balancer_configs(
+        self, skip: int = 0, limit: int = 100
+    ) -> List[LoadBalancerConfig]:
+        """Get all load balancer configs with pagination."""
+        async with self.get_session() as session:
+            from sqlalchemy import select
+
+            result = await session.execute(
+                select(LoadBalancerConfig).offset(skip).limit(limit)
+            )
+            return result.scalars().all()
+
+    async def update_load_balancer_config(
+        self, lb_id: str, lb_data: dict
+    ) -> Optional[LoadBalancerConfig]:
+        """Update load balancer config."""
+        async with self.get_session() as session:
+            load_balancer = await session.get(LoadBalancerConfig, lb_id)
+            if load_balancer:
+                for key, value in lb_data.items():
+                    setattr(load_balancer, key, value)
+                await session.commit()
+                await session.refresh(load_balancer)
+            return load_balancer
+
+    async def delete_load_balancer_config(self, lb_id: str) -> bool:
+        """Delete load balancer config."""
+        async with self.get_session() as session:
+            load_balancer = await session.get(LoadBalancerConfig, lb_id)
+            if load_balancer:
+                await session.delete(load_balancer)
+                await session.commit()
+                return True
             return False
 
 
@@ -107,75 +449,76 @@ class ServerInstanceCRUD:
     def __init__(self, db: DatabaseManager):
         self.db = db
 
-    async def create(self, instance: ServerInstance) -> ServerInstance:
+    async def create(self, server_data: ServerInstanceCreate) -> ServerInstance:
         """Create a new server instance."""
-        async with self.db.get_session() as session:
-            session.add(instance)
-            await session.commit()
-            await session.refresh(instance)
-            return instance
+        server_dict = server_data.model_dump()
+        return await self.create_server_instance(server_dict)
 
-    async def get(self, instance_id: str) -> Optional[ServerInstance]:
+    async def create_server_instance(self, server_data: dict) -> ServerInstance:
+        """Create a new server instance."""
+        return await self.db.create_server_instance(server_data)
+
+    async def get_server_instance(self, server_id: str) -> Optional[ServerInstance]:
         """Get server instance by ID."""
+        return await self.db.get_server_instance(server_id)
+
+    async def get_active(self) -> List[ServerInstance]:
+        """Get all active server instances."""
         async with self.db.get_session() as session:
+
             result = await session.execute(
-                select(ServerInstance).where(ServerInstance.id == instance_id)
+                select(ServerInstance).where(ServerInstance.is_active is True)
             )
-            return result.scalar_one_or_none()
+            return result.scalars().all()
+
+    async def get_server_instances(
+        self, skip: int = 0, limit: int = 100
+    ) -> List[ServerInstance]:
+        """Get all server instances."""
+        return await self.db.get_server_instances(skip, limit)
+
+    async def update_server_instance(
+        self, server_id: str, server_data: dict
+    ) -> Optional[ServerInstance]:
+        """Update server instance."""
+        return await self.db.update_server_instance(server_id, server_data)
+
+    async def delete_server_instance(self, server_id: str) -> bool:
+        """Delete server instance."""
+        return await self.db.delete_server_instance(server_id)
+
+    async def get_all(self) -> List[ServerInstance]:
+        """Get all server instances."""
+        return await self.get_server_instances()
+
+    async def list_all(self) -> List[ServerInstance]:
+        """Get all server instances (alias for get_all)."""
+        return await self.get_all()
 
     async def get_by_template(self, template_name: str) -> List[ServerInstance]:
-        """Get all instances for a template."""
+        """Get server instances by template name."""
         async with self.db.get_session() as session:
+            from sqlalchemy import select
+
             result = await session.execute(
                 select(ServerInstance).where(
                     ServerInstance.template_name == template_name
                 )
             )
-            return list(result.scalars().all())
+            return result.scalars().all()
 
     async def get_healthy_by_template(self, template_name: str) -> List[ServerInstance]:
-        """Get healthy instances for a template."""
+        """Get healthy server instances by template name."""
         async with self.db.get_session() as session:
+            from sqlalchemy import select
+
             result = await session.execute(
                 select(ServerInstance).where(
-                    ServerInstance.template_name == template_name,
-                    ServerInstance.status == "healthy",
+                    (ServerInstance.template_name == template_name)
+                    & (ServerInstance.status == "healthy")
                 )
             )
-            return list(result.scalars().all())
-
-    async def update(self, instance_id: str, updates: dict) -> Optional[ServerInstance]:
-        """Update server instance."""
-        async with self.db.get_session() as session:
-            result = await session.execute(
-                select(ServerInstance).where(ServerInstance.id == instance_id)
-            )
-            instance = result.scalar_one_or_none()
-            if instance:
-                for key, value in updates.items():
-                    setattr(instance, key, value)
-                await session.commit()
-                await session.refresh(instance)
-            return instance
-
-    async def delete(self, instance_id: str) -> bool:
-        """Delete server instance."""
-        async with self.db.get_session() as session:
-            result = await session.execute(
-                select(ServerInstance).where(ServerInstance.id == instance_id)
-            )
-            instance = result.scalar_one_or_none()
-            if instance:
-                await session.delete(instance)
-                await session.commit()
-                return True
-            return False
-
-    async def list_all(self) -> List[ServerInstance]:
-        """List all server instances."""
-        async with self.db.get_session() as session:
-            result = await session.execute(select(ServerInstance))
-            return list(result.scalars().all())
+            return result.scalars().all()
 
 
 class ServerTemplateCRUD:
@@ -184,190 +527,184 @@ class ServerTemplateCRUD:
     def __init__(self, db: DatabaseManager):
         self.db = db
 
-    async def create(self, template: ServerTemplate) -> ServerTemplate:
+    async def create(self, template_data: dict) -> ServerTemplate:
         """Create a new server template."""
-        async with self.db.get_session() as session:
-            session.add(template)
-            await session.commit()
-            await session.refresh(template)
-            return template
+        return await self.create_server_template(template_data)
 
-    async def get(self, name: str) -> Optional[ServerTemplate]:
-        """Get server template by name."""
-        async with self.db.get_session() as session:
-            result = await session.execute(
-                select(ServerTemplate).where(ServerTemplate.name == name)
-            )
-            return result.scalar_one_or_none()
+    async def create_server_template(self, template_data: dict) -> ServerTemplate:
+        """Create a new server template."""
+        return await self.db.create_server_template(template_data)
 
-    async def update(self, name: str, updates: dict) -> Optional[ServerTemplate]:
-        """Update server template."""
-        async with self.db.get_session() as session:
-            result = await session.execute(
-                select(ServerTemplate).where(ServerTemplate.name == name)
-            )
-            template = result.scalar_one_or_none()
-            if template:
-                for key, value in updates.items():
-                    setattr(template, key, value)
-                await session.commit()
-                await session.refresh(template)
-            return template
+    async def get_server_template(self, template_id: str) -> Optional[ServerTemplate]:
+        """Get server template by ID."""
+        return await self.db.get_server_template(template_id)
 
-    async def delete(self, name: str) -> bool:
-        """Delete server template."""
-        async with self.db.get_session() as session:
-            result = await session.execute(
-                select(ServerTemplate).where(ServerTemplate.name == name)
-            )
-            template = result.scalar_one_or_none()
-            if template:
-                await session.delete(template)
-                await session.commit()
-                return True
-            return False
+    async def get_all(self) -> List[ServerTemplate]:
+        """Get all server templates."""
+        return await self.get_server_templates()
 
     async def list_all(self) -> List[ServerTemplate]:
-        """List all server templates."""
-        async with self.db.get_session() as session:
-            result = await session.execute(select(ServerTemplate))
-            return list(result.scalars().all())
+        """Get all server templates (alias for get_all)."""
+        return await self.get_all()
+
+    async def get_server_templates(
+        self, skip: int = 0, limit: int = 100
+    ) -> List[ServerTemplate]:
+        """Get all server templates."""
+        return await self.db.get_server_templates(skip, limit)
+
+    async def update_server_template(
+        self, template_id: str, template_data: dict
+    ) -> Optional[ServerTemplate]:
+        """Update server template."""
+        return await self.db.update_server_template(template_id, template_data)
+
+    async def delete_server_template(self, template_id: str) -> bool:
+        """Delete server template."""
+        return await self.db.delete_server_template(template_id)
 
 
-class UserCRUD:
-    """CRUD operations for users."""
+# Base CRUD class
+class BaseCRUD:
+    """Base CRUD operations."""
 
     def __init__(self, db: DatabaseManager):
         self.db = db
 
-    async def create(self, user: User) -> User:
-        """Create a new user."""
-        async with self.db.get_session() as session:
-            session.add(user)
-            await session.commit()
-            await session.refresh(user)
-            return user
 
-    async def get(self, user_id: int) -> Optional[User]:
+# CRUD classes for compatibility with existing tests and auth.py
+class UserCRUD(BaseCRUD):
+    """CRUD operations for users."""
+
+    def __init__(self, db: DatabaseManager):
+        super().__init__(db)
+
+    async def create(self, user_data: UserCreate, hashed_password: str) -> User:
+        """Create a new user with hashed password."""
+        user_dict = user_data.model_dump()
+        user_dict["hashed_password"] = hashed_password
+        # Remove the plain password if it exists
+        user_dict.pop("password", None)
+        return await self.db.create_user(user_dict)
+
+    async def create_user(self, user_data: dict) -> User:
+        """Create a new user."""
+        return await self.db.create_user(user_data)
+
+    async def get_user(self, user_id: str) -> Optional[User]:
         """Get user by ID."""
-        async with self.db.get_session() as session:
-            result = await session.execute(select(User).where(User.id == user_id))
-            return result.scalar_one_or_none()
+        return await self.db.get_user(user_id)
 
     async def get_by_username(self, username: str) -> Optional[User]:
         """Get user by username."""
+        return await self.get_user_by_username(username)
+
+    async def get_user_by_username(self, username: str) -> Optional[User]:
+        """Get user by username."""
         async with self.db.get_session() as session:
+            from sqlalchemy import select
+
             result = await session.execute(
                 select(User).where(User.username == username)
             )
             return result.scalar_one_or_none()
 
-    async def update(self, user_id: int, updates: dict) -> Optional[User]:
+    async def get_user_by_email(self, email: str) -> Optional[User]:
+        """Get user by email."""
+        async with self.db.get_session() as session:
+            from sqlalchemy import select
+
+            result = await session.execute(select(User).where(User.email == email))
+            return result.scalar_one_or_none()
+
+    async def update(self, user_id: str, user_data: dict) -> Optional[User]:
         """Update user."""
-        async with self.db.get_session() as session:
-            result = await session.execute(select(User).where(User.id == user_id))
-            user = result.scalar_one_or_none()
-            if user:
-                for key, value in updates.items():
-                    setattr(user, key, value)
-                await session.commit()
-                await session.refresh(user)
-            return user
+        return await self.update_user(user_id, user_data)
 
-    async def delete(self, user_id: int) -> bool:
+    async def update_user(self, user_id: str, user_data: dict) -> Optional[User]:
+        """Update user."""
+        return await self.db.update_user(user_id, user_data)
+
+    async def delete_user(self, user_id: str) -> bool:
         """Delete user."""
-        async with self.db.get_session() as session:
-            result = await session.execute(select(User).where(User.id == user_id))
-            user = result.scalar_one_or_none()
-            if user:
-                await session.delete(user)
-                await session.commit()
-                return True
-            return False
+        return await self.db.delete_user(user_id)
 
 
-class APIKeyCRUD:
+class APIKeyCRUD(BaseCRUD):
     """CRUD operations for API keys."""
 
     def __init__(self, db: DatabaseManager):
-        self.db = db
+        super().__init__(db)
 
-    async def create(self, api_key: APIKey) -> APIKey:
+    async def create(self, api_key_data: dict, key_hash: str) -> APIKey:
+        """Create a new API key with hashed key."""
+        api_key_data = api_key_data.copy()
+        api_key_data["key_hash"] = key_hash
+        return await self.db.create_api_key(api_key_data)
+
+    async def create_api_key(self, api_key_data: dict) -> APIKey:
         """Create a new API key."""
-        async with self.db.get_session() as session:
-            session.add(api_key)
-            await session.commit()
-            await session.refresh(api_key)
-            return api_key
+        return await self.db.create_api_key(api_key_data)
 
-    async def get(self, key_id: int) -> Optional[APIKey]:
+    async def get_api_key(self, key_id: str) -> Optional[APIKey]:
         """Get API key by ID."""
-        async with self.db.get_session() as session:
-            result = await session.execute(select(APIKey).where(APIKey.id == key_id))
-            return result.scalar_one_or_none()
+        return await self.db.get_api_key(key_id)
 
-    async def get_by_hash(self, key_hash: str) -> Optional[APIKey]:
-        """Get API key by hash."""
+    async def get_by_user(self, user_id: str) -> List[APIKey]:
+        """Get API keys by user ID."""
         async with self.db.get_session() as session:
-            result = await session.execute(
-                select(APIKey).where(APIKey.key_hash == key_hash)
-            )
-            return result.scalar_one_or_none()
+            from sqlalchemy import select
 
-    async def get_by_user(self, user_id: int) -> List[APIKey]:
-        """Get all API keys for a user."""
-        async with self.db.get_session() as session:
             result = await session.execute(
                 select(APIKey).where(APIKey.user_id == user_id)
             )
-            return list(result.scalars().all())
+            return result.scalars().all()
 
-    async def update(self, key_id: int, updates: dict) -> Optional[APIKey]:
+    async def get_api_key_by_key(self, key: str) -> Optional[APIKey]:
+        """Get API key by key value."""
+        async with self.db.get_session() as session:
+            from sqlalchemy import select
+
+            result = await session.execute(select(APIKey).where(APIKey.key == key))
+            return result.scalar_one_or_none()
+
+    async def update(self, key_id: str, api_key_data: dict) -> Optional[APIKey]:
         """Update API key."""
-        async with self.db.get_session() as session:
-            result = await session.execute(select(APIKey).where(APIKey.id == key_id))
-            api_key = result.scalar_one_or_none()
-            if api_key:
-                for key, value in updates.items():
-                    setattr(api_key, key, value)
-                await session.commit()
-                await session.refresh(api_key)
-            return api_key
+        return await self.update_api_key(key_id, api_key_data)
 
-    async def delete(self, key_id: int) -> bool:
+    async def update_api_key(self, key_id: str, api_key_data: dict) -> Optional[APIKey]:
+        """Update API key."""
+        return await self.db.update_api_key(key_id, api_key_data)
+
+    async def delete_api_key(self, key_id: str) -> bool:
         """Delete API key."""
-        async with self.db.get_session() as session:
-            result = await session.execute(select(APIKey).where(APIKey.id == key_id))
-            api_key = result.scalar_one_or_none()
-            if api_key:
-                await session.delete(api_key)
-                await session.commit()
-                return True
-            return False
+        return await self.db.delete_api_key(key_id)
 
 
-# Global database instance
-db_manager: Optional[DatabaseManager] = None
+# Global database manager instance
+_database_manager: Optional[DatabaseManager] = None
 
 
-async def get_database() -> DatabaseManager:
-    """Dependency to get database manager."""
-    if db_manager is None:
-        raise RuntimeError("Database not initialized")
-    return db_manager
+def get_database() -> DatabaseManager:
+    """Get global database manager."""
+    if _database_manager is None:
+        raise RuntimeError(
+            "Database not initialized. Call initialize_database() first."
+        )
+    return _database_manager
 
 
 async def initialize_database(config: GatewayConfig) -> DatabaseManager:
     """Initialize global database manager."""
-    global db_manager
-    db_manager = DatabaseManager(config)
-    await db_manager.initialize()
-    return db_manager
+    global _database_manager
+    _database_manager = DatabaseManager(config)
+    await _database_manager.initialize()
+    return _database_manager
 
 
 async def close_database():
     """Close global database manager."""
-    global db_manager
-    if db_manager:
-        await db_manager.close()
-        db_manager = None
+    global _database_manager
+    if _database_manager:
+        await _database_manager.close()
+        _database_manager = None

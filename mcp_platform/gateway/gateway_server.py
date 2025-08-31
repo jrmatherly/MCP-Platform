@@ -15,6 +15,7 @@ from typing import Any, Dict, Optional, Union
 import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import OAuth2PasswordRequestForm
 
 from mcp_platform.core.mcp_connection import MCPConnection
 from mcp_platform.core.multi_backend_manager import MultiBackendManager
@@ -175,10 +176,10 @@ class MCPGatewayServer:
 
         # Authentication routes
         @self.app.post("/auth/login", response_model=TokenResponse)
-        async def login(username: str, password: str):
+        async def login(form_data: OAuth2PasswordRequestForm = Depends()):
             """Authenticate user and return JWT token."""
             auth: AuthManager = self.app.state.auth
-            user = await auth.authenticate_user(username, password)
+            user = await auth.authenticate_user(form_data.username, form_data.password)
 
             if not user:
                 raise HTTPException(
