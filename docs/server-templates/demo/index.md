@@ -169,8 +169,6 @@ hello_from: "Custom Server"
 log_level: debug
 ```
 
-## Available Tools
-
 ### 1. say_hello
 
 Generate a personalized greeting message.
@@ -208,99 +206,6 @@ Echo back a message with server identification.
 ```python
 client.call("echo_message", message="Hello World")
 # Returns: "[MCP Platform] Echo: Hello World"
-```
-
-## Client Integration
-
-### FastMCP Client
-
-```python
-from fastmcp.client import FastMCPClient
-
-# Connect to the server
-client = FastMCPClient(endpoint="http://localhost:7071")
-
-# Call tools
-greeting = client.call("say_hello", name="Alice")
-server_info = client.call("get_server_info")
-echo_result = client.call("echo_message", message="Test")
-
-print(greeting)  # Hello Alice! Greetings from MCP Platform!
-```
-
-### Claude Desktop Integration
-
-Add to your Claude Desktop configuration:
-
-```json
-{
-  "mcpServers": {
-    "demo": {
-      "command": "docker",
-      "args": ["exec", "-i", "demo", "python", "server.py", "--transport", "stdio"]
-    }
-  }
-}
-```
-
-### VS Code Integration
-
-Add to your VS Code MCP configuration:
-
-```json
-{
-  "mcp.servers": {
-    "demo": {
-      "command": "python",
-      "args": ["server.py", "--transport", "stdio"],
-      "cwd": "/path/to/templates/demo"
-    }
-  }
-}
-```
-
-### cURL Testing
-
-```bash
-# Test say_hello
-curl -X POST http://localhost:7071/call \
-  -H "Content-Type: application/json" \
-  -d '{"method": "say_hello", "params": {"name": "Alice"}}'
-
-# Test get_server_info
-curl -X POST http://localhost:7071/call \
-  -H "Content-Type: application/json" \
-  -d '{"method": "get_server_info", "params": {}}'
-
-# Test echo_message
-curl -X POST http://localhost:7071/call \
-  -H "Content-Type: application/json" \
-  -d '{"method": "echo_message", "params": {"message": "Hello World"}}'
-```
-
-
-## Configuration Options
-
-| Property | Type | Environment Variable | Default | Description |
-|----------|------|---------------------|---------|-------------|
-| `hello_from` | string | `MCP_HELLO_FROM` | `MCP Platform` | Name or message to include in greetings |
-| `log_level` | string | `MCP_LOG_LEVEL` | `info` | Logging level for the server |
-| `allowed_dirs` | string | `MCP_ALLOWED_DIRS` | `/tmp` | Directories that the server can access for file operations. Only for demonstration purposes. |
-
-### Usage Examples
-
-```bash
-# Deploy with configuration
-python -m mcp_platform deploy demo --show-config
-
-# Using environment variables
-python -m mcp_platform deploy demo --env MCP_HELLO_FROM=value
-
-# Using CLI configuration
-python -m mcp_platform deploy {template_id} --config {first_prop}=value
-
-# Using nested configuration
-python -m mcp_platform deploy {template_id} --config category__property=value
 ```
 
 ## Development
@@ -361,6 +266,11 @@ This modular design ensures consistency across templates and makes the code:
 - **Maintainable**: Clear separation of concerns
 - **Extensible**: Easy to add new tools and configuration options
 - **Reusable**: Base classes can be used by other templates
+
+
+## Usage
+
+For detailed usage examples, tool documentation, and integration guides, see the **[Usage Guide](usage.md)**.
 
 ## Troubleshooting
 

@@ -9,6 +9,7 @@ This script:
 4. Builds the documentation with mkdocs
 """
 
+import json
 import shutil
 import subprocess
 import sys
@@ -71,6 +72,299 @@ def scan_template_docs(templates_dir: Path) -> Dict[str, Dict]:
     return template_docs
 
 
+def generate_usage_md(template_id: str, template_info: Dict) -> str:
+    """Generate standardized usage.md content for a template."""
+    template_config = template_info["config"]
+    template_name = template_config.get("name", template_id.title())
+    tools = template_config.get("tools", [])
+    
+    usage_content = f"""# {template_name} Usage Guide
+
+## Overview
+
+This guide shows how to use the {template_name} with different MCP clients and integration methods.
+
+## Tool Discovery
+
+### Interactive CLI
+```bash
+# Start interactive mode
+python -m mcp_platform interactive
+
+# List available tools
+mcpp> tools {template_id}
+```
+
+### Regular CLI
+```bash
+# Discover tools using CLI
+python -m mcp_platform tools {template_id}
+```
+
+### Python Client
+```python
+from mcp_platform.client import MCPClient
+
+async def discover_tools():
+    async with MCPClient() as client:
+        tools = await client.list_tools("{template_id}")
+        for tool in tools:
+            print(f"Tool: {{tool['name']}} - {{tool['description']}}")
+```
+
+## Available Tools
+
+"""
+    
+    # Add tool documentation
+    for tool in tools:
+        tool_name = tool.get("name", "unknown_tool")
+        tool_desc = tool.get("description", "No description available")
+        tool_params = tool.get("parameters", [])
+        
+        usage_content += f"""### {tool_name}
+
+**Description**: {tool_desc}
+
+**Parameters**:
+"""
+        if tool_params:
+            for param in tool_params:
+                param_name = param.get("name", "unknown")
+                param_desc = param.get("description", "No description")
+                param_type = param.get("type", "string")
+                param_required = " (required)" if param.get("required", False) else " (optional)"
+                usage_content += f"- `{param_name}` ({param_type}){param_required}: {param_desc}\n"
+        else:
+            usage_content += "- No parameters required\n"
+        
+        usage_content += "\n"
+    
+    # Add usage examples section
+    usage_content += f"""## Usage Examples
+
+### Interactive CLI
+
+```bash
+# Start interactive mode
+python -m mcp_platform interactive
+
+# Deploy the template (if not already deployed)
+mcpp> deploy {template_id}
+```
+
+Then call tools:
+"""
+    
+    # Add interactive CLI examples for each tool
+    for tool in tools[:3]:  # Show examples for first 3 tools
+        tool_name = tool.get("name", "unknown_tool")
+        tool_params = tool.get("parameters", [])
+        
+        if tool_params:
+            # Create example parameters
+            example_params = {}
+            for param in tool_params:
+                param_name = param.get("name", "param")
+                param_type = param.get("type", "string")
+                if param_type == "string":
+                    example_params[param_name] = "example_value"
+                elif param_type == "boolean":
+                    example_params[param_name] = True
+                elif param_type == "number":
+                    example_params[param_name] = 123
+                else:
+                    example_params[param_name] = "example_value"
+            
+            params_json = json.dumps(example_params)
+            usage_content += f"""```bash
+mcpp> call {template_id} {tool_name} '{params_json}'
+```
+
+"""
+        else:
+            usage_content += f"""```bash
+mcpp> call {template_id} {tool_name}
+```
+
+"""
+    
+    # Add CLI deployment section
+    usage_content += f"""### Regular CLI
+
+```bash
+# Deploy the template
+python -m mcp_platform deploy {template_id}
+
+# Check deployment status
+python -m mcp_platform status
+
+# View logs
+python -m mcp_platform logs {template_id}
+
+# Stop the template
+python -m mcp_platform stop {template_id}
+```
+
+### Python Client
+
+```python
+import asyncio
+from mcp_platform.client import MCPClient
+
+async def use_{template_id.replace('-', '_')}():
+    async with MCPClient() as client:
+        # Start the server
+        deployment = await client.start_server("{template_id}", {{}})
+        
+        if deployment["success"]:
+            deployment_id = deployment["deployment_id"]
+            
+            try:
+"""
+    
+    # Add Python client examples for each tool
+    for tool in tools[:2]:  # Show examples for first 2 tools
+        tool_name = tool.get("name", "unknown_tool")
+        tool_params = tool.get("parameters", [])
+        
+        if tool_params:
+            example_params = {}
+            for param in tool_params:
+                param_name = param.get("name", "param")
+                param_type = param.get("type", "string")
+                if param_type == "string":
+                    example_params[param_name] = "example_value"
+                elif param_type == "boolean":
+                    example_params[param_name] = True
+                elif param_type == "number":
+                    example_params[param_name] = 123
+                else:
+                    example_params[param_name] = "example_value"
+            
+            usage_content += f"""                # Call {tool_name}
+                result = await client.call_tool("{template_id}", "{tool_name}", {example_params})
+                print(f"{tool_name} result: {{result}}")
+                
+"""
+        else:
+            usage_content += f"""                # Call {tool_name}
+                result = await client.call_tool("{template_id}", "{tool_name}", {{}})
+                print(f"{tool_name} result: {{result}}")
+                
+"""
+    
+    usage_content += f"""            finally:
+                # Clean up
+                await client.stop_server(deployment_id)
+        else:
+            print("Failed to start server")
+
+# Run the example
+asyncio.run(use_{template_id.replace('-', '_')}())
+```
+
+## Integration Examples
+
+### Claude Desktop
+
+Add this configuration to your Claude Desktop configuration file:
+
+**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+**Windows**: `%APPDATA%\\Claude\\claude_desktop_config.json`
+
+```json
+{{
+  "mcpServers": {{
+    "{template_id}": {{
+      "command": "python",
+      "args": ["-m", "mcp_platform", "connect", "{template_id}", "--stdio"],
+      "env": {{
+        "LOG_LEVEL": "info"
+      }}
+    }}
+  }}
+}}
+```
+
+### VS Code
+
+Install the MCP extension and add this to your VS Code settings (`.vscode/settings.json`):
+
+```json
+{{
+  "mcp.servers": {{
+    "{template_id}": {{
+      "command": "python",
+      "args": ["-m", "mcp_platform", "connect", "{template_id}", "--stdio"],
+      "env": {{
+        "LOG_LEVEL": "info"
+      }}
+    }}
+  }}
+}}
+```
+
+### Manual Connection
+
+```bash
+# Get connection details for other integrations
+python -m mcp_platform connect {template_id} --llm claude
+python -m mcp_platform connect {template_id} --llm vscode
+```
+
+## Configuration
+
+For template-specific configuration options, see the main template documentation. Common configuration methods:
+
+```bash
+# Deploy with configuration
+python -m mcp_platform deploy {template_id} --config key=value
+
+# Deploy with environment variables  
+python -m mcp_platform deploy {template_id} --env KEY=VALUE
+
+# Deploy with config file
+python -m mcp_platform deploy {template_id} --config-file config.json
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Template not found**: Ensure the template name is correct
+   ```bash
+   python -m mcp_platform list  # List available templates
+   ```
+
+2. **Connection issues**: Check if the server is running
+   ```bash
+   python -m mcp_platform status
+   ```
+
+3. **Tool discovery fails**: Try refreshing the tool cache
+   ```bash
+   mcpp> tools {template_id} --refresh
+   ```
+
+### Debug Mode
+
+Enable debug logging for troubleshooting:
+
+```bash
+# Interactive CLI with debug
+LOG_LEVEL=debug python -m mcp_platform interactive
+
+# Deploy with debug logging
+python -m mcp_platform deploy {template_id} --config log_level=debug
+```
+
+For more help, see the [main documentation](../../) or open an issue in the repository.
+"""
+    
+    return usage_content
+
+
 def copy_template_docs(template_docs: Dict[str, Dict], docs_dir: Path):
     """Copy template documentation to docs directory and fix CLI commands."""
     print("📄 Copying template documentation...")
@@ -81,6 +375,12 @@ def copy_template_docs(template_docs: Dict[str, Dict], docs_dir: Path):
     for template_id, template_info in template_docs.items():
         template_doc_dir = templates_docs_dir / template_id
         template_doc_dir.mkdir(exist_ok=True)
+
+        # Generate usage.md file
+        usage_content = generate_usage_md(template_id, template_info)
+        with open(template_doc_dir / "usage.md", "w", encoding="utf-8") as f:
+            f.write(usage_content)
+        print(f"  📝 Generated usage.md for {template_id}")
 
         # Copy the index.md file and fix CLI commands
         dest_file = template_doc_dir / "index.md"
@@ -102,6 +402,9 @@ def copy_template_docs(template_docs: Dict[str, Dict], docs_dir: Path):
         content = content.replace("mcpp logs", "python -m mcp_platform logs")
         content = content.replace("mcpp shell", "python -m mcp_platform shell")
         content = content.replace("mcpp cleanup", "python -m mcp_platform cleanup")
+
+        # Remove existing usage sections and replace with link to usage.md
+        content = remove_usage_sections_and_add_link(content, template_id)
 
         # Add configuration information from template schema if not present
         config_schema = template_info["config"].get("config_schema", {})
@@ -171,6 +474,67 @@ def copy_template_docs(template_docs: Dict[str, Dict], docs_dir: Path):
                 shutil.copy2(doc_file, template_doc_dir / doc_file.name)
 
         print(f"  📄 Copied and enhanced docs for {template_id}")
+
+
+def remove_usage_sections_and_add_link(content: str, template_id: str) -> str:
+    """Remove usage sections from content and add link to usage.md."""
+    import re
+    
+    # Common usage section patterns to remove
+    usage_patterns = [
+        r"### Usage\s*\n.*?(?=### |## |\Z)",  # ### Usage section
+        r"## Usage\s*\n.*?(?=### |## |\Z)",   # ## Usage section  
+        r"### Available Tools\s*\n.*?(?=### |## |\Z)",  # ### Available Tools section
+        r"## Available Tools\s*\n.*?(?=### |## |\Z)",   # ## Available Tools section
+        r"### API Reference\s*\n.*?(?=### |## |\Z)",    # ### API Reference section
+        r"## API Reference\s*\n.*?(?=### |## |\Z)",     # ## API Reference section
+        r"### Usage Examples\s*\n.*?(?=### |## |\Z)",   # ### Usage Examples section
+        r"## Usage Examples\s*\n.*?(?=### |## |\Z)",    # ## Usage Examples section
+        r"### Client Integration\s*\n.*?(?=### |## |\Z)", # ### Client Integration section
+        r"## Client Integration\s*\n.*?(?=### |## |\Z)",  # ## Client Integration section
+        r"### Integration Examples\s*\n.*?(?=### |## |\Z)", # ### Integration Examples section
+        r"## Integration Examples\s*\n.*?(?=### |## |\Z)",  # ## Integration Examples section
+        r"### FastMCP Client\s*\n.*?(?=### |## |\Z)",    # ### FastMCP Client section
+        r"## FastMCP Client\s*\n.*?(?=### |## |\Z)",     # ## FastMCP Client section
+        r"### Claude Desktop Integration\s*\n.*?(?=### |## |\Z)", # ### Claude Desktop Integration section
+        r"## Claude Desktop Integration\s*\n.*?(?=### |## |\Z)",  # ## Claude Desktop Integration section
+        r"### VS Code Integration\s*\n.*?(?=### |## |\Z)", # ### VS Code Integration section
+        r"## VS Code Integration\s*\n.*?(?=### |## |\Z)",  # ## VS Code Integration section
+        r"### cURL Testing\s*\n.*?(?=### |## |\Z)",      # ### cURL Testing section
+        r"## cURL Testing\s*\n.*?(?=### |## |\Z)",       # ## cURL Testing section
+    ]
+    
+    # Remove usage-related sections
+    for pattern in usage_patterns:
+        content = re.sub(pattern, "", content, flags=re.DOTALL)
+    
+    # Clean up multiple consecutive newlines
+    content = re.sub(r'\n{3,}', '\n\n', content)
+    
+    # Add link to usage.md before troubleshooting, contributing, or at the end
+    usage_link = f"\n## Usage\n\nFor detailed usage examples, tool documentation, and integration guides, see the **[Usage Guide](usage.md)**.\n\n"
+    
+    # Insert before common end sections
+    insert_patterns = [
+        "## Troubleshooting",
+        "## Contributing", 
+        "## License",
+        "## Support",
+        "## Development"
+    ]
+    
+    inserted = False
+    for pattern in insert_patterns:
+        if pattern in content:
+            content = content.replace(pattern, usage_link + pattern)
+            inserted = True
+            break
+    
+    # If no suitable place found, add at the end
+    if not inserted:
+        content = content.rstrip() + "\n" + usage_link
+    
+    return content
 
 
 def generate_templates_index(template_docs: Dict[str, Dict], docs_dir: Path):

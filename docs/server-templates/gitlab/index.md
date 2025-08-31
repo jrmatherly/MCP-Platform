@@ -400,9 +400,12 @@ Most list operations support pagination:
 - Maximum page size: 100 items
 - Use pagination for datasets > 100 items
 
-## Integration Examples
+#
+## Usage
 
-### Development Workflow Automation
+For detailed usage examples, tool documentation, and integration guides, see the **[Usage Guide](usage.md)**.
+
+## Development Workflow Automation
 1. **Feature Development**: Create branch → Make changes → Create MR
 2. **Code Review**: Get MR diffs → Add review comments → Track discussions
 3. **CI/CD Monitoring**: Monitor pipeline → Check job outputs → Handle failures

@@ -154,9 +154,7 @@ The template requires a GitHub Personal Access Token for authentication:
    - `notifications` - Notification access
    - `security_events` - Security alert access
 
-### Usage Examples
-
-#### Repository Operations
+### Repository Operations
 ```bash
 # List repository files
 mcp-client call get_file_contents --owner "octocat" --repo "Hello-World" --path "README.md"
@@ -237,36 +235,6 @@ mcpp> tools github --verbose
 - **Interactive CLI**: Rich terminal interface with progress indicators
 - **Comprehensive Documentation**: Auto-generated tool documentation
 - **Testing Integration**: Built-in testing framework for GitHub operations
-
-
-## Configuration Options
-
-| Property | Type | Environment Variable | Default | Description |
-|----------|------|---------------------|---------|-------------|
-| `log_level` | string | `LOG_LEVEL` | `INFO` | Logging level (DEBUG, INFO, WARNING, ERROR) |
-| `mcp_transport` | string | `MCP_TRANSPORT` | `stdio` | MCP transport mode (stdio only supported) |
-| `mcp_port` | integer | `MCP_PORT` | `7071` | Port for MCP server (not used for stdio) |
-| `github_token` | string | `GITHUB_PERSONAL_ACCESS_TOKEN` | `` | GitHub personal access token |
-| `github_host` | string | `GITHUB_HOST` | `https://api.github.com` | GitHub host URL (default: https://api.github.com) |
-| `github_toolset` | string | `GITHUB_TOOLSET` | `all` | GitHub toolset to use (default: 'default'). Options: 'context', 'actions', 'code_security', 'dependabot', 'discussions', 'experiments', 'gists', 'issues', 'notifications', 'orgs', 'pull_requests', 'repos', 'secret_protection', 'users'. If 'all', all toolsets are enabled. Use comma-separated values to specify multiple toolsets. |
-| `dynamic_toolsets` | integer | `GITHUB_DYNAMIC_TOOLSETS` | `0` | Enable dynamic toolset discovery (default: 0) |
-| `read_only` | integer | `GITHUB_READ_ONLY` | `0` | When 1, restricts server to read-only operations for enhanced security |
-
-### Usage Examples
-
-```bash
-# Deploy with configuration
-python -m mcp_platform deploy github --show-config
-
-# Using environment variables
-python -m mcp_platform deploy github --env LOG_LEVEL=value
-
-# Using CLI configuration
-python -m mcp_platform deploy {template_id} --config {first_prop}=value
-
-# Using nested configuration
-python -m mcp_platform deploy {template_id} --config category__property=value
-```
 
 ## Development
 
@@ -390,18 +358,10 @@ python -m mcp_platform logs github --trace
 - **Request Batching**: Batch compatible requests
 - **Priority Queuing**: Prioritize critical operations
 
-## API Reference
 
-All 77 GitHub tools are available through the MCP interface. Each tool includes:
-- **Input Schema**: Detailed parameter specifications
-- **Output Schema**: Response format documentation
-- **Error Handling**: Comprehensive error response patterns
-- **Examples**: Real-world usage examples
+## Usage
 
-For detailed API documentation of each tool, use:
-```bash
-mcpp> tools github --tool-name <tool_name> --detailed
-```
+For detailed usage examples, tool documentation, and integration guides, see the **[Usage Guide](usage.md)**.
 
 ## Contributing
 

@@ -54,11 +54,7 @@ mcpp run-tool filesystem list_directory \
   '{"path": "/tmp"}'
 ```
 
-## API Reference
-
-### Available Tools
-
-#### Directory Operations
+### Directory Operations
 
 ##### `list_allowed_directories`
 List all configured allowed directories.
@@ -287,8 +283,6 @@ export ALLOWED_DIRS="/etc:/data/config:ro /var/log:/data/logs:ro /tmp:/data/tmp:
 export ALLOWED_DIRS="/home/user/documents /home/user/projects"
 ```
 
-## Integration Examples
-
 ### Claude Desktop Configuration
 ```json
 {
@@ -343,30 +337,6 @@ docker run -i --rm \
   dataeverything/mcp-filesystem
 ```
 
-
-## Configuration Options
-
-| Property | Type | Environment Variable | Default | Description |
-|----------|------|---------------------|---------|-------------|
-| `log_level` | string | `LOG_LEVEL` | `INFO` | Logging level (DEBUG, INFO, WARNING, ERROR) |
-| `allowed_dirs` | string | `ALLOWED_DIRS` | `` | Allowed directories to scan, create or read from. Defaults to anything that gets mounted to /data directory in container |
-
-### Usage Examples
-
-```bash
-# Deploy with configuration
-python -m mcp_platform deploy filesystem --show-config
-
-# Using environment variables
-python -m mcp_platform deploy filesystem --env LOG_LEVEL=value
-
-# Using CLI configuration
-python -m mcp_platform deploy {template_id} --config {first_prop}=value
-
-# Using nested configuration
-python -m mcp_platform deploy {template_id} --config category__property=value
-```
-
 ## Development
 
 ### Local Development Setup
@@ -408,6 +378,11 @@ python -m mcp_platform create my-custom-fs --base filesystem
 # Extend Dockerfile for additional tools
 # Add custom tests in tests/ directory
 ```
+
+
+## Usage
+
+For detailed usage examples, tool documentation, and integration guides, see the **[Usage Guide](usage.md)**.
 
 ## Troubleshooting
 
@@ -488,6 +463,11 @@ docker build -t dataeverything/mcp-filesystem .
 # Run the container
 docker run dataeverything/mcp-filesystem
 ```
+
+
+## Usage
+
+For detailed usage examples, tool documentation, and integration guides, see the **[Usage Guide](usage.md)**.
 
 ## Troubleshooting
 
