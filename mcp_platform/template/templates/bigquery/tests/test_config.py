@@ -5,8 +5,6 @@ Test Configuration for BigQuery MCP Server.
 Tests the configuration loading, validation, and management functionality.
 """
 
-import os
-
 # Import the config module
 import os
 import sys

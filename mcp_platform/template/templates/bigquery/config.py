@@ -6,9 +6,11 @@ This module handles configuration loading, validation, and management for the
 BigQuery MCP server template.
 """
 
+import json
 import logging
 import os
 import sys
+from pathlib import Path
 from typing import Any, Dict, Optional
 
 # Import base configuration from MCP Platform
@@ -30,7 +32,16 @@ except ImportError:
                 return self.config_dict
 
             def get_template_data(self):
-                return self.config_dict
+                # Try to load template.json for fallback
+                try:
+                    template_path = Path(__file__).parent / "template.json"
+                    with open(template_path, mode="r", encoding="utf-8") as f:
+                        template_data = json.load(f)
+                    # Merge with config overrides
+                    template_data.update(self.config_dict)
+                    return template_data
+                except (FileNotFoundError, json.JSONDecodeError):
+                    return self.config_dict
 
 
 class BigQueryServerConfig(ServerConfig):
@@ -45,6 +56,9 @@ class BigQueryServerConfig(ServerConfig):
         """Initialize BigQuery server configuration."""
         super().__init__(config_dict or {})
         self.logger = logging.getLogger(__name__)
+
+        # Load template data
+        self.template_data = self._load_template()
 
         # Validate required configuration (skip for testing)
         if not skip_validation:
@@ -293,13 +307,67 @@ class BigQueryServerConfig(ServerConfig):
         for key, value in safe_config.items():
             self.logger.info(f"  {key}: {value}")
 
+    def _load_template(self, template_path: str = None) -> Dict[str, Any]:
+        """
+        Load template data from template.json file.
+
+        Args:
+            template_path: Path to the template JSON file
+
+        Returns:
+            Parsed template data as dictionary
+        """
+        if not template_path:
+            template_path = Path(__file__).parent / "template.json"
+
+        try:
+            with open(template_path, mode="r", encoding="utf-8") as template_file:
+                return json.load(template_file)
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            self.logger.warning(
+                f"Failed to load template data from {template_path}: {e}"
+            )
+            # Return minimal template data as fallback
+            return {
+                "name": "BigQuery MCP Server",
+                "version": "1.0.0",
+                "description": "BigQuery MCP Server",
+                "transport": {"port": 7072},
+            }
+
+    def get_template_data(self) -> Dict[str, Any]:
+        """
+        Get the full template data, potentially modified by configuration overrides.
+
+        Returns:
+            Template data dictionary with any configuration overrides applied
+        """
+        # Start with base template data
+        template_data = self.template_data.copy()
+
+        # Apply any template-level overrides from config_dict
+        template_config_keys = set(self.get_template_config().keys())
+        for key, value in self.config_dict.items():
+            if key.lower() not in template_config_keys:
+                # Direct template-level override (not in config_schema)
+                template_key = key.lower()
+                template_data[template_key] = value
+                self.logger.debug(
+                    "Applied template override: %s = %s", template_key, value
+                )
+
+        return template_data
+
+        # Get current configuration for logging
+        current_config = self.get_template_config()
+
         # Log security warnings
-        if not config["read_only"]:
+        if not current_config["read_only"]:
             self.logger.warning(
                 "Server is running in WRITE mode - this allows data modifications!"
             )
 
-        if config["allowed_datasets"] == "*":
+        if current_config["allowed_datasets"] == "*":
             self.logger.warning(
                 "All datasets are accessible - consider restricting access for production use"
             )
