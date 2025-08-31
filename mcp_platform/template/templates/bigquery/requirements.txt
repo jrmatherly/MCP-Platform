@@ -30,28 +30,3 @@ aiohttp>=3.9.0
 
 # Configuration and environment management
 python-dotenv>=1.0.0
-
-# Rich console output for better logging
-rich>=13.7.0
-
-# Development dependencies (for local testing)
-pytest>=7.4.0
-pytest-asyncio>=0.21.0
-pytest-mock>=3.12.0
-responses>=0.24.0
-
-# Type checking
-mypy>=1.7.0
-types-requests>=2.31.0
-
-# Code quality
-black>=23.11.0
-isort>=5.12.0
-flake8>=6.1.0
-
-# Security scanning
-bandit>=1.7.5
-
-# Documentation
-mkdocs>=1.5.3
-mkdocs-material>=9.4.0
