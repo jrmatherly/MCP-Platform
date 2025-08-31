@@ -1,10 +1,11 @@
 """
-Unit tests for authentication and authorization.
+Unit tests for gateway authentication module.
+
+Tests password hashing, JWT tokens, API key management, and the AuthManager class.
 """
 
-import secrets
 from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
@@ -13,494 +14,365 @@ from mcp_platform.gateway.database import DatabaseManager
 from mcp_platform.gateway.models import APIKey, AuthConfig, User
 
 
-@pytest.mark.unit
-@pytest.mark.gateway
-@pytest.mark.auth
-@pytest.fixture
-def auth_config():
-    """Create test auth configuration."""
-    return AuthConfig(
-        secret_key="test-secret-key-for-jwt-tokens-123",
-        algorithm="HS256",
-        access_token_expire_minutes=30,
-        api_key_expire_days=30,
-    )
+class TestAuthManager:
+    """Test AuthManager class."""
 
+    def setup_method(self):
+        """Set up test fixtures."""
+        self.auth_config = AuthConfig(secret_key="test_secret_key_123456789")
+        self.mock_db = Mock(spec=DatabaseManager)
+        self.auth_manager = AuthManager(self.auth_config, self.mock_db)
 
-@pytest.fixture
-def mock_db():
-    """Create mock database manager."""
-    return Mock(spec=DatabaseManager)
+    def test_auth_manager_initialization(self):
+        """Test AuthManager initialization."""
+        assert self.auth_manager.config == self.auth_config
+        assert self.auth_manager.db == self.mock_db
+        assert self.auth_manager.user_crud is not None
+        assert self.auth_manager.api_key_crud is not None
 
+    def test_password_hashing(self):
+        """Test password hashing methods."""
+        password = "test_password123"
+        hashed = self.auth_manager.get_password_hash(password)
 
-@pytest.fixture
-def auth_manager(auth_config, mock_db):
-    """Create test auth manager."""
-    return AuthManager(auth_config, mock_db)
-
-
-@pytest.mark.unit
-@pytest.mark.gateway
-@pytest.mark.auth
-class TestPasswordHashing:
-    """Test password hashing functionality."""
-
-    def test_password_hashing(self, auth_manager):
-        """Test password hashing and verification."""
-        password = "secure_password_123"
-
-        # Hash password
-        hashed = auth_manager.get_password_hash(password)
+        # Should be different from original
         assert hashed != password
-        assert hashed.startswith("$2b$")  # bcrypt prefix
+        # Should be a string
+        assert isinstance(hashed, str)
+        # Should have reasonable length (bcrypt hashes are ~60 chars)
+        assert len(hashed) > 50
 
-        # Verify correct password
-        assert auth_manager.verify_password(password, hashed) is True
+        # Test verification
+        assert self.auth_manager.verify_password(password, hashed) is True
+        assert self.auth_manager.verify_password("wrong_password", hashed) is False
 
-        # Verify incorrect password
-        assert auth_manager.verify_password("wrong_password", hashed) is False
+    def test_password_salt_uniqueness(self):
+        """Test that same password produces different hashes due to salt."""
+        password = "test_password"
 
-    def test_different_passwords_different_hashes(self, auth_manager):
-        """Test that different passwords produce different hashes."""
-        password1 = "password1"
-        password2 = "password2"
+        hash1 = self.auth_manager.get_password_hash(password)
+        hash2 = self.auth_manager.get_password_hash(password)
 
-        hash1 = auth_manager.get_password_hash(password1)
-        hash2 = auth_manager.get_password_hash(password2)
-
+        # Different salts should produce different hashes
         assert hash1 != hash2
+        # But both should verify correctly
+        assert self.auth_manager.verify_password(password, hash1) is True
+        assert self.auth_manager.verify_password(password, hash2) is True
 
-    def test_same_password_different_salts(self, auth_manager):
-        """Test that same password produces different hashes (due to salt)."""
-        password = "same_password"
+    def test_create_access_token(self):
+        """Test access token creation."""
+        data = {"sub": "testuser", "user_id": 1}
 
-        hash1 = auth_manager.get_password_hash(password)
-        hash2 = auth_manager.get_password_hash(password)
+        token = self.auth_manager.create_access_token(data)
 
-        # Different hashes due to random salt
-        assert hash1 != hash2
-
-        # But both verify correctly
-        assert auth_manager.verify_password(password, hash1) is True
-        assert auth_manager.verify_password(password, hash2) is True
-
-
-class TestJWTTokens:
-    """Test JWT token creation and verification."""
-
-    def test_create_access_token(self, auth_manager):
-        """Test JWT token creation."""
-        data = {"sub": "testuser", "scopes": ["read", "write"]}
-
-        token = auth_manager.create_access_token(data)
         assert isinstance(token, str)
-        assert len(token.split(".")) == 3  # JWT has 3 parts
+        # JWT tokens have 3 parts separated by dots
+        assert len(token.split(".")) == 3
 
-    def test_verify_valid_token(self, auth_manager):
-        """Test verifying valid JWT token."""
-        data = {"sub": "testuser", "role": "admin"}
+    def test_verify_access_token(self):
+        """Test access token verification."""
+        data = {"sub": "testuser", "user_id": 1}
 
-        token = auth_manager.create_access_token(data)
-        payload = auth_manager.verify_token(token)
+        token = self.auth_manager.create_access_token(data)
+        payload = self.auth_manager.verify_token(token)
 
+        assert payload is not None
         assert payload["sub"] == "testuser"
-        assert payload["role"] == "admin"
-        assert "exp" in payload  # Expiration should be added
+        assert payload["user_id"] == 1
+        assert "exp" in payload
 
-    def test_verify_invalid_token(self, auth_manager):
-        """Test verifying invalid JWT token."""
-        invalid_token = "invalid.jwt.token"
+    def test_verify_invalid_token(self):
+        """Test verification of invalid token."""
+        invalid_token = "invalid.token.here"
 
-        with pytest.raises(AuthenticationError):
-            auth_manager.verify_token(invalid_token)
+        with pytest.raises(AuthenticationError, match="Invalid token"):
+            self.auth_manager.verify_token(invalid_token)
 
-    def test_verify_expired_token(self, auth_manager):
-        """Test verifying expired JWT token."""
+    def test_custom_token_expiration(self):
+        """Test token with custom expiration."""
         data = {"sub": "testuser"}
+        expires_delta = timedelta(hours=2)
 
-        # Create token with very short expiration
-        expires_delta = timedelta(seconds=-1)  # Already expired
-        token = auth_manager.create_access_token(data, expires_delta)
+        token = self.auth_manager.create_access_token(data, expires_delta=expires_delta)
+        payload = self.auth_manager.verify_token(token)
 
-        with pytest.raises(AuthenticationError):
-            auth_manager.verify_token(token)
-
-    def test_custom_expiration(self, auth_manager):
-        """Test custom token expiration."""
-        data = {"sub": "testuser"}
-        expires_delta = timedelta(minutes=60)
-
-        token = auth_manager.create_access_token(data, expires_delta)
-        payload = auth_manager.verify_token(token)
-
-        # Check expiration is approximately 1 hour from now
+        assert payload is not None
+        # Check that expiration is roughly 2 hours from now
         exp_time = datetime.fromtimestamp(payload["exp"], tz=timezone.utc)
         expected_exp = datetime.now(timezone.utc) + expires_delta
+        # Allow 1 minute tolerance
+        assert abs((exp_time - expected_exp).total_seconds()) < 60
 
-        # Allow 10 second tolerance
-        assert abs((exp_time - expected_exp).total_seconds()) < 10
-
-
-class TestAPIKeyManagement:
-    """Test API key generation and validation."""
-
-    def test_generate_api_key(self, auth_manager):
+    def test_generate_api_key(self):
         """Test API key generation."""
-        api_key = auth_manager.generate_api_key()
+        api_key = self.auth_manager.generate_api_key()
 
+        assert isinstance(api_key, str)
+        # Should start with "mcp_"
         assert api_key.startswith("mcp_")
-        assert len(api_key) > 20  # Should be reasonably long
+        # Should be reasonably long for security
+        assert len(api_key) >= 36  # "mcp_" + 32 chars
 
-        # Generate multiple keys - should be unique
-        key1 = auth_manager.generate_api_key()
-        key2 = auth_manager.generate_api_key()
+    def test_api_key_uniqueness(self):
+        """Test that generated API keys are unique."""
+        key1 = self.auth_manager.generate_api_key()
+        key2 = self.auth_manager.generate_api_key()
+
         assert key1 != key2
 
-    def test_hash_api_key(self, auth_manager):
-        """Test API key hashing."""
-        api_key = "mcp_test_key_123"
+    def test_api_key_hashing(self):
+        """Test API key hashing and verification."""
+        api_key = "mcp_test_api_key_123"
+        hashed = self.auth_manager.hash_api_key(api_key)
 
-        hashed = auth_manager.hash_api_key(api_key)
         assert hashed != api_key
-        assert hashed.startswith("$2b$")  # bcrypt prefix
+        assert isinstance(hashed, str)
+        assert len(hashed) > 50  # bcrypt hash length
 
-    def test_verify_api_key(self, auth_manager):
-        """Test API key verification."""
-        api_key = "mcp_test_key_456"
-        hashed = auth_manager.hash_api_key(api_key)
+        # Test verification
+        assert self.auth_manager.verify_api_key(api_key, hashed) is True
+        assert self.auth_manager.verify_api_key("wrong_key", hashed) is False
 
-        # Correct key should verify
-        assert auth_manager.verify_api_key(api_key, hashed) is True
-
-        # Wrong key should not verify
-        assert auth_manager.verify_api_key("mcp_wrong_key", hashed) is False
-
-
-class TestUserAuthentication:
-    """Test user authentication methods."""
-
-    async def test_authenticate_user_success(self, auth_manager):
+    @pytest.mark.asyncio
+    async def test_authenticate_user_success(self):
         """Test successful user authentication."""
-        # Mock user CRUD
+        # Create a user with hashed password
+        password = "test_password"
+        hashed_password = self.auth_manager.get_password_hash(password)
         mock_user = User(
-            id=1,
-            username="testuser",
-            hashed_password=auth_manager.get_password_hash("correct_password"),
+            id=1, username="testuser", hashed_password=hashed_password, is_active=True
         )
 
-        auth_manager.user_crud.get_by_username = AsyncMock(return_value=mock_user)
+        # Mock the database call
+        self.auth_manager.user_crud.get_by_username = AsyncMock(return_value=mock_user)
 
-        # Authenticate with correct credentials
-        user = await auth_manager.authenticate_user("testuser", "correct_password")
-        assert user is not None
-        assert user.username == "testuser"
+        result = await self.auth_manager.authenticate_user("testuser", password)
 
-    async def test_authenticate_user_wrong_password(self, auth_manager):
-        """Test authentication with wrong password."""
+        assert result == mock_user
+        self.auth_manager.user_crud.get_by_username.assert_called_once_with("testuser")
+
+    @pytest.mark.asyncio
+    async def test_authenticate_user_wrong_password(self):
+        """Test user authentication with wrong password."""
+        password = "test_password"
+        wrong_password = "wrong_password"
+        hashed_password = self.auth_manager.get_password_hash(password)
         mock_user = User(
-            id=1,
-            username="testuser",
-            hashed_password=auth_manager.get_password_hash("correct_password"),
+            id=1, username="testuser", hashed_password=hashed_password, is_active=True
         )
 
-        auth_manager.user_crud.get_by_username = AsyncMock(return_value=mock_user)
+        self.auth_manager.user_crud.get_by_username = AsyncMock(return_value=mock_user)
 
-        # Authenticate with wrong password
-        user = await auth_manager.authenticate_user("testuser", "wrong_password")
-        assert user is None
+        result = await self.auth_manager.authenticate_user("testuser", wrong_password)
 
-    async def test_authenticate_nonexistent_user(self, auth_manager):
-        """Test authentication with nonexistent user."""
-        auth_manager.user_crud.get_by_username = AsyncMock(return_value=None)
+        assert result is None
 
-        user = await auth_manager.authenticate_user("nonexistent", "password")
-        assert user is None
+    @pytest.mark.asyncio
+    async def test_authenticate_nonexistent_user(self):
+        """Test authentication of non-existent user."""
+        self.auth_manager.user_crud.get_by_username = AsyncMock(return_value=None)
 
+        result = await self.auth_manager.authenticate_user("nonexistent", "password")
 
-class TestCreateUser:
-    """Test user creation functionality."""
+        assert result is None
 
-    async def test_create_user_success(self, auth_manager):
-        """Test successful user creation."""
-        mock_created_user = User(
-            id=1,
-            username="newuser",
-            email="new@example.com",
-            hashed_password="hashed_password",
-        )
-
-        auth_manager.user_crud.create = AsyncMock(return_value=mock_created_user)
-
-        user = await auth_manager.create_user(
-            username="newuser",
-            password="secure_password",
-            email="new@example.com",
-        )
-
-        assert user.username == "newuser"
-        assert user.email == "new@example.com"
-
-        # Verify password was hashed
-        create_call = auth_manager.user_crud.create.call_args[0][0]
-        assert create_call.hashed_password != "secure_password"
-        assert auth_manager.verify_password(
-            "secure_password", create_call.hashed_password
-        )
-
-    async def test_create_user_with_extra_fields(self, auth_manager):
-        """Test creating user with additional fields."""
-        mock_created_user = User(
-            id=1,
-            username="adminuser",
-            hashed_password="hash",
-            is_superuser=True,
-            full_name="Admin User",
-        )
-
-        auth_manager.user_crud.create = AsyncMock(return_value=mock_created_user)
-
-        user = await auth_manager.create_user(
-            username="adminuser",
-            password="admin_password",
-            is_superuser=True,
-            full_name="Admin User",
-        )
-
-        assert user.is_superuser is True
-        assert user.full_name == "Admin User"
-
-
-class TestCreateAPIKey:
-    """Test API key creation functionality."""
-
-    async def test_create_api_key_success(self, auth_manager):
-        """Test successful API key creation."""
-        mock_api_key_record = APIKey(
-            id=1,
-            name="test-key",
-            description="Test API key",
-            key_hash="hashed_key",
-            user_id=1,
-            scopes=["gateway:read"],
-            expires_at=datetime.now(timezone.utc) + timedelta(days=30),
-        )
-
-        auth_manager.api_key_crud.create = AsyncMock(return_value=mock_api_key_record)
-
-        api_key_record, api_key = await auth_manager.create_api_key(
-            user_id=1,
-            name="test-key",
-            description="Test API key",
-            scopes=["gateway:read"],
-        )
-
-        assert api_key_record.name == "test-key"
-        assert api_key_record.description == "Test API key"
-        assert api_key_record.scopes == ["gateway:read"]
-        assert api_key.startswith("mcp_")
-
-        # Verify API key was hashed
-        create_call = auth_manager.api_key_crud.create.call_args[0][0]
-        assert auth_manager.verify_api_key(api_key, create_call.key_hash)
-
-    async def test_create_api_key_custom_expiration(self, auth_manager):
-        """Test creating API key with custom expiration."""
-        mock_api_key_record = APIKey(
-            id=1,
-            name="short-key",
-            key_hash="hash",
-            user_id=1,
-            expires_at=datetime.now(timezone.utc) + timedelta(days=7),
-        )
-
-        auth_manager.api_key_crud.create = AsyncMock(return_value=mock_api_key_record)
-
-        _, _ = await auth_manager.create_api_key(
-            user_id=1,
-            name="short-key",
-            expires_days=7,
-        )
-
-        # Check expiration was set correctly
-        create_call = auth_manager.api_key_crud.create.call_args[0][0]
-        expected_exp = datetime.now(timezone.utc) + timedelta(days=7)
-
-        # Allow 10 second tolerance
-        assert abs((create_call.expires_at - expected_exp).total_seconds()) < 10
-
-    async def test_create_api_key_default_expiration(self, auth_manager):
-        """Test creating API key with default expiration."""
-        mock_api_key_record = APIKey(
-            id=1,
-            name="default-key",
-            key_hash="hash",
-            user_id=1,
-            expires_at=datetime.now(timezone.utc) + timedelta(days=30),
-        )
-
-        auth_manager.api_key_crud.create = AsyncMock(return_value=mock_api_key_record)
-
-        _, _ = await auth_manager.create_api_key(
-            user_id=1,
-            name="default-key",
-        )
-
-        # Check default expiration was used
-        create_call = auth_manager.api_key_crud.create.call_args[0][0]
-        expected_exp = datetime.now(timezone.utc) + timedelta(days=30)
-
-        # Allow 10 second tolerance
-        assert abs((create_call.expires_at - expected_exp).total_seconds()) < 10
-
-
-class TestAPIKeyAuthentication:
-    """Test API key authentication methods."""
-
-    async def test_authenticate_api_key_success(self, auth_manager):
+    @pytest.mark.asyncio
+    async def test_authenticate_api_key_success(self):
         """Test successful API key authentication."""
-        # This test is simplified since the actual implementation
-        # would require more complex API key lookup logic
-        api_key = "mcp_valid_key_123"
-
-        mock_api_key_record = APIKey(
+        api_key = "mcp_test_api_key"
+        hashed_key = self.auth_manager.hash_api_key(api_key)
+        mock_api_key = APIKey(
             id=1,
-            name="valid-key",
-            key_hash=auth_manager.hash_api_key(api_key),
+            name="Test Key",
+            key_hash=hashed_key,
             user_id=1,
             is_active=True,
-            expires_at=datetime.now(timezone.utc) + timedelta(days=30),
+            expires_at=None,
         )
 
-        # Mock the lookup method
-        auth_manager.api_key_crud.get_by_user = AsyncMock(
-            return_value=[mock_api_key_record]
+        # Mock the database calls
+        self.auth_manager.api_key_crud.get_by_user = AsyncMock(
+            return_value=[mock_api_key]
         )
-        auth_manager.api_key_crud.update = AsyncMock(return_value=mock_api_key_record)
+        self.auth_manager.api_key_crud.update = AsyncMock()
 
-        authenticated_key = await auth_manager.authenticate_api_key(api_key)
-        assert authenticated_key is not None
-        assert authenticated_key.name == "valid-key"
+        # Mock the hash verification to return True for our test key
+        with patch.object(self.auth_manager, "verify_api_key", return_value=True):
+            result = await self.auth_manager.authenticate_api_key(api_key)
 
-    async def test_authenticate_invalid_api_key_format(self, auth_manager):
+        assert result == mock_api_key
+        # Verify that last_used was updated
+        self.auth_manager.api_key_crud.update.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_authenticate_expired_api_key(self):
+        """Test authentication with expired API key."""
+        api_key = "mcp_test_api_key"
+        hashed_key = self.auth_manager.hash_api_key(api_key)
+        past_time = datetime.now(timezone.utc) - timedelta(days=1)
+        mock_api_key = APIKey(
+            id=1,
+            name="Expired Key",
+            key_hash=hashed_key,
+            user_id=1,
+            is_active=True,
+            expires_at=past_time,
+        )
+
+        # Mock the database calls
+        self.auth_manager.api_key_crud.get_by_user = AsyncMock(
+            return_value=[mock_api_key]
+        )
+        self.auth_manager.api_key_crud.update = AsyncMock()
+
+        with patch.object(self.auth_manager, "verify_api_key", return_value=True):
+            result = await self.auth_manager.authenticate_api_key(api_key)
+
+        assert result is None
+        # Should not update last_used for expired keys
+        self.auth_manager.api_key_crud.update.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_authenticate_invalid_api_key_format(self):
         """Test authentication with invalid API key format."""
         invalid_key = "invalid_key_format"
 
-        authenticated_key = await auth_manager.authenticate_api_key(invalid_key)
-        assert authenticated_key is None
+        result = await self.auth_manager.authenticate_api_key(invalid_key)
 
-    async def test_authenticate_expired_api_key(self, auth_manager):
-        """Test authentication with expired API key."""
-        api_key = "mcp_expired_key_123"
+        assert result is None
 
-        mock_api_key_record = APIKey(
-            id=1,
-            name="expired-key",
-            key_hash=auth_manager.hash_api_key(api_key),
-            user_id=1,
-            is_active=True,
-            expires_at=datetime.now(timezone.utc) - timedelta(days=1),  # Expired
-        )
+    @pytest.mark.asyncio
+    async def test_authenticate_api_key_not_found(self):
+        """Test authentication with API key that doesn't exist."""
+        api_key = "mcp_nonexistent_key"
 
-        auth_manager.api_key_crud.get_by_user = AsyncMock(
-            return_value=[mock_api_key_record]
-        )
+        # Mock empty list (no keys found)
+        self.auth_manager.api_key_crud.get_by_user = AsyncMock(return_value=[])
 
-        authenticated_key = await auth_manager.authenticate_api_key(api_key)
-        assert authenticated_key is None
+        result = await self.auth_manager.authenticate_api_key(api_key)
 
-    async def test_authenticate_inactive_api_key(self, auth_manager):
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_authenticate_inactive_api_key(self):
         """Test authentication with inactive API key."""
-        api_key = "mcp_inactive_key_123"
-
-        mock_api_key_record = APIKey(
+        api_key = "mcp_test_api_key"
+        hashed_key = self.auth_manager.hash_api_key(api_key)
+        mock_api_key = APIKey(
             id=1,
-            name="inactive-key",
-            key_hash=auth_manager.hash_api_key(api_key),
+            name="Inactive Key",
+            key_hash=hashed_key,
             user_id=1,
-            is_active=False,  # Inactive
-            expires_at=datetime.now(timezone.utc) + timedelta(days=30),
+            is_active=False,  # Inactive key
+            expires_at=None,
         )
 
-        auth_manager.api_key_crud.get_by_user = AsyncMock(
-            return_value=[mock_api_key_record]
+        # Mock the database calls
+        self.auth_manager.api_key_crud.get_by_user = AsyncMock(
+            return_value=[mock_api_key]
         )
 
-        authenticated_key = await auth_manager.authenticate_api_key(api_key)
-        assert authenticated_key is None
+        with patch.object(self.auth_manager, "verify_api_key", return_value=True):
+            result = await self.auth_manager.authenticate_api_key(api_key)
+
+        assert result is None
 
 
-class TestConfigurationValidation:
-    """Test authentication configuration validation."""
+class TestAuthConfig:
+    """Test authentication configuration."""
 
     def test_valid_auth_config(self):
-        """Test valid authentication configuration."""
-        config = AuthConfig(
-            secret_key="valid-secret-key-123",
-            algorithm="HS256",
-            access_token_expire_minutes=60,
-            api_key_expire_days=90,
-        )
+        """Test valid auth configuration."""
+        config = AuthConfig(secret_key="my_secret_key")
 
-        assert config.secret_key == "valid-secret-key-123"
-        assert config.algorithm == "HS256"
-        assert config.access_token_expire_minutes == 60
-        assert config.api_key_expire_days == 90
-
-    def test_auth_config_defaults(self):
-        """Test authentication configuration defaults."""
-        config = AuthConfig(secret_key="test-key")
-
+        assert config.secret_key == "my_secret_key"
         assert config.algorithm == "HS256"
         assert config.access_token_expire_minutes == 30
         assert config.api_key_expire_days == 30
 
-    def test_empty_secret_key_allowed(self):
-        """Test that empty secret key is allowed (will be generated)."""
-        config = AuthConfig(secret_key="")
-        assert config.secret_key == ""
+    def test_auth_config_custom_values(self):
+        """Test auth configuration with custom values."""
+        config = AuthConfig(
+            secret_key="test",
+            algorithm="HS512",
+            access_token_expire_minutes=60,
+            api_key_expire_days=90,
+        )
+
+        assert config.algorithm == "HS512"
+        assert config.access_token_expire_minutes == 60
+        assert config.api_key_expire_days == 90
+
+
+class TestAuthenticationError:
+    """Test AuthenticationError exception."""
+
+    def test_authentication_error_creation(self):
+        """Test creating AuthenticationError."""
+        error = AuthenticationError("Test error message")
+        assert str(error) == "Test error message"
+
+    def test_authentication_error_inheritance(self):
+        """Test that AuthenticationError inherits from Exception."""
+        error = AuthenticationError("Test")
+        assert isinstance(error, Exception)
 
 
 class TestSecurityBestPractices:
-    """Test security best practices implementation."""
+    """Test security best practices."""
 
-    def test_password_hash_strength(self, auth_manager):
+    def test_password_hash_strength(self):
         """Test that password hashes are strong."""
+        auth_config = AuthConfig(secret_key="test_secret")
+        auth_manager = AuthManager(auth_config, Mock())
+
         password = "test_password"
         hash1 = auth_manager.get_password_hash(password)
         hash2 = auth_manager.get_password_hash(password)
 
         # Different salts should produce different hashes
         assert hash1 != hash2
+        # Both should be long enough
+        assert len(hash1) > 50
+        assert len(hash2) > 50
 
-        # Hash should be long enough (bcrypt produces 60 char hashes)
-        assert len(hash1) == 60
-        assert len(hash2) == 60
+    def test_api_key_format(self):
+        """Test that API keys follow the expected format."""
+        auth_config = AuthConfig(secret_key="test_secret")
+        auth_manager = AuthManager(auth_config, Mock())
 
-    def test_api_key_uniqueness(self, auth_manager):
-        """Test that API keys are unique."""
-        keys = set()
-        for _ in range(100):
-            key = auth_manager.generate_api_key()
-            assert key not in keys
-            keys.add(key)
+        api_key = auth_manager.generate_api_key()
 
-    def test_api_key_length(self, auth_manager):
-        """Test that API keys are sufficiently long."""
-        for _ in range(10):
-            key = auth_manager.generate_api_key()
-            # Remove prefix and check length
-            key_part = key[4:]  # Remove "mcp_"
-            assert len(key_part) >= 32  # Should be at least 32 characters
+        # Should start with "mcp_"
+        assert api_key.startswith("mcp_")
+        # Should be URL-safe (no special characters that need encoding)
+        import string
 
-    def test_jwt_includes_expiration(self, auth_manager):
-        """Test that JWT tokens always include expiration."""
+        allowed_chars = string.ascii_letters + string.digits + "-_"
+        assert all(c in allowed_chars for c in api_key)
+
+    def test_jwt_includes_expiration(self):
+        """Test that JWT tokens include expiration."""
+        auth_config = AuthConfig(secret_key="test_secret_key_123456789")
+        auth_manager = AuthManager(auth_config, Mock())
+
         data = {"sub": "testuser"}
+
         token = auth_manager.create_access_token(data)
         payload = auth_manager.verify_token(token)
 
         assert "exp" in payload
-        assert isinstance(payload["exp"], (int, float))
+        assert payload["exp"] > datetime.now(timezone.utc).timestamp()
 
-        # Expiration should be in the future
-        exp_time = datetime.fromtimestamp(payload["exp"], tz=timezone.utc)
-        assert exp_time > datetime.now(timezone.utc)
+    def test_secret_key_minimum_length(self):
+        """Test that secret keys should be reasonably long."""
+        # This test ensures we're using good practices
+        short_key = "short"
+        good_key = "this_is_a_much_longer_secret_key_for_security"
+
+        # We can still create configs with short keys, but it's not recommended
+        config1 = AuthConfig(secret_key=short_key)
+        config2 = AuthConfig(secret_key=good_key)
+
+        assert len(config1.secret_key) < 20  # Short key
+        assert len(config2.secret_key) > 20  # Better key

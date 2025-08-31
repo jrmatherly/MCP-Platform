@@ -1,9 +1,12 @@
 """
 Unit tests for gateway load balancer.
+
+Tests load balancing strategies, connection tracking, and instance selection.
 """
 
 import time
-from unittest.mock import Mock
+from typing import List
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -17,383 +20,429 @@ from mcp_platform.gateway.load_balancer import (
     RoundRobinStrategy,
     WeightedRoundRobinStrategy,
 )
+from mcp_platform.gateway.models import LoadBalancerConfig
 from mcp_platform.gateway.registry import ServerInstance
 
-pytestmark = pytest.mark.unit
 
+class TestLoadBalancingStrategies:
+    """Test load balancing strategy implementations."""
 
-class TestRoundRobinStrategy:
-    """Unit tests for round-robin load balancing strategy."""
+    def setup_method(self):
+        """Set up test fixtures."""
+        self.instances = [
+            ServerInstance(
+                id=1,
+                name="server1",
+                host="localhost",
+                port=8001,
+                status="running",
+                health_score=0.9,
+                weight=1,
+            ),
+            ServerInstance(
+                id=2,
+                name="server2",
+                host="localhost",
+                port=8002,
+                status="running",
+                health_score=0.8,
+                weight=2,
+            ),
+            ServerInstance(
+                id=3,
+                name="server3",
+                host="localhost",
+                port=8003,
+                status="running",
+                health_score=0.7,
+                weight=1,
+            ),
+        ]
 
-    def test_round_robin_selection(self):
-        """Test round-robin instance selection."""
+    def test_load_balancing_strategy_enum(self):
+        """Test LoadBalancingStrategy enum values."""
+        strategies = LoadBalancingStrategy
+
+        assert strategies.ROUND_ROBIN.value == "round_robin"
+        assert strategies.LEAST_CONNECTIONS.value == "least_connections"
+        assert strategies.WEIGHTED_ROUND_ROBIN.value == "weighted"
+        assert strategies.HEALTH_BASED.value == "health_based"
+        assert strategies.RANDOM.value == "random"
+
+    def test_base_strategy_abstract(self):
+        """Test that BaseBalancingStrategy cannot be instantiated."""
+        with pytest.raises(TypeError):
+            BaseBalancingStrategy("test")
+
+    def test_round_robin_strategy(self):
+        """Test round robin strategy implementation."""
         strategy = RoundRobinStrategy()
 
-        instances = [
-            ServerInstance(id="inst-1", template_name="demo"),
-            ServerInstance(id="inst-2", template_name="demo"),
-            ServerInstance(id="inst-3", template_name="demo"),
-        ]
+        # Test sequential selection
+        selected1 = strategy.select_instance(self.instances)
+        selected2 = strategy.select_instance(self.instances)
+        selected3 = strategy.select_instance(self.instances)
+        selected4 = strategy.select_instance(self.instances)
 
         # Should cycle through instances
-        selected1 = strategy.select_instance(instances)
-        selected2 = strategy.select_instance(instances)
-        selected3 = strategy.select_instance(instances)
-        selected4 = strategy.select_instance(instances)
-
-        assert selected1.id == "inst-1"
-        assert selected2.id == "inst-2"
-        assert selected3.id == "inst-3"
-        assert selected4.id == "inst-1"  # Back to first
+        assert selected1 == self.instances[0]
+        assert selected2 == self.instances[1]
+        assert selected3 == self.instances[2]
+        assert selected4 == self.instances[0]  # Back to first
 
     def test_round_robin_empty_list(self):
-        """Test round-robin with empty instance list."""
-        strategy = RoundRobinStrategy()
-        assert strategy.select_instance([]) is None
-
-    def test_round_robin_single_instance(self):
-        """Test round-robin with single instance."""
-        strategy = RoundRobinStrategy()
-        instance = ServerInstance(id="single", template_name="demo")
-
-        # Should always return the same instance
-        assert strategy.select_instance([instance]) == instance
-        assert strategy.select_instance([instance]) == instance
-
-    def test_round_robin_separate_templates(self):
-        """Test round-robin maintains separate counters per template."""
+        """Test round robin with empty instance list."""
         strategy = RoundRobinStrategy()
 
-        demo_instances = [
-            ServerInstance(id="demo-1", template_name="demo"),
-            ServerInstance(id="demo-2", template_name="demo"),
-        ]
+        result = strategy.select_instance([])
+        assert result is None
 
-        fs_instances = [
-            ServerInstance(id="fs-1", template_name="filesystem"),
-            ServerInstance(id="fs-2", template_name="filesystem"),
-        ]
-
-        # Select from demo template
-        demo_selected1 = strategy.select_instance(demo_instances)
-        demo_selected2 = strategy.select_instance(demo_instances)
-
-        # Select from filesystem template
-        fs_selected1 = strategy.select_instance(fs_instances)
-        fs_selected2 = strategy.select_instance(fs_instances)
-
-        # Each template should have its own counter
-        assert demo_selected1.id == "demo-1"
-        assert demo_selected2.id == "demo-2"
-        assert fs_selected1.id == "fs-1"
-        assert fs_selected2.id == "fs-2"
-
-
-class TestLeastConnectionsStrategy:
-    """Unit tests for least connections load balancing strategy."""
-
-    def test_least_connections_selection(self):
-        """Test least connections instance selection."""
+    def test_least_connections_strategy(self):
+        """Test least connections strategy."""
         strategy = LeastConnectionsStrategy()
 
-        instances = [
-            ServerInstance(id="inst-1", template_name="demo"),
-            ServerInstance(id="inst-2", template_name="demo"),
-            ServerInstance(id="inst-3", template_name="demo"),
-        ]
+        # All instances start with 0 connections
+        selected1 = strategy.select_instance(self.instances)
+        assert selected1 in self.instances
 
-        # Initially all have 0 connections, should select first
-        selected = strategy.select_instance(instances)
-        assert selected.id == "inst-1"
+        # Track a connection to first instance
+        strategy.track_connection(selected1)
 
-        # Record request for inst-1
-        strategy.record_request(selected)
+        # Next selection should avoid the busy instance
+        selected2 = strategy.select_instance(self.instances)
+        assert selected2 != selected1
 
-        # Now inst-2 and inst-3 have fewer connections
-        selected = strategy.select_instance(instances)
-        assert selected.id == "inst-2"
+        # Release connection
+        strategy.release_connection(selected1)
 
-        # Record request for inst-2
-        strategy.record_request(selected)
-
-        # Now inst-3 has fewest connections
-        selected = strategy.select_instance(instances)
-        assert selected.id == "inst-3"
-
-    def test_least_connections_completion(self):
-        """Test connection tracking with completion."""
-        strategy = LeastConnectionsStrategy()
-        instance = ServerInstance(id="test", template_name="demo")
-
-        # Record request
-        strategy.record_request(instance)
-        assert strategy._active_connections[instance.id] == 1
-
-        # Record completion
-        strategy.record_completion(instance, True)
-        assert strategy._active_connections[instance.id] == 0
-
-        # Multiple requests
-        strategy.record_request(instance)
-        strategy.record_request(instance)
-        assert strategy._active_connections[instance.id] == 2
-
-        # One completion
-        strategy.record_completion(instance, False)
-        assert strategy._active_connections[instance.id] == 1
-
-
-class TestWeightedRoundRobinStrategy:
-    """Unit tests for weighted round-robin load balancing strategy."""
-
-    def test_weighted_selection(self):
-        """Test weighted round-robin selection."""
+    def test_weighted_round_robin_strategy(self):
+        """Test weighted round robin strategy."""
         strategy = WeightedRoundRobinStrategy()
 
-        instances = [
-            ServerInstance(
-                id="heavy",
-                template_name="demo",
-                transport="http",
-                backend="docker",
-                endpoint="http://localhost:8001",
-                metadata={"weight": 3},
-            ),
-            ServerInstance(
-                id="light",
-                template_name="demo",
-                transport="http",
-                backend="docker",
-                endpoint="http://localhost:8002",
-                metadata={"weight": 1},
-            ),
-        ]
-
-        # Select multiple times and count
+        # Track selections to verify weight distribution
         selections = []
-        for i in range(8):  # Total weight is 4, so 8 selections = 2 cycles
-            selected = strategy.select_instance(instances)
-            if selected:  # Check if selection is not None
-                selections.append(selected.id)
+        for _ in range(8):  # Total weight = 4, so 8 selections = 2 cycles
+            selected = strategy.select_instance(self.instances)
+            selections.append(selected)
 
-        # Heavy instance should appear more often than light instance
-        heavy_count = selections.count("heavy")
-        light_count = selections.count("light")
+        # Server2 has weight 2, should appear twice as often
+        server1_count = selections.count(self.instances[0])  # weight 1
+        server2_count = selections.count(self.instances[1])  # weight 2
+        server3_count = selections.count(self.instances[2])  # weight 1
 
-        # With weights 3:1, heavy should appear 3 times for every 1 time light appears
-        # In 8 selections, we expect: heavy=6, light=2
-        assert heavy_count == 6
-        assert light_count == 2
-        assert len(selections) == 8  # All selections should be valid
-        assert light_count == 2  # 1 per cycle * 2 cycles
+        # In 2 cycles: server1=2, server2=4, server3=2
+        assert server1_count == 2
+        assert server2_count == 4
+        assert server3_count == 2
 
-    def test_weighted_no_metadata(self):
-        """Test weighted strategy with instances without weight metadata."""
-        strategy = WeightedRoundRobinStrategy()
-
-        instances = [
-            ServerInstance(id="no-weight", template_name="demo"),
-            ServerInstance(id="also-no-weight", template_name="demo"),
-        ]
-
-        # Should work like normal round-robin (default weight = 1)
-        selected1 = strategy.select_instance(instances)
-        selected2 = strategy.select_instance(instances)
-
-        assert selected1.id != selected2.id
-
-
-class TestHealthBasedStrategy:
-    """Unit tests for health-based load balancing strategy."""
-
-    def test_health_based_selection(self):
-        """Test health-based selection prefers healthier instances."""
-        strategy = HealthBasedStrategy()
-
-        # Create instances with different health states
-        healthy = ServerInstance(id="healthy", template_name="demo")
-        healthy.consecutive_failures = 0
-
-        failing = ServerInstance(id="failing", template_name="demo")
-        failing.consecutive_failures = 2
-
-        instances = [failing, healthy]  # Deliberately put failing first
-
-        # Should select healthy instance despite order
-        selected = strategy.select_instance(instances)
-        assert selected.id == "healthy"
-
-    def test_health_based_failure_tracking(self):
-        """Test health-based strategy tracks failures."""
-        strategy = HealthBasedStrategy()
-        instance = ServerInstance(id="test", template_name="demo")
-
-        # Initially no recent failures
-        assert strategy._failure_counts[instance.id] == 0
-
-        # Record failed completion
-        strategy.record_completion(instance, False)
-        assert strategy._failure_counts[instance.id] == 1
-
-        # Record successful completion (no change in recent failures)
-        strategy.record_completion(instance, True)
-        assert strategy._failure_counts[instance.id] == 1
-
-        # Record another failure
-        strategy.record_completion(instance, False)
-        assert strategy._failure_counts[instance.id] == 2
-
-
-class TestRandomStrategy:
-    """Unit tests for random load balancing strategy."""
-
-    def test_random_selection(self):
-        """Test random instance selection."""
+    def test_random_strategy(self):
+        """Test random strategy."""
         strategy = RandomStrategy()
 
-        instances = [
-            ServerInstance(id="inst-1", template_name="demo"),
-            ServerInstance(id="inst-2", template_name="demo"),
-            ServerInstance(id="inst-3", template_name="demo"),
-        ]
-
-        # Should always return an instance from the list
+        # Test multiple selections
+        selections = []
         for _ in range(10):
-            selected = strategy.select_instance(instances)
-            assert selected in instances
+            selected = strategy.select_instance(self.instances)
+            selections.append(selected)
 
-    def test_random_empty_list(self):
-        """Test random selection with empty list."""
-        strategy = RandomStrategy()
-        assert strategy.select_instance([]) is None
+        # All selections should be from our instances
+        assert all(instance in self.instances for instance in selections)
+
+        # With random, we should get different instances (high probability)
+        unique_selections = set(selections)
+        assert len(unique_selections) > 1
+
+    def test_health_based_strategy(self):
+        """Test health-based strategy."""
+        strategy = HealthBasedStrategy()
+
+        # Should prefer higher health score instances
+        selected = strategy.select_instance(self.instances)
+
+        # First instance has highest health score (0.9)
+        assert selected == self.instances[0]
+
+    def test_health_based_with_unhealthy_instances(self):
+        """Test health-based strategy with some unhealthy instances."""
+        # Create instances with different health scores
+        unhealthy_instances = [
+            ServerInstance(id=1, name="healthy", health_score=0.9, status="running"),
+            ServerInstance(id=2, name="unhealthy", health_score=0.1, status="running"),
+        ]
+
+        strategy = HealthBasedStrategy()
+
+        # Should consistently pick the healthy instance
+        for _ in range(5):
+            selected = strategy.select_instance(unhealthy_instances)
+            assert selected.name == "healthy"
 
 
 class TestLoadBalancer:
-    """Unit tests for main LoadBalancer class."""
+    """Test LoadBalancer main class."""
+
+    def setup_method(self):
+        """Set up test fixtures."""
+        self.config = LoadBalancerConfig(
+            strategy=LoadBalancingStrategy.ROUND_ROBIN,
+            health_check_interval=30,
+            max_connections_per_instance=100,
+        )
+        self.load_balancer = LoadBalancer(self.config)
+
+        self.mock_registry = Mock()
+        self.load_balancer.registry = self.mock_registry
 
     def test_load_balancer_initialization(self):
-        """Test load balancer initialization."""
-        lb = LoadBalancer()
+        """Test LoadBalancer initialization."""
+        assert self.load_balancer.config == self.config
+        assert isinstance(self.load_balancer.strategy, RoundRobinStrategy)
+        assert self.load_balancer.connection_counts == {}
 
-        assert lb.default_strategy == LoadBalancingStrategy.ROUND_ROBIN
-        assert len(lb._strategies) == 5  # All available strategies
-        assert LoadBalancingStrategy.ROUND_ROBIN in lb._strategies
-        assert LoadBalancingStrategy.LEAST_CONNECTIONS in lb._strategies
-
-    def test_load_balancer_custom_default(self):
-        """Test load balancer with custom default strategy."""
-        lb = LoadBalancer(default_strategy=LoadBalancingStrategy.LEAST_CONNECTIONS)
-        assert lb.default_strategy == LoadBalancingStrategy.LEAST_CONNECTIONS
-
-    def test_select_instance_healthy_only(self):
-        """Test instance selection filters to healthy instances."""
-        lb = LoadBalancer()
-
-        healthy = ServerInstance(id="healthy", template_name="demo")
-        healthy.update_health_status(True)
-
-        unhealthy = ServerInstance(id="unhealthy", template_name="demo")
-        unhealthy.update_health_status(False)
-
-        instances = [unhealthy, healthy]
-
-        # Should select healthy instance only
-        selected = lb.select_instance(instances)
-        assert selected.id == "healthy"
-
-    def test_select_instance_fallback_to_all(self):
-        """Test instance selection falls back to all instances if none healthy."""
-        lb = LoadBalancer()
-
-        unhealthy1 = ServerInstance(id="unhealthy-1", template_name="demo")
-        unhealthy1.update_health_status(False)
-
-        unhealthy2 = ServerInstance(id="unhealthy-2", template_name="demo")
-        unhealthy2.update_health_status(False)
-
-        instances = [unhealthy1, unhealthy2]
-
-        # Should fall back to selecting from all instances
-        selected = lb.select_instance(instances)
-        assert selected in instances
-
-    def test_select_instance_custom_strategy(self):
-        """Test instance selection with custom strategy."""
-        lb = LoadBalancer()
-
-        instances = [
-            ServerInstance(id="inst-1", template_name="demo"),
-            ServerInstance(id="inst-2", template_name="demo"),
+    def test_load_balancer_strategy_selection(self):
+        """Test that LoadBalancer selects the correct strategy."""
+        # Test different strategies
+        configs_and_types = [
+            (LoadBalancingStrategy.ROUND_ROBIN, RoundRobinStrategy),
+            (LoadBalancingStrategy.LEAST_CONNECTIONS, LeastConnectionsStrategy),
+            (LoadBalancingStrategy.WEIGHTED_ROUND_ROBIN, WeightedRoundRobinStrategy),
+            (LoadBalancingStrategy.RANDOM, RandomStrategy),
+            (LoadBalancingStrategy.HEALTH_BASED, HealthBasedStrategy),
         ]
 
-        # Select with least connections strategy
-        selected = lb.select_instance(
-            instances, LoadBalancingStrategy.LEAST_CONNECTIONS
+        for strategy_enum, strategy_class in configs_and_types:
+            config = LoadBalancerConfig(strategy=strategy_enum)
+            lb = LoadBalancer(config)
+            assert isinstance(lb.strategy, strategy_class)
+
+    def test_get_instance_success(self):
+        """Test successful instance selection."""
+        healthy_instances = [
+            ServerInstance(id=1, name="server1", status="running"),
+            ServerInstance(id=2, name="server2", status="running"),
+        ]
+
+        self.mock_registry.get_healthy_instances.return_value = healthy_instances
+
+        selected = self.load_balancer.get_instance()
+
+        assert selected in healthy_instances
+        self.mock_registry.get_healthy_instances.assert_called_once()
+
+    def test_get_instance_no_healthy_instances(self):
+        """Test instance selection when no healthy instances available."""
+        self.mock_registry.get_healthy_instances.return_value = []
+
+        selected = self.load_balancer.get_instance()
+
+        assert selected is None
+
+    def test_connection_tracking(self):
+        """Test connection tracking functionality."""
+        instance = ServerInstance(id=1, name="test", status="running")
+
+        # Initially no connections
+        assert self.load_balancer.get_connection_count(instance) == 0
+
+        # Track a connection
+        self.load_balancer.track_connection(instance)
+        assert self.load_balancer.get_connection_count(instance) == 1
+
+        # Track another connection
+        self.load_balancer.track_connection(instance)
+        assert self.load_balancer.get_connection_count(instance) == 2
+
+        # Release a connection
+        self.load_balancer.release_connection(instance)
+        assert self.load_balancer.get_connection_count(instance) == 1
+
+        # Release another connection
+        self.load_balancer.release_connection(instance)
+        assert self.load_balancer.get_connection_count(instance) == 0
+
+    def test_connection_limit_enforcement(self):
+        """Test that connection limits are enforced."""
+        config = LoadBalancerConfig(
+            strategy=LoadBalancingStrategy.ROUND_ROBIN, max_connections_per_instance=2
         )
-        assert selected in instances
+        lb = LoadBalancer(config)
 
-    def test_request_tracking(self):
-        """Test request start and completion tracking."""
-        lb = LoadBalancer()
-        instance = ServerInstance(id="test", template_name="demo")
+        instance = ServerInstance(id=1, name="test", status="running")
 
-        # Record request start
-        lb.record_request_start(instance)
-        assert lb._request_count[instance.id] == 1
+        # First two connections should succeed
+        assert lb.can_accept_connection(instance) is True
+        lb.track_connection(instance)
 
-        # Record completion
-        lb.record_request_completion(instance, True)
+        assert lb.can_accept_connection(instance) is True
+        lb.track_connection(instance)
 
-        # Another request
-        lb.record_request_start(instance)
-        assert lb._request_count[instance.id] == 2
+        # Third connection should be rejected
+        assert lb.can_accept_connection(instance) is False
 
-    def test_load_balancer_stats(self):
-        """Test load balancer statistics."""
-        lb = LoadBalancer()
-        instance = ServerInstance(id="test", template_name="demo")
+    def test_get_instance_with_connection_limits(self):
+        """Test instance selection respects connection limits."""
+        config = LoadBalancerConfig(
+            strategy=LoadBalancingStrategy.ROUND_ROBIN, max_connections_per_instance=1
+        )
+        lb = LoadBalancer(config)
+        lb.registry = self.mock_registry
 
-        # Initial stats
-        stats = lb.get_load_balancer_stats()
-        assert stats["default_strategy"] == "round_robin"
-        assert stats["total_requests"] == 0
-        assert len(stats["available_strategies"]) == 5
+        instances = [
+            ServerInstance(id=1, name="server1", status="running"),
+            ServerInstance(id=2, name="server2", status="running"),
+        ]
 
-        # After some requests
-        lb.record_request_start(instance)
-        lb.record_request_start(instance)
+        self.mock_registry.get_healthy_instances.return_value = instances
 
-        stats = lb.get_load_balancer_stats()
-        assert stats["total_requests"] == 2
-        assert instance.id in stats["requests_per_instance"]
-        assert stats["requests_per_instance"][instance.id] == 2
+        # First call should return an instance
+        selected1 = lb.get_instance()
+        assert selected1 is not None
 
-    def test_reset_stats(self):
-        """Test resetting load balancer statistics."""
-        lb = LoadBalancer()
-        instance = ServerInstance(id="test", template_name="demo")
+        # Max out connections on first instance
+        lb.track_connection(selected1)
 
-        # Generate some stats
-        lb.record_request_start(instance)
-        assert lb._request_count[instance.id] == 1
+        # Second call should return the other instance
+        selected2 = lb.get_instance()
+        assert selected2 is not None
+        assert selected2 != selected1
 
-        # Reset
-        lb.reset_stats()
-        assert lb._request_count[instance.id] == 0
+    def test_statistics_collection(self):
+        """Test load balancer statistics collection."""
+        instance = ServerInstance(id=1, name="test", status="running")
 
-        stats = lb.get_load_balancer_stats()
-        assert stats["total_requests"] == 0
+        # Track some connections
+        self.load_balancer.track_connection(instance)
+        self.load_balancer.track_connection(instance)
+        self.load_balancer.release_connection(instance)
 
-    def test_unknown_strategy_fallback(self):
-        """Test fallback to round-robin for unknown strategy."""
-        lb = LoadBalancer()
+        stats = self.load_balancer.get_statistics()
 
-        # Mock an unknown strategy
-        unknown_strategy = Mock()
-        unknown_strategy.value = "unknown_strategy"
+        assert "total_requests" in stats
+        assert "active_connections" in stats
+        assert "instance_stats" in stats
 
-        instances = [ServerInstance(id="test", template_name="demo")]
+        # Check instance-specific stats
+        instance_stats = stats["instance_stats"]
+        assert str(instance.id) in instance_stats
+        assert instance_stats[str(instance.id)]["active_connections"] == 1
 
-        # Should fall back to round-robin
-        selected = lb.select_instance(instances, unknown_strategy)
-        assert selected is not None
+    def test_load_balancer_thread_safety(self):
+        """Test that load balancer operations are thread-safe."""
+        import threading
+        import time
+
+        instance = ServerInstance(id=1, name="test", status="running")
+        results = []
+
+        def track_connections():
+            for _ in range(10):
+                self.load_balancer.track_connection(instance)
+                time.sleep(0.001)  # Small delay to increase chance of race conditions
+                results.append(self.load_balancer.get_connection_count(instance))
+
+        # Start multiple threads
+        threads = []
+        for _ in range(3):
+            thread = threading.Thread(target=track_connections)
+            threads.append(thread)
+            thread.start()
+
+        # Wait for all threads to complete
+        for thread in threads:
+            thread.join()
+
+        # Final count should be 30 (3 threads * 10 connections each)
+        final_count = self.load_balancer.get_connection_count(instance)
+        assert final_count == 30
+
+
+class TestLoadBalancerConfiguration:
+    """Test LoadBalancer configuration and validation."""
+
+    def test_load_balancer_config_defaults(self):
+        """Test LoadBalancerConfig default values."""
+        config = LoadBalancerConfig()
+
+        assert config.strategy == LoadBalancingStrategy.ROUND_ROBIN
+        assert config.health_check_interval == 30
+        assert config.max_connections_per_instance == 100
+
+    def test_load_balancer_config_custom_values(self):
+        """Test LoadBalancerConfig with custom values."""
+        config = LoadBalancerConfig(
+            strategy=LoadBalancingStrategy.LEAST_CONNECTIONS,
+            health_check_interval=60,
+            max_connections_per_instance=50,
+        )
+
+        assert config.strategy == LoadBalancingStrategy.LEAST_CONNECTIONS
+        assert config.health_check_interval == 60
+        assert config.max_connections_per_instance == 50
+
+    def test_invalid_strategy_handling(self):
+        """Test handling of invalid strategy configuration."""
+        # This should be caught by pydantic validation
+        with pytest.raises(ValueError):
+            LoadBalancerConfig(strategy="invalid_strategy")
+
+
+class TestLoadBalancerIntegration:
+    """Test load balancer integration scenarios."""
+
+    def test_load_balancer_with_registry_integration(self):
+        """Test load balancer working with server registry."""
+        from mcp_platform.gateway.registry import ServerRegistry
+
+        # Create real registry and load balancer
+        registry = ServerRegistry()
+        config = LoadBalancerConfig(strategy=LoadBalancingStrategy.ROUND_ROBIN)
+        load_balancer = LoadBalancer(config)
+        load_balancer.registry = registry
+
+        # Add some test instances to registry
+        instance1 = ServerInstance(id=1, name="server1", status="running")
+        instance2 = ServerInstance(id=2, name="server2", status="running")
+
+        # Mock the registry methods
+        with patch.object(registry, "get_healthy_instances") as mock_healthy:
+            mock_healthy.return_value = [instance1, instance2]
+
+            # Test instance selection
+            selected = load_balancer.get_instance()
+            assert selected in [instance1, instance2]
+
+            # Test connection tracking
+            load_balancer.track_connection(selected)
+            assert load_balancer.get_connection_count(selected) == 1
+
+    def test_load_balancer_failover_behavior(self):
+        """Test load balancer behavior during server failures."""
+        config = LoadBalancerConfig(strategy=LoadBalancingStrategy.ROUND_ROBIN)
+        lb = LoadBalancer(config)
+        lb.registry = Mock()
+
+        # Start with healthy instances
+        healthy_instances = [
+            ServerInstance(id=1, name="server1", status="running"),
+            ServerInstance(id=2, name="server2", status="running"),
+        ]
+        lb.registry.get_healthy_instances.return_value = healthy_instances
+
+        # Get an instance
+        selected1 = lb.get_instance()
+        assert selected1 is not None
+
+        # Simulate server failure - only one instance left
+        failed_instances = [healthy_instances[1]]  # Only server2 remains
+        lb.registry.get_healthy_instances.return_value = failed_instances
+
+        # Should still get a valid instance
+        selected2 = lb.get_instance()
+        assert selected2 == failed_instances[0]
+
+        # Simulate complete failure
+        lb.registry.get_healthy_instances.return_value = []
+
+        # Should return None when no instances available
+        selected3 = lb.get_instance()
+        assert selected3 is None
