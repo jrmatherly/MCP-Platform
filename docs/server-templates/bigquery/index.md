@@ -941,3 +941,33 @@ See [CONTRIBUTING.md](../../../../CONTRIBUTING.md) for detailed guidelines.
 ## License
 
 This template is part of the MCP Platform and is licensed under the Elastic License 2.0. See [LICENSE](../../../../LICENSE) for details.
+
+## Configuration Options
+
+| Property | Type | Environment Variable | Default | Description |
+|----------|------|---------------------|---------|-------------|
+| `project_id` | string | `GOOGLE_CLOUD_PROJECT` | `` | Google Cloud project ID containing BigQuery datasets |
+| `auth_method` | string | `BIGQUERY_AUTH_METHOD` | `application_default` | Method for authenticating with Google Cloud |
+| `service_account_path` | string | `GOOGLE_APPLICATION_CREDENTIALS` | `` | Path to service account JSON key file (required if auth_method is service_account) |
+| `read_only` | boolean | `BIGQUERY_READ_ONLY` | `True` | Enable read-only mode to prevent data modifications (recommended for security) |
+| `allowed_datasets` | string | `BIGQUERY_ALLOWED_DATASETS` | `*` | Comma-separated list of dataset patterns. Use * for all datasets, or specify patterns like 'analytics_*,public_data' |
+| `dataset_regex` | string | `BIGQUERY_DATASET_REGEX` | `` | Optional regex pattern for advanced dataset filtering. Takes precedence over allowed_datasets if provided |
+| `query_timeout` | integer | `BIGQUERY_QUERY_TIMEOUT` | `300` | Maximum time to wait for query execution |
+| `max_results` | integer | `BIGQUERY_MAX_RESULTS` | `1000` | Maximum number of rows to return from queries |
+| `log_level` | string | `MCP_LOG_LEVEL` | `info` | Logging level for the server |
+
+### Usage Examples
+
+```bash
+# Deploy with configuration
+python -m mcp_platform deploy bigquery --show-config
+
+# Using environment variables
+python -m mcp_platform deploy bigquery --env GOOGLE_CLOUD_PROJECT=value
+
+# Using CLI configuration
+python -m mcp_platform deploy {template_id} --config {first_prop}=value
+
+# Using nested configuration
+python -m mcp_platform deploy {template_id} --config category__property=value
+```

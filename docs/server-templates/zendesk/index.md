@@ -379,6 +379,39 @@ pytest tests/test_integration.py
 pytest --cov=. tests/
 ```
 
+
+## Configuration Options
+
+| Property | Type | Environment Variable | Default | Description |
+|----------|------|---------------------|---------|-------------|
+| `zendesk_subdomain` | string | `ZENDESK_SUBDOMAIN` | `` | Your Zendesk subdomain (e.g., 'mycompany' for mycompany.zendesk.com) |
+| `zendesk_email` | string | `ZENDESK_EMAIL` | `` | Email address for Zendesk authentication |
+| `zendesk_api_token` | string | `ZENDESK_API_TOKEN` | `` | Zendesk API token for authentication |
+| `zendesk_oauth_token` | string | `ZENDESK_OAUTH_TOKEN` | `` | Zendesk OAuth token (alternative to API token) |
+| `rate_limit_requests` | integer | `ZENDESK_RATE_LIMIT` | `200` | Maximum number of requests per minute |
+| `timeout_seconds` | integer | `ZENDESK_TIMEOUT` | `30` | HTTP request timeout in seconds |
+| `log_level` | string | `MCP_LOG_LEVEL` | `info` | Logging level for the server |
+| `default_ticket_priority` | string | `ZENDESK_DEFAULT_PRIORITY` | `normal` | Default priority for newly created tickets |
+| `default_ticket_type` | string | `ZENDESK_DEFAULT_TYPE` | `question` | Default type for newly created tickets |
+| `enable_cache` | boolean | `ZENDESK_ENABLE_CACHE` | `True` | Enable caching for frequently accessed data |
+| `cache_ttl_seconds` | integer | `ZENDESK_CACHE_TTL` | `300` | Cache time-to-live in seconds |
+
+### Usage Examples
+
+```bash
+# Deploy with configuration
+python -m mcp_platform deploy zendesk --show-config
+
+# Using environment variables
+python -m mcp_platform deploy zendesk --env ZENDESK_SUBDOMAIN=value
+
+# Using CLI configuration
+python -m mcp_platform deploy {template_id} --config {first_prop}=value
+
+# Using nested configuration
+python -m mcp_platform deploy {template_id} --config category__property=value
+```
+
 ## Development
 
 ### Local Development Setup

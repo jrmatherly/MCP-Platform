@@ -88,6 +88,9 @@ python -m mcp_platform interactive
 
 # Deploy the template (if not already deployed)
 mcpp> deploy bigquery
+
+# List available tools after deployment
+mcpp> tools bigquery
 ```
 
 Then call tools:
@@ -134,6 +137,10 @@ async def use_bigquery():
             deployment_id = deployment["deployment_id"]
             
             try:
+                # Discover available tools
+                tools = await client.list_tools("bigquery")
+                print(f"Available tools: {[t['name'] for t in tools]}")
+                
                 # Call list_datasets
                 result = await client.call_tool("bigquery", "list_datasets", {})
                 print(f"list_datasets result: {result}")

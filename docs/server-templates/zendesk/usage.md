@@ -157,6 +157,9 @@ python -m mcp_platform interactive
 
 # Deploy the template (if not already deployed)
 mcpp> deploy zendesk
+
+# List available tools after deployment
+mcpp> tools zendesk
 ```
 
 Then call tools:
@@ -203,6 +206,10 @@ async def use_zendesk():
             deployment_id = deployment["deployment_id"]
             
             try:
+                # Discover available tools
+                tools = await client.list_tools("zendesk")
+                print(f"Available tools: {[t['name'] for t in tools]}")
+                
                 # Call create_ticket
                 result = await client.call_tool("zendesk", "create_ticket", {'subject': 'example_value', 'description': 'example_value', 'requester_email': 'example_value', 'priority': 'example_value', 'type': 'example_value', 'tags': 'example_value'})
                 print(f"create_ticket result: {result}")

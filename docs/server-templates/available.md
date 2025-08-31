@@ -2,6 +2,18 @@
 
 This page lists all available MCP Platform server templates.
 
+## [BigQuery MCP Server](bigquery/index.md)
+
+Production-ready BigQuery MCP server for secure querying of Google BigQuery datasets with configurable access controls
+
+**Template ID:** `bigquery`
+
+**Version:** 1.0.0
+
+**Author:** Data Everything
+
+---
+
 ## [Demo Hello MCP Server](demo/index.md)
 
 A simple demonstration MCP server that provides greeting tools using FastMCP
@@ -10,7 +22,7 @@ A simple demonstration MCP server that provides greeting tools using FastMCP
 
 **Version:** 1.0.0
 
-**Author:** Unknown
+**Author:** Data Everything
 
 ---
 
@@ -22,7 +34,7 @@ Local filesystem access with configurable allowed paths.
 
 **Version:** 1.0.0
 
-**Author:** Unknown
+**Author:** Sam Arora
 
 ---
 
@@ -34,7 +46,7 @@ Enhanced GitLab MCP server implementation with comprehensive API coverage
 
 **Version:** 1.0.76
 
-**Author:** Unknown
+**Author:** zereight team & Data Everything
 
 ---
 
@@ -46,7 +58,19 @@ Official github MCP server implementation
 
 **Version:** 1.0.0
 
-**Author:** Unknown
+**Author:** Sam Arora
+
+---
+
+## [Slack MCP Server](slack/index.md)
+
+Enhanced Slack MCP server for comprehensive workspace integration with channels, DMs, and message management
+
+**Template ID:** `slack`
+
+**Version:** 1.0.0
+
+**Author:** Data Everything (extends korotovsky/slack-mcp-server)
 
 ---
 
@@ -58,7 +82,7 @@ Comprehensive Zendesk integration MCP server providing ticket management, user o
 
 **Version:** 1.0.0
 
-**Author:** Unknown
+**Author:** Data Everything
 
 ---
 

@@ -34,6 +34,10 @@ async def discover_tools():
 
 ## Available Tools
 
+This template uses an external MCP server implementation. Tools are dynamically discovered at runtime.
+
+Use the tool discovery methods above to see the full list of available tools for this template.
+
 ## Usage Examples
 
 ### Interactive CLI
@@ -44,9 +48,17 @@ python -m mcp_platform interactive
 
 # Deploy the template (if not already deployed)
 mcpp> deploy filesystem
+
+# List available tools after deployment
+mcpp> tools filesystem
 ```
 
-Then call tools:
+Example tool calls (replace with actual tool names discovered above):
+```bash
+# Example - replace 'tool_name' with actual tool from discovery
+mcpp> call filesystem tool_name '{"param": "value"}'
+```
+
 ### Regular CLI
 
 ```bash
@@ -78,6 +90,14 @@ async def use_filesystem():
             deployment_id = deployment["deployment_id"]
             
             try:
+                # Discover available tools
+                tools = await client.list_tools("filesystem")
+                print(f"Available tools: {[t['name'] for t in tools]}")
+                
+                # Example tool call (replace with actual tool name)
+                # result = await client.call_tool("filesystem", "tool_name", {"param": "value"})
+                # print(f"Tool result: {result}")
+                
             finally:
                 # Clean up
                 await client.stop_server(deployment_id)

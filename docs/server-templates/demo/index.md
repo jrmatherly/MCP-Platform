@@ -208,6 +208,31 @@ client.call("echo_message", message="Hello World")
 # Returns: "[MCP Platform] Echo: Hello World"
 ```
 
+
+## Configuration Options
+
+| Property | Type | Environment Variable | Default | Description |
+|----------|------|---------------------|---------|-------------|
+| `hello_from` | string | `MCP_HELLO_FROM` | `MCP Platform` | Name or message to include in greetings |
+| `log_level` | string | `MCP_LOG_LEVEL` | `info` | Logging level for the server |
+| `allowed_dirs` | string | `MCP_ALLOWED_DIRS` | `/tmp` | Directories that the server can access for file operations. Only for demonstration purposes. |
+
+### Usage Examples
+
+```bash
+# Deploy with configuration
+python -m mcp_platform deploy demo --show-config
+
+# Using environment variables
+python -m mcp_platform deploy demo --env MCP_HELLO_FROM=value
+
+# Using CLI configuration
+python -m mcp_platform deploy {template_id} --config {first_prop}=value
+
+# Using nested configuration
+python -m mcp_platform deploy {template_id} --config category__property=value
+```
+
 ## Development
 
 ### Project Structure

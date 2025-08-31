@@ -65,6 +65,9 @@ python -m mcp_platform interactive
 
 # Deploy the template (if not already deployed)
 mcpp> deploy demo
+
+# List available tools after deployment
+mcpp> tools demo
 ```
 
 Then call tools:
@@ -111,6 +114,10 @@ async def use_demo():
             deployment_id = deployment["deployment_id"]
             
             try:
+                # Discover available tools
+                tools = await client.list_tools("demo")
+                print(f"Available tools: {[t['name'] for t in tools]}")
+                
                 # Call say_hello
                 result = await client.call_tool("demo", "say_hello", {'name': 'example_value'})
                 print(f"say_hello result: {result}")

@@ -20,8 +20,44 @@ import yaml
 
 # Import the TemplateDiscovery utility
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from mcp_platform.template.utils.discovery import TemplateDiscovery
-from mcp_platform.utils import ROOT_DIR, TEMPLATES_DIR
+
+# Try to import with fallback if kubernetes is not available
+try:
+    from mcp_platform.template.utils.discovery import TemplateDiscovery
+except ImportError as e:
+    print(f"Warning: Could not import TemplateDiscovery: {e}")
+    print("Falling back to standalone template discovery...")
+    
+    # Fallback class for standalone operation
+    class TemplateDiscovery:
+        def __init__(self):
+            pass
+        
+        def discover_templates(self):
+            """Fallback template discovery."""
+            templates = {}
+            templates_dir = Path(__file__).parent.parent / "mcp_platform" / "template" / "templates"
+            
+            for template_dir in templates_dir.iterdir():
+                if template_dir.is_dir():
+                    template_json = template_dir / "template.json"
+                    if template_json.exists():
+                        try:
+                            with open(template_json) as f:
+                                config = json.load(f)
+                            templates[template_dir.name] = config
+                            print(f"  ✅ Found template: {template_dir.name}")
+                        except Exception as exc:
+                            print(f"  ⚠️  Error loading {template_dir.name}: {exc}")
+            
+            return templates
+
+try:
+    from mcp_platform.utils import ROOT_DIR, TEMPLATES_DIR
+except ImportError:
+    # Fallback constants if utils module is not available
+    ROOT_DIR = Path(__file__).parent.parent
+    TEMPLATES_DIR = ROOT_DIR / "mcp_platform" / "template" / "templates"
 
 
 def cleanup_old_docs(docs_dir: Path):
@@ -117,28 +153,36 @@ async def discover_tools():
 """
     
     # Add tool documentation
-    for tool in tools:
-        tool_name = tool.get("name", "unknown_tool")
-        tool_desc = tool.get("description", "No description available")
-        tool_params = tool.get("parameters", [])
-        
-        usage_content += f"""### {tool_name}
+    if tools:
+        for tool in tools:
+            tool_name = tool.get("name", "unknown_tool")
+            tool_desc = tool.get("description", "No description available")
+            tool_params = tool.get("parameters", [])
+            
+            usage_content += f"""### {tool_name}
 
 **Description**: {tool_desc}
 
 **Parameters**:
 """
-        if tool_params:
-            for param in tool_params:
-                param_name = param.get("name", "unknown")
-                param_desc = param.get("description", "No description")
-                param_type = param.get("type", "string")
-                param_required = " (required)" if param.get("required", False) else " (optional)"
-                usage_content += f"- `{param_name}` ({param_type}){param_required}: {param_desc}\n"
-        else:
-            usage_content += "- No parameters required\n"
-        
-        usage_content += "\n"
+            if tool_params:
+                for param in tool_params:
+                    param_name = param.get("name", "unknown")
+                    param_desc = param.get("description", "No description")
+                    param_type = param.get("type", "string")
+                    param_required = " (required)" if param.get("required", False) else " (optional)"
+                    usage_content += f"- `{param_name}` ({param_type}){param_required}: {param_desc}\n"
+            else:
+                usage_content += "- No parameters required\n"
+            
+            usage_content += "\n"
+    else:
+        # Handle templates without defined tools (like GitHub MCP Server)
+        usage_content += f"""This template uses an external MCP server implementation. Tools are dynamically discovered at runtime.
+
+Use the tool discovery methods above to see the full list of available tools for this template.
+
+"""
     
     # Add usage examples section
     usage_content += f"""## Usage Examples
@@ -151,40 +195,53 @@ python -m mcp_platform interactive
 
 # Deploy the template (if not already deployed)
 mcpp> deploy {template_id}
+
+# List available tools after deployment
+mcpp> tools {template_id}
 ```
 
-Then call tools:
 """
     
-    # Add interactive CLI examples for each tool
-    for tool in tools[:3]:  # Show examples for first 3 tools
-        tool_name = tool.get("name", "unknown_tool")
-        tool_params = tool.get("parameters", [])
-        
-        if tool_params:
-            # Create example parameters
-            example_params = {}
-            for param in tool_params:
-                param_name = param.get("name", "param")
-                param_type = param.get("type", "string")
-                if param_type == "string":
-                    example_params[param_name] = "example_value"
-                elif param_type == "boolean":
-                    example_params[param_name] = True
-                elif param_type == "number":
-                    example_params[param_name] = 123
-                else:
-                    example_params[param_name] = "example_value"
+    if tools:
+        usage_content += "Then call tools:\n"
+        # Add interactive CLI examples for each tool
+        for tool in tools[:3]:  # Show examples for first 3 tools
+            tool_name = tool.get("name", "unknown_tool")
+            tool_params = tool.get("parameters", [])
             
-            params_json = json.dumps(example_params)
-            usage_content += f"""```bash
+            if tool_params:
+                # Create example parameters
+                example_params = {}
+                for param in tool_params:
+                    param_name = param.get("name", "param")
+                    param_type = param.get("type", "string")
+                    if param_type == "string":
+                        example_params[param_name] = "example_value"
+                    elif param_type == "boolean":
+                        example_params[param_name] = True
+                    elif param_type == "number":
+                        example_params[param_name] = 123
+                    else:
+                        example_params[param_name] = "example_value"
+                
+                params_json = json.dumps(example_params)
+                usage_content += f"""```bash
 mcpp> call {template_id} {tool_name} '{params_json}'
 ```
 
 """
-        else:
-            usage_content += f"""```bash
+            else:
+                usage_content += f"""```bash
 mcpp> call {template_id} {tool_name}
+```
+
+"""
+    else:
+        # Generic example for templates without predefined tools
+        usage_content += f"""Example tool calls (replace with actual tool names discovered above):
+```bash
+# Example - replace 'tool_name' with actual tool from discovery
+mcpp> call {template_id} tool_name '{{"param": "value"}}'
 ```
 
 """
@@ -221,36 +278,48 @@ async def use_{template_id.replace('-', '_')}():
             deployment_id = deployment["deployment_id"]
             
             try:
+                # Discover available tools
+                tools = await client.list_tools("{template_id}")
+                print(f"Available tools: {{[t['name'] for t in tools]}}")
+                
 """
     
     # Add Python client examples for each tool
-    for tool in tools[:2]:  # Show examples for first 2 tools
-        tool_name = tool.get("name", "unknown_tool")
-        tool_params = tool.get("parameters", [])
-        
-        if tool_params:
-            example_params = {}
-            for param in tool_params:
-                param_name = param.get("name", "param")
-                param_type = param.get("type", "string")
-                if param_type == "string":
-                    example_params[param_name] = "example_value"
-                elif param_type == "boolean":
-                    example_params[param_name] = True
-                elif param_type == "number":
-                    example_params[param_name] = 123
-                else:
-                    example_params[param_name] = "example_value"
+    if tools:
+        for tool in tools[:2]:  # Show examples for first 2 tools
+            tool_name = tool.get("name", "unknown_tool")
+            tool_params = tool.get("parameters", [])
             
-            usage_content += f"""                # Call {tool_name}
+            if tool_params:
+                example_params = {}
+                for param in tool_params:
+                    param_name = param.get("name", "param")
+                    param_type = param.get("type", "string")
+                    if param_type == "string":
+                        example_params[param_name] = "example_value"
+                    elif param_type == "boolean":
+                        example_params[param_name] = True
+                    elif param_type == "number":
+                        example_params[param_name] = 123
+                    else:
+                        example_params[param_name] = "example_value"
+                
+                usage_content += f"""                # Call {tool_name}
                 result = await client.call_tool("{template_id}", "{tool_name}", {example_params})
                 print(f"{tool_name} result: {{result}}")
                 
 """
-        else:
-            usage_content += f"""                # Call {tool_name}
+            else:
+                usage_content += f"""                # Call {tool_name}
                 result = await client.call_tool("{template_id}", "{tool_name}", {{}})
                 print(f"{tool_name} result: {{result}}")
+                
+"""
+    else:
+        # Generic example for templates without predefined tools
+        usage_content += f"""                # Example tool call (replace with actual tool name)
+                # result = await client.call_tool("{template_id}", "tool_name", {{"param": "value"}})
+                # print(f"Tool result: {{result}}")
                 
 """
     

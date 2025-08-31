@@ -360,3 +360,43 @@ This template extends the korotovsky/slack-mcp-server project. Please refer to t
 - **Template Issues**: [MCP Platform Repository](https://github.com/Data-Everything/MCP-Platform)
 - **Slack Server Issues**: [korotovsky/slack-mcp-server](https://github.com/korotovsky/slack-mcp-server)
 - **Documentation**: [MCP Platform Docs](https://docs.mcp-platform.com)
+
+
+## Configuration Options
+
+| Property | Type | Environment Variable | Default | Description |
+|----------|------|---------------------|---------|-------------|
+| `slack_mcp_log_level` | string | `SLACK_MCP_LOG_LEVEL` | `info` | Logging level (debug, info, warn, error, panic, fatal) |
+| `slack_mcp_port` | integer | `SLACK_MCP_PORT` | `13080` | Port for the MCP server to listen on |
+| `slack_mcp_host` | string | `SLACK_MCP_HOST` | `127.0.0.1` | Host for the MCP server to listen on |
+| `slack_mcp_xoxc_token` | string | `SLACK_MCP_XOXC_TOKEN` | `` | Slack browser token (xoxc-...) for cookie authentication |
+| `slack_mcp_xoxd_token` | string | `SLACK_MCP_XOXD_TOKEN` | `` | Slack browser cookie d (xoxd-...) for cookie authentication |
+| `slack_mcp_xoxp_token` | string | `SLACK_MCP_XOXP_TOKEN` | `` | User OAuth token (xoxp-...) - alternative to xoxc/xoxd |
+| `slack_mcp_sse_api_key` | string | `SLACK_MCP_SSE_API_KEY` | `` | Bearer token for SSE transport authentication |
+| `slack_mcp_proxy` | string | `SLACK_MCP_PROXY` | `` | Proxy URL for outgoing requests |
+| `slack_mcp_user_agent` | string | `SLACK_MCP_USER_AGENT` | `` | Custom User-Agent for Enterprise Slack environments |
+| `slack_mcp_custom_tls` | boolean | `SLACK_MCP_CUSTOM_TLS` | `False` | Send custom TLS-handshake to Slack servers (for Enterprise Slack) |
+| `slack_mcp_server_ca` | string | `SLACK_MCP_SERVER_CA` | `` | Path to CA certificate for custom TLS |
+| `slack_mcp_server_ca_toolkit` | boolean | `SLACK_MCP_SERVER_CA_TOOLKIT` | `False` | Inject HTTPToolkit CA certificate for MitM debugging |
+| `slack_mcp_server_ca_insecure` | boolean | `SLACK_MCP_SERVER_CA_INSECURE` | `False` | Trust all insecure requests (NOT RECOMMENDED) |
+| `slack_mcp_add_message_tool` | string | `SLACK_MCP_ADD_MESSAGE_TOOL` | `` | Enable message posting: 'true' for all channels, comma-separated channel IDs for whitelist, or '!channel_id' to exclude channels |
+| `slack_mcp_add_message_mark` | boolean | `SLACK_MCP_ADD_MESSAGE_MARK` | `False` | Automatically mark posted messages as read |
+| `slack_mcp_add_message_unfurling` | string | `SLACK_MCP_ADD_MESSAGE_UNFURLING` | `` | Enable link unfurling: 'true' for all domains or comma-separated list like 'github.com,slack.com' |
+| `slack_mcp_users_cache` | string | `SLACK_MCP_USERS_CACHE` | `.users_cache.json` | Path to users cache file for improved performance |
+| `slack_mcp_channels_cache` | string | `SLACK_MCP_CHANNELS_CACHE` | `.channels_cache_v2.json` | Path to channels cache file for improved performance |
+
+### Usage Examples
+
+```bash
+# Deploy with configuration
+python -m mcp_platform deploy slack --show-config
+
+# Using environment variables
+python -m mcp_platform deploy slack --env SLACK_MCP_LOG_LEVEL=value
+
+# Using CLI configuration
+python -m mcp_platform deploy {template_id} --config {first_prop}=value
+
+# Using nested configuration
+python -m mcp_platform deploy {template_id} --config category__property=value
+```

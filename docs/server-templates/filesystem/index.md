@@ -337,6 +337,30 @@ docker run -i --rm \
   dataeverything/mcp-filesystem
 ```
 
+
+## Configuration Options
+
+| Property | Type | Environment Variable | Default | Description |
+|----------|------|---------------------|---------|-------------|
+| `log_level` | string | `LOG_LEVEL` | `INFO` | Logging level (DEBUG, INFO, WARNING, ERROR) |
+| `allowed_dirs` | string | `ALLOWED_DIRS` | `` | Allowed directories to scan, create or read from. Defaults to anything that gets mounted to /data directory in container |
+
+### Usage Examples
+
+```bash
+# Deploy with configuration
+python -m mcp_platform deploy filesystem --show-config
+
+# Using environment variables
+python -m mcp_platform deploy filesystem --env LOG_LEVEL=value
+
+# Using CLI configuration
+python -m mcp_platform deploy {template_id} --config {first_prop}=value
+
+# Using nested configuration
+python -m mcp_platform deploy {template_id} --config category__property=value
+```
+
 ## Development
 
 ### Local Development Setup
