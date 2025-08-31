@@ -12,8 +12,6 @@ import tempfile
 from datetime import datetime
 from unittest.mock import MagicMock, Mock, patch
 
-import pytest
-
 # Add the parent directory to sys.path to import server modules
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
@@ -181,7 +179,7 @@ class TestBigQueryMCPServer:
                 mock_client = Mock()
                 mock_bigquery_module.Client.return_value = mock_client
 
-                server = BigQueryMCPServer(config_dict=config, skip_validation=True)
+                BigQueryMCPServer(config_dict=config, skip_validation=True)
 
                 # Verify service account credentials were used
                 mock_service_account_module.Credentials.from_service_account_file.assert_called_once_with(
@@ -206,8 +204,8 @@ class TestBigQueryMCPServer:
             mock_config.logger = Mock()
             mock_config_class.return_value = mock_config
 
-            with patch("builtins.print") as mock_print:
-                server = BigQueryMCPServer(config_dict=config, skip_validation=True)
+            with patch("builtins.print"):
+                BigQueryMCPServer(config_dict=config, skip_validation=True)
 
                 # Verify warning was logged
                 mock_config.logger.warning.assert_called()
@@ -837,9 +835,7 @@ class TestBigQueryMCPServer:
             mock_mcp_instance = Mock()
             mock_fastmcp.return_value = mock_mcp_instance
 
-            server = BigQueryMCPServer(
-                config_dict=self.test_config, skip_validation=True
-            )
+            BigQueryMCPServer(config_dict=self.test_config, skip_validation=True)
 
             # Verify that mcp.tool was called for each expected tool
             expected_tools = 6  # list_datasets, list_tables, describe_table, execute_query, get_job_status, get_dataset_info
