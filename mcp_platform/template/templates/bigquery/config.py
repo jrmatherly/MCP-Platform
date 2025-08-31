@@ -66,7 +66,8 @@ class BigQueryServerConfig(ServerConfig):
                 # Allow test project IDs that start with "test-"
                 if not (hasattr(self, "_is_test_mode") and self._is_test_mode):
                     raise ValueError(
-                        "project_id is required. Set it in config or GOOGLE_CLOUD_PROJECT environment variable."
+                        "project_id is required. Set it in config or "
+                        "GOOGLE_CLOUD_PROJECT environment variable."
                     )
                 # Use test default
                 project_id = "test-project"

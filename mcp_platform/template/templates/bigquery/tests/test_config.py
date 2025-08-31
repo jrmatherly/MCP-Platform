@@ -6,10 +6,12 @@ Tests the configuration loading, validation, and management functionality.
 """
 
 import os
+
 # Import the config module
+import os
 import sys
 import tempfile
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 

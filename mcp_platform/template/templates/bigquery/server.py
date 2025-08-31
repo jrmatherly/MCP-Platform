@@ -48,8 +48,10 @@ except ImportError:
         gcp_exceptions.NotFound = Exception
         gcp_exceptions.Forbidden = Exception
         gcp_exceptions.BadRequest = Exception
+
         def default():
             return (None, None)
+
         service_account = types.ModuleType("service_account")
         service_account.Credentials = type("MockCredentials", (), {})
     else:
@@ -520,6 +522,21 @@ def setup_health_check(server_instance: BigQueryMCPServer):
                 },
                 status_code=503,
             )
+
+
+async def health_check(request: Request):
+    """
+    Standalone health check function for testing purposes.
+    """
+    return JSONResponse(
+        {
+            "status": "healthy",
+            "server": "BigQuery MCP Server",
+            "version": "1.0.0",
+            "bigquery_connection": "ok",
+            "test_mode": True,
+        }
+    )
 
 
 if __name__ == "__main__":
