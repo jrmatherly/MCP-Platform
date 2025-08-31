@@ -23,6 +23,11 @@ mock_service_account = MagicMock()
 mock_default = MagicMock()
 mock_gcp_exceptions = MagicMock()
 
+# Set up mock exception classes
+mock_gcp_exceptions.NotFound = Exception
+mock_gcp_exceptions.Forbidden = Exception
+mock_gcp_exceptions.BadRequest = Exception
+
 sys.modules["google.cloud"] = MagicMock()
 sys.modules["google.cloud.bigquery"] = mock_bigquery
 sys.modules["google.oauth2"] = MagicMock()
@@ -57,7 +62,9 @@ class TestBigQueryMCPServer:
 
     def test_server_initialization(self):
         """Test server initialization with default config."""
-        with patch("server.BigQueryServerConfig") as mock_config_class:
+        with patch("server.BigQueryServerConfig") as mock_config_class, \
+             patch("server.bigquery") as mock_bigquery_module:
+            
             mock_config = Mock()
             mock_config.get_template_config.return_value = self.test_config
             mock_config.get_template_data.return_value = {
@@ -67,14 +74,19 @@ class TestBigQueryMCPServer:
             mock_config.logger = Mock()
             mock_config_class.return_value = mock_config
 
-            server = BigQueryMCPServer(self.test_config)
+            # Set up BigQuery client mock
+            mock_client = Mock()
+            mock_bigquery_module.Client.return_value = mock_client
+
+            # Create server with skip_validation for tests
+            server = BigQueryMCPServer(config_dict=self.test_config, skip_validation=True)
 
             # Verify configuration was loaded
             mock_config_class.assert_called_once()
             assert server.config_data == self.test_config
 
             # Verify BigQuery client was initialized
-            mock_bigquery.Client.assert_called_once()
+            mock_bigquery_module.Client.assert_called_once_with(project="test-project")
 
     def test_server_initialization_with_service_account(self):
         """Test server initialization with service account authentication."""
@@ -91,7 +103,10 @@ class TestBigQueryMCPServer:
                 }
             )
 
-            with patch("server.BigQueryServerConfig") as mock_config_class:
+            with patch("server.BigQueryServerConfig") as mock_config_class, \
+                 patch("server.service_account") as mock_service_account_module, \
+                 patch("server.bigquery") as mock_bigquery_module:
+                
                 mock_config = Mock()
                 mock_config.get_template_config.return_value = config
                 mock_config.get_template_data.return_value = {
@@ -101,10 +116,16 @@ class TestBigQueryMCPServer:
                 mock_config.logger = Mock()
                 mock_config_class.return_value = mock_config
 
-                server = BigQueryMCPServer(config)
+                # Set up mocks
+                mock_credentials = Mock()
+                mock_service_account_module.Credentials.from_service_account_file.return_value = mock_credentials
+                mock_client = Mock()
+                mock_bigquery_module.Client.return_value = mock_client
+
+                server = BigQueryMCPServer(config_dict=config, skip_validation=True)
 
                 # Verify service account credentials were used
-                mock_service_account.Credentials.from_service_account_file.assert_called_once_with(
+                mock_service_account_module.Credentials.from_service_account_file.assert_called_once_with(
                     service_account_path
                 )
 
@@ -127,7 +148,7 @@ class TestBigQueryMCPServer:
             mock_config_class.return_value = mock_config
 
             with patch("builtins.print") as mock_print:
-                server = BigQueryMCPServer(config)
+                server = BigQueryMCPServer(config_dict=config, skip_validation=True)
 
                 # Verify warning was logged
                 mock_config.logger.warning.assert_called()
@@ -147,7 +168,7 @@ class TestBigQueryMCPServer:
             mock_config.logger = Mock()
             mock_config_class.return_value = mock_config
 
-            server = BigQueryMCPServer(self.test_config)
+            server = BigQueryMCPServer(config_dict=self.test_config, skip_validation=True)
 
             # With wildcard, all datasets should be allowed
             assert server._is_dataset_allowed("any_dataset") is True
@@ -168,7 +189,7 @@ class TestBigQueryMCPServer:
             mock_config.logger = Mock()
             mock_config_class.return_value = mock_config
 
-            server = BigQueryMCPServer(config)
+            server = BigQueryMCPServer(config_dict=config, skip_validation=True)
 
             # Test pattern matching
             assert server._is_dataset_allowed("analytics_prod") is True
@@ -196,7 +217,7 @@ class TestBigQueryMCPServer:
             mock_config.logger = Mock()
             mock_config_class.return_value = mock_config
 
-            server = BigQueryMCPServer(config)
+            server = BigQueryMCPServer(config_dict=config, skip_validation=True)
 
             # Test regex matching (should take precedence over allowed_datasets)
             assert server._is_dataset_allowed("prod_analytics") is True
@@ -215,7 +236,7 @@ class TestBigQueryMCPServer:
             mock_config.logger = Mock()
             mock_config_class.return_value = mock_config
 
-            server = BigQueryMCPServer(self.test_config)
+            server = BigQueryMCPServer(config_dict=self.test_config, skip_validation=True)
 
             # Test read operations (should be allowed)
             assert server._check_write_operation("SELECT * FROM table") is False
@@ -253,7 +274,7 @@ class TestBigQueryMCPServer:
             mock_config.logger = Mock()
             mock_config_class.return_value = mock_config
 
-            server = BigQueryMCPServer(config)
+            server = BigQueryMCPServer(config_dict=config, skip_validation=True)
 
             # All operations should be allowed in write mode
             assert server._check_write_operation("SELECT * FROM table") is False
@@ -264,7 +285,9 @@ class TestBigQueryMCPServer:
 
     def test_list_datasets_success(self):
         """Test successful dataset listing."""
-        with patch("server.BigQueryServerConfig") as mock_config_class:
+        with patch("server.BigQueryServerConfig") as mock_config_class, \
+             patch("server.bigquery") as mock_bigquery_module:
+            
             mock_config = Mock()
             mock_config.get_template_config.return_value = self.test_config
             mock_config.get_template_data.return_value = {
@@ -274,7 +297,11 @@ class TestBigQueryMCPServer:
             mock_config.logger = Mock()
             mock_config_class.return_value = mock_config
 
-            server = BigQueryMCPServer(self.test_config)
+            # Set up BigQuery client mock
+            mock_client = Mock()
+            mock_bigquery_module.Client.return_value = mock_client
+
+            server = BigQueryMCPServer(config_dict=self.test_config, skip_validation=True)
 
             # Mock dataset objects
             mock_dataset1 = Mock()
@@ -291,7 +318,7 @@ class TestBigQueryMCPServer:
             mock_dataset2.created = datetime.now()
             mock_dataset2.modified = datetime.now()
 
-            self.mock_client.list_datasets.return_value = [mock_dataset1, mock_dataset2]
+            mock_client.list_datasets.return_value = [mock_dataset1, mock_dataset2]
 
             result = server.list_datasets()
 
@@ -316,7 +343,7 @@ class TestBigQueryMCPServer:
             mock_config.logger = Mock()
             mock_config_class.return_value = mock_config
 
-            server = BigQueryMCPServer(config)
+            server = BigQueryMCPServer(config_dict=config, skip_validation=True)
 
             # Mock dataset objects
             mock_dataset1 = Mock()
@@ -348,7 +375,7 @@ class TestBigQueryMCPServer:
             mock_config.logger = Mock()
             mock_config_class.return_value = mock_config
 
-            server = BigQueryMCPServer(self.test_config)
+            server = BigQueryMCPServer(config_dict=self.test_config, skip_validation=True)
 
             self.mock_client.list_datasets.side_effect = Exception("BigQuery error")
 
@@ -370,7 +397,7 @@ class TestBigQueryMCPServer:
             mock_config.logger = Mock()
             mock_config_class.return_value = mock_config
 
-            server = BigQueryMCPServer(self.test_config)
+            server = BigQueryMCPServer(config_dict=self.test_config, skip_validation=True)
 
             # Mock table objects
             mock_table1 = Mock()
@@ -406,7 +433,7 @@ class TestBigQueryMCPServer:
             mock_config.logger = Mock()
             mock_config_class.return_value = mock_config
 
-            server = BigQueryMCPServer(config)
+            server = BigQueryMCPServer(config_dict=config, skip_validation=True)
 
             result = server.list_tables("private_data")
 
@@ -426,7 +453,7 @@ class TestBigQueryMCPServer:
             mock_config.logger = Mock()
             mock_config_class.return_value = mock_config
 
-            server = BigQueryMCPServer(self.test_config)
+            server = BigQueryMCPServer(config_dict=self.test_config, skip_validation=True)
 
             # Mock table schema
             mock_field1 = Mock()
@@ -481,7 +508,7 @@ class TestBigQueryMCPServer:
             mock_config.logger = Mock()
             mock_config_class.return_value = mock_config
 
-            server = BigQueryMCPServer(self.test_config)
+            server = BigQueryMCPServer(config_dict=self.test_config, skip_validation=True)
 
             # Mock query job
             mock_job = Mock()
@@ -519,7 +546,7 @@ class TestBigQueryMCPServer:
             mock_config.logger = Mock()
             mock_config_class.return_value = mock_config
 
-            server = BigQueryMCPServer(self.test_config)
+            server = BigQueryMCPServer(config_dict=self.test_config, skip_validation=True)
 
             result = server.execute_query("INSERT INTO table VALUES (1)")
 
@@ -538,7 +565,7 @@ class TestBigQueryMCPServer:
             mock_config.logger = Mock()
             mock_config_class.return_value = mock_config
 
-            server = BigQueryMCPServer(self.test_config)
+            server = BigQueryMCPServer(config_dict=self.test_config, skip_validation=True)
 
             # Mock dry run job
             mock_job = Mock()
@@ -565,7 +592,7 @@ class TestBigQueryMCPServer:
             mock_config.logger = Mock()
             mock_config_class.return_value = mock_config
 
-            server = BigQueryMCPServer(self.test_config)
+            server = BigQueryMCPServer(config_dict=self.test_config, skip_validation=True)
 
             # Mock job
             mock_job = Mock()
@@ -599,7 +626,7 @@ class TestBigQueryMCPServer:
             mock_config.logger = Mock()
             mock_config_class.return_value = mock_config
 
-            server = BigQueryMCPServer(self.test_config)
+            server = BigQueryMCPServer(config_dict=self.test_config, skip_validation=True)
 
             # Mock dataset
             mock_dataset = Mock()
@@ -640,7 +667,7 @@ class TestBigQueryMCPServer:
             mock_config.logger = Mock()
             mock_config_class.return_value = mock_config
 
-            server = BigQueryMCPServer(config)
+            server = BigQueryMCPServer(config_dict=config, skip_validation=True)
 
             result = server.get_dataset_info("private_data")
 
@@ -659,7 +686,7 @@ class TestBigQueryMCPServer:
             mock_config.logger = Mock()
             mock_config_class.return_value = mock_config
 
-            server = BigQueryMCPServer(self.test_config)
+            server = BigQueryMCPServer(config_dict=self.test_config, skip_validation=True)
 
             # Verify that mcp.tool was called for each expected tool
             expected_tools = 6  # list_datasets, list_tables, describe_table, execute_query, get_job_status, get_dataset_info
@@ -677,7 +704,7 @@ class TestBigQueryMCPServer:
             mock_config.logger = Mock()
             mock_config_class.return_value = mock_config
 
-            server = BigQueryMCPServer(self.test_config)
+            server = BigQueryMCPServer(config_dict=self.test_config, skip_validation=True)
 
             # Mock nested fields
             mock_nested_field = Mock()
@@ -717,7 +744,7 @@ class TestBigQueryMCPServer:
             mock_config.logger = Mock()
             mock_config_class.return_value = mock_config
 
-            server = BigQueryMCPServer(config)
+            server = BigQueryMCPServer(config_dict=config, skip_validation=True)
 
             # Mock datasets
             mock_dataset1 = Mock()

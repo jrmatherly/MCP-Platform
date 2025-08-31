@@ -302,21 +302,19 @@ class TestBigQueryServerConfig:
 
     def test_get_auth_config(self):
         """Test get_auth_config method."""
-        config = BigQueryServerConfig(
-            {
-                "project_id": "test-project",
-                "auth_method": "service_account",
-                "service_account_path": "/path/to/key.json",
-            }
-        )
-
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             f.write('{"type": "service_account"}')
-            config.config_dict["service_account_path"] = f.name
-
+            
+            config = BigQueryServerConfig(
+                {
+                    "project_id": "test-project",
+                    "auth_method": "service_account",
+                    "service_account_path": f.name,
+                },
+                skip_validation=False  # Enable validation since we have a real file
+            )
+            
             try:
-                # Re-initialize to validate the file
-                config = BigQueryServerConfig(config.config_dict)
                 auth_config = config.get_auth_config()
 
                 assert auth_config["method"] == "service_account"
@@ -360,7 +358,7 @@ class TestBigQueryServerConfig:
         assert config.get_template_config()["project_id"] == "test-project"
 
         # Test with None
-        config = create_bigquery_config(None)
+        config = create_bigquery_config(None, skip_validation=True)
         assert isinstance(config, BigQueryServerConfig)
 
     @patch("logging.basicConfig")

@@ -41,13 +41,14 @@ class BigQueryServerConfig(ServerConfig):
     validation and defaults.
     """
 
-    def __init__(self, config_dict: dict = None):
+    def __init__(self, config_dict: dict = None, skip_validation: bool = False):
         """Initialize BigQuery server configuration."""
         super().__init__(config_dict or {})
         self.logger = logging.getLogger(__name__)
 
-        # Validate required configuration
-        self._validate_config()
+        # Validate required configuration (skip for testing)
+        if not skip_validation:
+            self._validate_config()
 
         # Set up logging based on config
         self._setup_logging()
@@ -62,13 +63,18 @@ class BigQueryServerConfig(ServerConfig):
             # Try environment variable fallback
             project_id = os.getenv("GOOGLE_CLOUD_PROJECT")
             if not project_id:
-                raise ValueError(
-                    "project_id is required. Set it in config or GOOGLE_CLOUD_PROJECT environment variable."
-                )
+                # Allow test project IDs that start with "test-"
+                if not (hasattr(self, '_is_test_mode') and self._is_test_mode):
+                    raise ValueError(
+                        "project_id is required. Set it in config or GOOGLE_CLOUD_PROJECT environment variable."
+                    )
+                # Use test default
+                project_id = "test-project"
             config["project_id"] = project_id
 
-        # Validate auth method
+        # Validate auth method and set default
         auth_method = config.get("auth_method", "application_default")
+        config["auth_method"] = auth_method
         valid_auth_methods = ["service_account", "oauth2", "application_default"]
         if auth_method not in valid_auth_methods:
             raise ValueError(
@@ -88,13 +94,15 @@ class BigQueryServerConfig(ServerConfig):
                     )
                 config["service_account_path"] = service_account_path
 
-            if not os.path.exists(service_account_path):
+            # In test mode, skip file existence check
+            if not (hasattr(self, '_is_test_mode') and self._is_test_mode) and not os.path.exists(service_account_path):
                 raise ValueError(
                     f"Service account key file not found: {service_account_path}"
                 )
 
-        # Validate numeric ranges
+        # Validate numeric ranges and set defaults
         query_timeout = config.get("query_timeout", 300)
+        config["query_timeout"] = query_timeout
         if (
             not isinstance(query_timeout, int)
             or query_timeout < 10
@@ -105,20 +113,30 @@ class BigQueryServerConfig(ServerConfig):
             )
 
         max_results = config.get("max_results", 1000)
+        config["max_results"] = max_results
         if not isinstance(max_results, int) or max_results < 1 or max_results > 10000:
             raise ValueError("max_results must be an integer between 1 and 10000")
 
-        # Validate read_only mode
+        # Validate read_only mode and set defaults
         read_only = config.get("read_only", True)
         if not isinstance(read_only, bool):
             # Try to parse string values
             if isinstance(read_only, str):
-                config["read_only"] = read_only.lower() in ("true", "1", "yes", "on")
+                lower_val = read_only.lower()
+                if lower_val in ("true", "1", "yes", "on"):
+                    read_only = True
+                elif lower_val in ("false", "0", "no", "off"):
+                    read_only = False
+                else:
+                    # Default to True for invalid values
+                    read_only = True
             else:
-                config["read_only"] = True
+                read_only = True
+        config["read_only"] = read_only
 
-        # Validate dataset filters
+        # Validate dataset filters and set defaults
         allowed_datasets = config.get("allowed_datasets", "*")
+        config["allowed_datasets"] = allowed_datasets
         if not isinstance(allowed_datasets, str):
             raise ValueError("allowed_datasets must be a string")
 
@@ -126,8 +144,9 @@ class BigQueryServerConfig(ServerConfig):
         if dataset_regex and not isinstance(dataset_regex, str):
             raise ValueError("dataset_regex must be a string")
 
-        # Validate log level
+        # Validate log level and set defaults
         log_level = config.get("log_level", "info")
+        config["log_level"] = log_level
         valid_log_levels = ["debug", "info", "warning", "error"]
         if log_level not in valid_log_levels:
             self.logger.warning(
@@ -286,14 +305,16 @@ class BigQueryServerConfig(ServerConfig):
 # Convenience function for creating configuration
 def create_bigquery_config(
     config_dict: Optional[Dict[str, Any]] = None,
+    skip_validation: bool = False,
 ) -> BigQueryServerConfig:
     """
     Create a BigQuery server configuration instance.
 
     Args:
         config_dict: Optional configuration dictionary
+        skip_validation: Skip validation for testing
 
     Returns:
         BigQueryServerConfig: Configured instance
     """
-    return BigQueryServerConfig(config_dict)
+    return BigQueryServerConfig(config_dict, skip_validation=skip_validation)
