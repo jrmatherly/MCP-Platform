@@ -199,9 +199,7 @@ class BigQueryMCPServer:
         patterns = [pattern.strip() for pattern in allowed_datasets.split(",")]
         return any(fnmatch.fnmatch(dataset_id, pattern) for pattern in patterns)
 
-    def _filter_datasets(
-        self, datasets: List[bigquery.DatasetListItem]
-    ) -> List[bigquery.DatasetListItem]:
+    def _filter_datasets(self, datasets: List[Any]) -> List[Any]:
         """Filter datasets based on access control configuration."""
         return [ds for ds in datasets if self._is_dataset_allowed(ds.dataset_id)]
 

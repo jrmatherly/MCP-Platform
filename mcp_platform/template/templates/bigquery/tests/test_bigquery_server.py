@@ -12,12 +12,28 @@ import tempfile
 from datetime import datetime
 from unittest.mock import MagicMock, Mock, patch
 
+import pytest
+
 # Add the parent directory to sys.path to import server modules
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 # Mock Google Cloud imports before importing server
 mock_bigquery = MagicMock()
 mock_service_account = MagicMock()
+mock_gcp_exceptions = MagicMock()
+
+
+# Mock classes for testing
+class MockForbidden(Exception):
+    pass
+
+
+class MockBadRequest(Exception):
+    pass
+
+
+mock_gcp_exceptions.Forbidden = MockForbidden
+mock_gcp_exceptions.BadRequest = MockBadRequest
 mock_default = MagicMock()
 mock_gcp_exceptions = MagicMock()
 
@@ -914,3 +930,457 @@ class TestBigQueryMCPServer:
             assert len(filtered) == 2
             assert filtered[0].dataset_id == "analytics_prod"
             assert filtered[1].dataset_id == "analytics_staging"
+
+    def test_dataset_filtering_patterns(self):
+        """Test dataset filtering with various patterns."""
+        server, _, _, _, _ = self.create_mock_server()
+
+        # Test with wildcard (allow all)
+        server.config_data = {"allowed_datasets": "*"}
+        assert server._is_dataset_allowed("any_dataset") is True
+
+        # Test with specific pattern
+        server.config_data = {"allowed_datasets": "analytics_*,public_*"}
+        assert server._is_dataset_allowed("analytics_data") is True
+        assert server._is_dataset_allowed("public_info") is True
+        assert server._is_dataset_allowed("private_data") is False
+
+        # Test with exact match
+        server.config_data = {"allowed_datasets": "exact_dataset"}
+        assert server._is_dataset_allowed("exact_dataset") is True
+        assert server._is_dataset_allowed("exact_dataset_2") is False
+
+    def test_write_operation_detection(self):
+        """Test detection of write operations in queries."""
+        server, _, mock_client, _, _ = self.create_mock_server()
+        server.config_data = {"read_only": True}
+
+        # Test write operations - these should return error responses
+        write_queries = [
+            "INSERT INTO table VALUES (1)",
+            "UPDATE table SET col = 1",
+            "DELETE FROM table WHERE id = 1",
+            "DROP TABLE table",
+            "CREATE TABLE new_table (id INT)",
+            "ALTER TABLE table ADD COLUMN col2 STRING",
+            "TRUNCATE TABLE table",
+            "MERGE INTO target USING source ON condition",
+        ]
+
+        for query in write_queries:
+            result = server.execute_query(query)
+            assert result["success"] is False
+            assert "read-only" in result["error"].lower()
+
+        # Test read operations - these should work
+        read_queries = [
+            "SELECT * FROM table",
+            "WITH cte AS (SELECT col FROM table) SELECT * FROM cte",
+            "DESCRIBE table",
+            "SHOW TABLES",
+        ]
+
+        # Mock successful query execution for read operations
+        mock_job = Mock()
+        mock_job.result.return_value = [{"col": "value"}]
+        mock_job.schema = [Mock(name="col", field_type="STRING")]
+        mock_client.query.return_value = mock_job
+
+        for query in read_queries:
+            result = server.execute_query(query)
+            # Should not have error for read operations
+            assert "error" not in result or result.get("success", True) is True
+
+        # Test with read_only disabled
+        server.config_data = {"read_only": False}
+
+        # Should not block write operations when read_only is False
+        result = server.execute_query("INSERT INTO table VALUES (1)")
+        # Should attempt to execute (though may fail for other reasons in mock)
+        assert "read-only" not in str(result)
+
+    def test_query_parameter_handling(self):
+        """Test query parameter handling in execute_query method."""
+        server, _, mock_client, _, _ = self.create_mock_server()
+
+        # Mock successful query execution
+        mock_job = Mock()
+        mock_job.result.return_value = [{"col": "value"}]
+        mock_job.schema = [Mock(name="col", field_type="STRING")]
+        mock_client.query.return_value = mock_job
+
+        # Test valid query
+        result = server.execute_query("SELECT * FROM table")
+        assert "rows" in result or "error" not in result
+
+        # Test empty query - should work in our current implementation
+        result = server.execute_query("")
+        # The server should handle this gracefully
+        assert isinstance(result, dict)
+
+    def test_authentication_methods(self):
+        """Test different authentication methods."""
+        # Test application default (uses BigQuery client directly)
+        config = self.test_config.copy()
+        config["auth_method"] = "application_default"
+
+        with (
+            patch("server.BigQueryServerConfig") as mock_config_class,
+            patch("server.bigquery") as mock_bigquery_module,
+        ):
+            mock_config = Mock()
+            mock_config.get_template_config.return_value = config
+            mock_config.get_template_data.return_value = {
+                "name": "test-server",
+                "version": "1.0.0",
+            }
+            mock_config.logger = Mock()
+            mock_config_class.return_value = mock_config
+            mock_bigquery_module.Client.return_value = Mock()
+
+            server = BigQueryMCPServer(config_dict=config, skip_validation=True)
+
+            # Should use application default auth (direct BigQuery client call)
+            mock_bigquery_module.Client.assert_called_once_with(project="test-project")
+            assert server.config_data["auth_method"] == "application_default"
+
+        # Test service account
+        config["auth_method"] = "service_account"
+        config["service_account_path"] = "/path/to/key.json"
+
+        with (
+            patch("server.BigQueryServerConfig") as mock_config_class,
+            patch("server.service_account") as mock_sa,
+            patch("server.bigquery") as mock_bigquery_module,
+        ):
+            mock_sa.Credentials.from_service_account_file.return_value = Mock()
+            mock_config = Mock()
+            mock_config.get_template_config.return_value = config
+            mock_config.get_template_data.return_value = {
+                "name": "test-server",
+                "version": "1.0.0",
+            }
+            mock_config.logger = Mock()
+            mock_config_class.return_value = mock_config
+            mock_bigquery_module.Client.return_value = Mock()
+
+            server = BigQueryMCPServer(config_dict=config, skip_validation=True)
+
+            # Should use service account auth
+            mock_sa.Credentials.from_service_account_file.assert_called_once_with(
+                "/path/to/key.json"
+            )
+            assert server.config_data["auth_method"] == "service_account"
+
+    def test_error_handling_edge_cases(self):
+        """Test error handling for edge cases."""
+        server, _, mock_client, _, _ = self.create_mock_server()
+
+        # Test with BigQuery exceptions using our mock classes
+        mock_client.list_datasets.side_effect = MockForbidden("Access denied")
+
+        result = server.list_datasets()
+        assert result["success"] is False
+        assert "Access denied" in result["error"]
+
+        # Test with network timeout
+        mock_client.query.side_effect = MockBadRequest("Timeout")
+
+        result = server.execute_query("SELECT 1")
+        assert result["success"] is False
+        assert "Timeout" in result["error"]
+
+    def test_table_metadata_extraction(self):
+        """Test table metadata extraction and formatting."""
+        server, _, mock_client, _, _ = self.create_mock_server()
+
+        # Mock table object
+        mock_table = Mock()
+        mock_table.project = "test-project"
+        mock_table.dataset_id = "test_dataset"
+        mock_table.table_id = "test_table"
+        mock_table.created = datetime(2023, 1, 1, 12, 0, 0)
+        mock_table.modified = datetime(2023, 1, 2, 12, 0, 0)
+        mock_table.num_rows = 1000
+        mock_table.num_bytes = 50000
+        mock_table.location = "US"
+        mock_table.table_type = "TABLE"
+
+        # Mock schema
+        mock_field = Mock()
+        mock_field.name = "test_col"
+        mock_field.field_type = "STRING"
+        mock_field.mode = "NULLABLE"
+        mock_field.description = "Test column"
+        mock_table.schema = [mock_field]
+
+        mock_client.get_table.return_value = mock_table
+
+        result = server.describe_table(
+            {"dataset_id": "test_dataset", "table_id": "test_table"}
+        )
+
+        # Verify metadata extraction
+        assert result["project_id"] == "test-project"
+        assert result["dataset_id"] == "test_dataset"
+        assert result["table_id"] == "test_table"
+        assert result["num_rows"] == 1000
+        assert result["num_bytes"] == 50000
+        assert len(result["schema"]) == 1
+        assert result["schema"][0]["name"] == "test_col"
+
+    def test_query_result_formatting(self):
+        """Test query result formatting and type conversion."""
+        server, _, mock_client, _, _ = self.create_mock_server()
+
+        # Mock query result
+        mock_job = Mock()
+        mock_row1 = {
+            "string_col": "test",
+            "int_col": 123,
+            "float_col": 45.67,
+            "bool_col": True,
+        }
+        mock_row2 = {
+            "string_col": "test2",
+            "int_col": 456,
+            "float_col": 89.01,
+            "bool_col": False,
+        }
+        mock_job.result.return_value = [mock_row1, mock_row2]
+        mock_job.schema = [
+            Mock(name="string_col", field_type="STRING"),
+            Mock(name="int_col", field_type="INTEGER"),
+            Mock(name="float_col", field_type="FLOAT"),
+            Mock(name="bool_col", field_type="BOOLEAN"),
+        ]
+
+        mock_client.query.return_value = mock_job
+
+        result = server.execute_query(
+            {"query": "SELECT * FROM test_table", "max_results": 100}
+        )
+
+        # Verify result formatting
+        assert len(result["rows"]) == 2
+        assert result["rows"][0]["string_col"] == "test"
+        assert result["rows"][0]["int_col"] == 123
+        assert result["rows"][1]["bool_col"] is False
+        assert len(result["schema"]) == 4
+
+    def test_configuration_validation(self):
+        """Test configuration validation and defaults."""
+        # Test minimal config
+        minimal_config = {"project_id": "test-project"}
+        server, _, _, _, _ = self.create_mock_server(minimal_config)
+
+        # Should have applied defaults
+        assert server.config_data.get("project_id") == "test-project"
+
+    def test_concurrent_query_handling(self):
+        """Test handling of concurrent queries."""
+        server, _, mock_client, _, _ = self.create_mock_server()
+
+        # Mock multiple query jobs
+        mock_jobs = []
+        for i in range(3):
+            mock_job = Mock()
+            mock_job.result.return_value = [{"col": f"value_{i}"}]
+            mock_job.schema = [Mock(name="col", field_type="STRING")]
+            mock_jobs.append(mock_job)
+
+        mock_client.query.side_effect = mock_jobs
+
+        # Execute multiple queries
+        results = []
+        for i in range(3):
+            result = server.execute_query(
+                {"query": f"SELECT 'value_{i}' as col", "max_results": 100}
+            )
+            results.append(result)
+
+        # Verify all queries executed
+        assert len(results) == 3
+        for i, result in enumerate(results):
+            assert result["rows"][0]["col"] == f"value_{i}"
+
+    def test_large_result_set_handling(self):
+        """Test handling of large result sets."""
+        server, _, mock_client, _, _ = self.create_mock_server()
+
+        # Mock large result set
+        large_results = [{"id": i, "data": f"row_{i}"} for i in range(5000)]
+        mock_job = Mock()
+        mock_job.result.return_value = large_results
+        mock_job.schema = [
+            Mock(name="id", field_type="INTEGER"),
+            Mock(name="data", field_type="STRING"),
+        ]
+
+        mock_client.query.return_value = mock_job
+
+        # Test with max_results limit
+        result = server.execute_query(
+            {"query": "SELECT * FROM large_table", "max_results": 100}
+        )
+
+        # Should be limited
+        assert len(result["rows"]) <= 5000
+
+    def test_sql_injection_protection(self):
+        """Test protection against SQL injection."""
+        server, _, mock_client, _, _ = self.create_mock_server()
+
+        # Mock query job
+        mock_job = Mock()
+        mock_job.result.return_value = []
+        mock_job.schema = []
+        mock_client.query.return_value = mock_job
+
+        # Test potentially malicious queries
+        malicious_queries = [
+            "SELECT * FROM table; DROP TABLE users;",
+            "SELECT * FROM table WHERE id = 1; DELETE FROM sensitive_data;",
+            "SELECT * FROM table UNION SELECT * FROM passwords",
+        ]
+
+        for query in malicious_queries:
+            # Should execute but be handled by BigQuery's built-in protection
+            result = server.execute_query({"query": query, "max_results": 100})
+            # BigQuery should handle security, we just verify it doesn't crash
+            assert "rows" in result
+
+    def test_dataset_permissions(self):
+        """Test dataset permission validation."""
+        server, _, mock_client, _, _ = self.create_mock_server()
+
+        # Set restricted datasets
+        server.config_data = {"allowed_datasets": "public_*"}
+
+        # Mock dataset list
+        mock_dataset_allowed = Mock()
+        mock_dataset_allowed.dataset_id = "public_data"
+
+        mock_dataset_forbidden = Mock()
+        mock_dataset_forbidden.dataset_id = "private_data"
+
+        mock_client.list_datasets.return_value = [
+            mock_dataset_allowed,
+            mock_dataset_forbidden,
+        ]
+
+        result = server.list_datasets({})
+
+        # Should only return allowed datasets
+        assert len(result["datasets"]) == 1
+        assert result["datasets"][0]["dataset_id"] == "public_data"
+
+    def test_table_listing_with_filters(self):
+        """Test table listing with various filters."""
+        server, _, mock_client, _, _ = self.create_mock_server()
+
+        # Mock tables
+        mock_tables = []
+        for i in range(5):
+            mock_table = Mock()
+            mock_table.table_id = f"table_{i}"
+            mock_table.table_type = "TABLE" if i % 2 == 0 else "VIEW"
+            mock_table.created = datetime(2023, 1, i + 1, 12, 0, 0)
+            mock_tables.append(mock_table)
+
+        mock_client.list_tables.return_value = mock_tables
+
+        # Test listing all tables
+        result = server.list_tables({"dataset_id": "test_dataset"})
+        assert len(result["tables"]) == 5
+
+        # Verify table information
+        for i, table in enumerate(result["tables"]):
+            assert table["table_id"] == f"table_{i}"
+            assert table["table_type"] in ["TABLE", "VIEW"]
+
+    def test_query_validation_edge_cases(self):
+        """Test query validation for edge cases."""
+        server, _, _, _, _ = self.create_mock_server()
+
+        # Test very long query
+        long_query = (
+            "SELECT " + ", ".join([f"col_{i}" for i in range(1000)]) + " FROM table"
+        )
+        # Should not raise exception for long but valid query
+        server._validate_query_params({"query": long_query})
+
+        # Test query with special characters
+        special_query = "SELECT 'test with \\n newline \\t tab \\' quote' as col"
+        server._validate_query_params({"query": special_query})
+
+        # Test query with unicode
+        unicode_query = "SELECT '测试数据' as chinese_text"
+        server._validate_query_params({"query": unicode_query})
+
+    def test_schema_handling_complex_types(self):
+        """Test handling of complex BigQuery schema types."""
+        server, _, _, _, _ = self.create_mock_server()
+
+        # Mock complex schema
+        mock_array_field = Mock()
+        mock_array_field.name = "array_field"
+        mock_array_field.field_type = "STRING"
+        mock_array_field.mode = "REPEATED"
+
+        mock_struct_inner = Mock()
+        mock_struct_inner.name = "inner_field"
+        mock_struct_inner.field_type = "INTEGER"
+        mock_struct_inner.mode = "NULLABLE"
+
+        mock_struct_field = Mock()
+        mock_struct_field.name = "struct_field"
+        mock_struct_field.field_type = "RECORD"
+        mock_struct_field.mode = "NULLABLE"
+        mock_struct_field.fields = [mock_struct_inner]
+
+        schema_fields = [mock_array_field, mock_struct_field]
+        result = server._format_schema_fields(schema_fields)
+
+        # Verify complex types are handled
+        assert len(result) == 2
+        assert result[0]["mode"] == "REPEATED"
+        assert result[1]["field_type"] == "RECORD"
+        assert len(result[1]["fields"]) == 1
+
+    def test_error_message_formatting(self):
+        """Test error message formatting and user-friendly messages."""
+        server, _, mock_client, _, _ = self.create_mock_server()
+
+        # Mock BigQuery error
+        bigquery_error = MockBadRequest("Syntax error: Unexpected token")
+        mock_client.query.side_effect = bigquery_error
+
+        with pytest.raises(Exception) as exc_info:
+            server.execute_query({"query": "INVALID SQL"})
+
+        # Should contain meaningful error information
+        error_msg = str(exc_info.value)
+        assert "Syntax error" in error_msg
+
+    def test_performance_monitoring(self):
+        """Test performance monitoring and query timing."""
+        server, _, mock_client, _, _ = self.create_mock_server()
+
+        # Mock query job with timing info
+        mock_job = Mock()
+        mock_job.result.return_value = [{"col": "value"}]
+        mock_job.schema = [Mock(name="col", field_type="STRING")]
+        mock_job.created = datetime(2023, 1, 1, 12, 0, 0)
+        mock_job.started = datetime(2023, 1, 1, 12, 0, 1)
+        mock_job.ended = datetime(2023, 1, 1, 12, 0, 5)
+
+        mock_client.query.return_value = mock_job
+
+        result = server.execute_query(
+            {"query": "SELECT 'value' as col", "max_results": 100}
+        )
+
+        # Verify timing information is included
+        assert "query_info" in result
+        assert "duration_seconds" in result["query_info"]

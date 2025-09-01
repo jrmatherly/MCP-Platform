@@ -341,7 +341,10 @@ class DockerDeploymentService(BaseDeploymentBackend):
         for host_path, container_path in template_volumes.items():
             # Expand user paths
             expanded_path = os.path.expanduser(host_path)
-            os.makedirs(expanded_path, exist_ok=True)
+            try:
+                os.makedirs(expanded_path, exist_ok=True)
+            except FileExistsError:
+                pass
             volumes.extend(["--volume", f"{expanded_path}:{container_path}"])
         return volumes
 
