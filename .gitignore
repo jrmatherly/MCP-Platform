@@ -225,3 +225,8 @@ site/
 
 # DB
 *.db
+
+# Generated documentation files (created by scripts/build_docs.py)
+docs/server-templates/available.md
+docs/server-templates/*/
+!docs/server-templates/index.md

@@ -1,5 +1,5 @@
 """
-MCP Test Utilities for template testing.
+MCP Platform Test Utilities for template testing.
 
 Provides common testing utilities for MCP server templates.
 """

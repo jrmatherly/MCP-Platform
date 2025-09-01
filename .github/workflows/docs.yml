@@ -31,15 +31,27 @@ jobs:
       with:
         python-version: "3.11"
 
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install mkdocs mkdocs-material pymdown-extensions
         pip install -r requirements.txt
 
+    - name: Start Docker service (for tool discovery)
+      run: |
+        sudo systemctl start docker
+        sudo chmod 666 /var/run/docker.sock
+        docker info
+
     - name: Build documentation
       run: |
         python scripts/build_docs.py
+      env:
+        # Set environment variables for tool discovery
+        DOCKER_HOST: unix:///var/run/docker.sock
 
     - name: Setup Pages
       uses: actions/configure-pages@v3
