@@ -6,7 +6,6 @@ Tests health checking functionality, status monitoring, and failure handling.
 
 import asyncio
 import time
-from datetime import datetime, timezone
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -14,6 +13,8 @@ import pytest
 from mcp_platform.gateway.health_checker import HealthChecker
 from mcp_platform.gateway.models import ServerStatus, TransportType
 from mcp_platform.gateway.registry import ServerInstance, ServerRegistry
+
+pytestmark = pytest.mark.unit
 
 
 class TestHealthChecker:

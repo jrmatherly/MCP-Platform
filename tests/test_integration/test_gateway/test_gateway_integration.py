@@ -5,20 +5,22 @@ Tests complete workflows combining multiple gateway components.
 """
 
 import asyncio
-import tempfile
+from datetime import timedelta
 from pathlib import Path
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import Mock
 
 import pytest
 
-from mcp_platform.gateway.auth import AuthManager
+from mcp_platform.gateway.auth import AuthenticationError, AuthManager
 from mcp_platform.gateway.models import (
+    AuthConfig,
     ServerInstance,
     ServerStatus,
-    ServerTemplate,
     TransportType,
 )
 from mcp_platform.gateway.registry import ServerRegistry
+
+pytestmark = pytest.mark.integration
 
 
 class TestGatewayIntegration:
@@ -127,9 +129,6 @@ class TestGatewayIntegration:
     @pytest.mark.asyncio
     async def test_auth_token_lifecycle(self):
         """Test complete authentication token lifecycle."""
-        from datetime import timedelta
-
-        from mcp_platform.gateway.models import AuthConfig
 
         mock_db = Mock()
         config = AuthConfig(secret_key="test-secret-key-for-testing")
@@ -332,8 +331,6 @@ class TestGatewayErrorHandling:
 
     def test_auth_error_scenarios(self):
         """Test authentication error handling."""
-        from mcp_platform.gateway.auth import AuthenticationError
-        from mcp_platform.gateway.models import AuthConfig
 
         mock_db = Mock()
         config = AuthConfig(secret_key="test-secret-key-for-testing")

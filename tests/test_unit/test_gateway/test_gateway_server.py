@@ -4,11 +4,13 @@ Unit tests for gateway server.
 Tests basic gateway server functionality and configuration.
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from mcp_platform.gateway.models import GatewayConfig
+from mcp_platform.gateway.models import AuthConfig, GatewayConfig
+
+pytestmark = pytest.mark.unit
 
 
 class TestGatewayServerBasic:
@@ -32,7 +34,6 @@ class TestGatewayServerBasic:
 
     def test_gateway_config_with_auth(self):
         """Test gateway configuration with auth enabled."""
-        from mcp_platform.gateway.models import AuthConfig
 
         config = GatewayConfig(
             host="localhost",
@@ -160,7 +161,6 @@ class TestGatewayIntegrationBasic:
 
     def test_config_component_compatibility(self):
         """Test configuration works with different components."""
-        from mcp_platform.gateway.models import AuthConfig
 
         config = GatewayConfig(auth=AuthConfig(secret_key="test-secret-key-12345"))
 

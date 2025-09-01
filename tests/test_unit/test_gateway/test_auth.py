@@ -4,6 +4,7 @@ Unit tests for gateway authentication module.
 Tests password hashing, JWT tokens, API key management, and the AuthManager class.
 """
 
+import string
 from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, Mock, patch
 
@@ -12,6 +13,8 @@ import pytest
 from mcp_platform.gateway.auth import AuthenticationError, AuthManager
 from mcp_platform.gateway.database import DatabaseManager
 from mcp_platform.gateway.models import APIKey, AuthConfig, User
+
+pytestmark = pytest.mark.unit
 
 
 class TestAuthManager:
@@ -346,7 +349,6 @@ class TestSecurityBestPractices:
         # Should start with "mcp_"
         assert api_key.startswith("mcp_")
         # Should be URL-safe (no special characters that need encoding)
-        import string
 
         allowed_chars = string.ascii_letters + string.digits + "-_"
         assert all(c in allowed_chars for c in api_key)
