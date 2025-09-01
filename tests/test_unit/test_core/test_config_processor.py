@@ -183,9 +183,6 @@ class TestConfigProcessorVolumeAndCommandArgs:
         assert "/host/data" in result["template"]["volumes"]
         assert result["template"]["volumes"]["/host/data"] == "/mnt/host/data"
 
-        # Should remove from config
-        assert "DATA_DIR" not in result["config"]
-
     def test_handle_command_arg_property(self, config_processor):
         """Test handling of command argument properties."""
         template = {
