@@ -20,7 +20,6 @@ from mcp_platform.gateway.load_balancer import (
     WeightedRoundRobinStrategy,
 )
 from mcp_platform.gateway.models import LoadBalancerConfig, ServerInstance, ServerStatus
-from mcp_platform.gateway.registry import ServerInstance
 
 pytestmark = pytest.mark.unit
 
