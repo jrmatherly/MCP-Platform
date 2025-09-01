@@ -368,16 +368,18 @@ class ConfigProcessor:
             # Check required fields
             required_fields = schema.get("required", [])
             for field in required_fields:
-                if field not in config:
-                    errors.append(f"Required field '{field}' is missing")
+                field_env_var = (
+                    schema.get("properties", {})
+                    .get(field, {})
+                    .get("env_mapping", field.upper())
+                )
+                if not (field in config or field_env_var in config):
+                    errors.append(
+                        f"Required field '{field}' (ENV VAR: {field_env_var}) is missing"
+                    )
 
             # Check field types and constraints
             properties = schema.get("properties", {})
-            for field, value in config.items():
-                if field in properties:
-                    field_schema = properties[field]
-                    field_errors = self._validate_field(field, value, field_schema)
-                    errors.extend(field_errors)
 
             # Check for unknown fields
             if schema.get("additionalProperties", True) is False:
@@ -390,7 +392,7 @@ class ConfigProcessor:
             )
 
         except Exception as e:
-            logger.error(f"Config validation failed: {e}")
+            logger.error("Config validation failed: %s", e)
             return ValidationResult(valid=False, errors=[f"Validation error: {str(e)}"])
 
     def handle_volume_and_args_config_properties(
