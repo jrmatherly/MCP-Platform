@@ -387,6 +387,122 @@ pytestmark = [
 ]
 
 
+# Gateway-specific fixtures
+@pytest.fixture
+async def test_db_manager():
+    """Create a test database manager with in-memory SQLite."""
+    from mcp_platform.gateway.database import DatabaseManager
+
+    db_manager = DatabaseManager(database_url="sqlite:///:memory:")
+    await db_manager.initialize()
+    try:
+        yield db_manager
+    finally:
+        await db_manager.close()
+
+
+@pytest.fixture
+async def test_auth_manager(test_db_manager):
+    """Create a test auth manager."""
+    from mcp_platform.gateway.auth import AuthManager
+
+    auth_manager = AuthManager(db_manager=test_db_manager)
+    await auth_manager.initialize()
+    return auth_manager
+
+
+@pytest.fixture
+async def test_gateway_registry(test_db_manager):
+    """Create a test gateway registry."""
+    from mcp_platform.gateway.registry import ServerRegistry
+
+    registry = ServerRegistry(test_db_manager, fallback_file=None)
+    return registry
+
+
+@pytest.fixture
+async def test_user(test_auth_manager):
+    """Create a test user."""
+    from mcp_platform.gateway.models import UserRole
+
+    return await test_auth_manager.create_user(
+        username="testuser",
+        email="test@example.com",
+        password="secure_password123",
+        role=UserRole.USER,
+    )
+
+
+@pytest.fixture
+async def test_admin(test_auth_manager):
+    """Create a test admin user."""
+    from mcp_platform.gateway.models import UserRole
+
+    return await test_auth_manager.create_user(
+        username="admin",
+        email="admin@example.com",
+        password="admin_password123",
+        role=UserRole.ADMIN,
+    )
+
+
+@pytest.fixture
+def temp_config_dir():
+    """Create a temporary configuration directory."""
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        yield Path(temp_dir)
+
+
+# Pytest configuration
+def pytest_configure(config):
+    """Configure pytest with custom markers."""
+    config.addinivalue_line(
+        "markers",
+        "integration: mark test as integration test (slower, requires full setup)",
+    )
+    config.addinivalue_line("markers", "unit: mark test as unit test (fast, isolated)")
+    config.addinivalue_line("markers", "auth: mark test as authentication-related")
+    config.addinivalue_line("markers", "database: mark test as database-related")
+    config.addinivalue_line("markers", "client: mark test as client SDK-related")
+    config.addinivalue_line("markers", "cli: mark test as CLI-related")
+    config.addinivalue_line("markers", "gateway: mark test as gateway-related")
+    config.addinivalue_line(
+        "markers", "load_balancer: mark test as load balancer-related"
+    )
+    config.addinivalue_line("markers", "registry: mark test as registry-related")
+
+
+def pytest_collection_modifyitems(config, items):
+    """Modify test collection to add markers based on file location and patterns."""
+    for item in items:
+        # Add markers based on test file location
+        if "test_integration" in str(item.fspath):
+            item.add_marker(pytest.mark.integration)
+        elif "test_unit" in str(item.fspath):
+            item.add_marker(pytest.mark.unit)
+
+        # Add gateway marker for gateway tests
+        if "gateway" in str(item.fspath):
+            item.add_marker(pytest.mark.gateway)
+
+        # Add specific markers based on test name patterns
+        test_name_lower = item.name.lower()
+        if "auth" in test_name_lower:
+            item.add_marker(pytest.mark.auth)
+        if "database" in test_name_lower or "db" in test_name_lower:
+            item.add_marker(pytest.mark.database)
+        if "client" in test_name_lower:
+            item.add_marker(pytest.mark.client)
+        if "cli" in test_name_lower:
+            item.add_marker(pytest.mark.cli)
+        if "load_balancer" in test_name_lower or "loadbalancer" in test_name_lower:
+            item.add_marker(pytest.mark.load_balancer)
+        if "registry" in test_name_lower:
+            item.add_marker(pytest.mark.registry)
+
+
 # Helper functions for tests
 def create_test_template(temp_dir: Path, template_id: str, **kwargs) -> Path:
     """Create a test template directory structure."""
