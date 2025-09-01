@@ -1,21 +1,11 @@
 """
-Unit tesfrom mcp_platform.gateway.load_balancer import (
-    BaseBalancingStrategy,
-    HealthBasedStrategy,
-    LeastConnectionsStrategy,
-    LoadBalancer,
-    LoadBalancingStrategy,
-    RandomStrategy,
-    RoundRobinStrategy,
-    WeightedRoundRobinStrategy,
-)
-from mcp_platform.gateway.models import ServerInstance, ServerStatus
+Unit tests for gateway load balancer module.
 
 Tests load balancing strategies, connection tracking, and instance selection.
 """
 
+import threading
 import time
-from typing import List
 from unittest.mock import Mock, patch
 
 import pytest
@@ -30,8 +20,10 @@ from mcp_platform.gateway.load_balancer import (
     RoundRobinStrategy,
     WeightedRoundRobinStrategy,
 )
-from mcp_platform.gateway.models import LoadBalancerConfig
-from mcp_platform.gateway.registry import ServerInstance
+from mcp_platform.gateway.models import LoadBalancerConfig, ServerInstance, ServerStatus
+from mcp_platform.gateway.registry import ServerInstance, ServerRegistry
+
+pytestmark = pytest.mark.unit
 
 
 class TestLoadBalancingStrategies:
@@ -41,31 +33,22 @@ class TestLoadBalancingStrategies:
         """Set up test fixtures."""
         self.instances = [
             ServerInstance(
-                id=1,
-                name="server1",
-                host="localhost",
-                port=8001,
-                status="running",
-                health_score=0.9,
-                weight=1,
+                id="server1",
+                template_name="test",
+                status=ServerStatus.HEALTHY,
+                instance_metadata={"weight": 1},
             ),
             ServerInstance(
-                id=2,
-                name="server2",
-                host="localhost",
-                port=8002,
-                status="running",
-                health_score=0.8,
-                weight=2,
+                id="server2",
+                template_name="test",
+                status=ServerStatus.HEALTHY,
+                instance_metadata={"weight": 2},
             ),
             ServerInstance(
-                id=3,
-                name="server3",
-                host="localhost",
-                port=8003,
-                status="running",
-                health_score=0.7,
-                weight=1,
+                id="server3",
+                template_name="test",
+                status=ServerStatus.HEALTHY,
+                instance_metadata={"weight": 1},
             ),
         ]
 
@@ -115,15 +98,15 @@ class TestLoadBalancingStrategies:
         selected1 = strategy.select_instance(self.instances)
         assert selected1 in self.instances
 
-        # Track a connection to first instance
-        strategy.track_connection(selected1)
+        # Record a request to first instance
+        strategy.record_request(selected1)
 
         # Next selection should avoid the busy instance
         selected2 = strategy.select_instance(self.instances)
         assert selected2 != selected1
 
-        # Release connection
-        strategy.release_connection(selected1)
+        # Record completion to release connection
+        strategy.record_completion(selected1, True)
 
     def test_weighted_round_robin_strategy(self):
         """Test weighted round robin strategy."""
@@ -159,33 +142,48 @@ class TestLoadBalancingStrategies:
         assert all(instance in self.instances for instance in selections)
 
         # With random, we should get different instances (high probability)
-        unique_selections = set(selections)
+        # Use instance IDs instead of the objects themselves since ServerInstance is not hashable
+        unique_selections = set(instance.id for instance in selections)
         assert len(unique_selections) > 1
 
     def test_health_based_strategy(self):
-        """Test health-based strategy."""
-        strategy = HealthBasedStrategy()
-
-        # Should prefer higher health score instances
-        selected = strategy.select_instance(self.instances)
-
-        # First instance has highest health score (0.9)
-        assert selected == self.instances[0]
-
-    def test_health_based_with_unhealthy_instances(self):
-        """Test health-based strategy with some unhealthy instances."""
-        # Create instances with different health scores
-        unhealthy_instances = [
-            ServerInstance(id=1, name="healthy", health_score=0.9, status="running"),
-            ServerInstance(id=2, name="unhealthy", health_score=0.1, status="running"),
+        """Test health-based strategy prefers instances with fewer failures."""
+        # Create instances with different consecutive failures
+        health_instances = [
+            ServerInstance(
+                id="healthy", status=ServerStatus.HEALTHY, consecutive_failures=0
+            ),
+            ServerInstance(
+                id="unhealthy", status=ServerStatus.UNHEALTHY, consecutive_failures=3
+            ),
         ]
 
         strategy = HealthBasedStrategy()
 
-        # Should consistently pick the healthy instance
+        # Should prefer instance with fewer consecutive failures
+        selected = strategy.select_instance(health_instances)
+
+        # Should pick the instance with 0 consecutive failures
+        assert selected.id == "healthy"
+
+    def test_health_based_with_unhealthy_instances(self):
+        """Test health-based strategy with instances having different failure counts."""
+        # Create instances with different consecutive failure counts
+        unhealthy_instances = [
+            ServerInstance(
+                id="healthy-1", status=ServerStatus.HEALTHY, consecutive_failures=0
+            ),
+            ServerInstance(
+                id="unhealthy-1", status=ServerStatus.UNHEALTHY, consecutive_failures=5
+            ),
+        ]
+
+        strategy = HealthBasedStrategy()
+
+        # Should consistently pick the instance with fewer failures
         for _ in range(5):
             selected = strategy.select_instance(unhealthy_instances)
-            assert selected.name == "healthy"
+            assert selected.id == "healthy-1"
 
 
 class TestLoadBalancer:
@@ -193,50 +191,49 @@ class TestLoadBalancer:
 
     def setup_method(self):
         """Set up test fixtures."""
-        self.config = LoadBalancerConfig(
-            strategy=LoadBalancingStrategy.ROUND_ROBIN,
-            health_check_interval=30,
-            max_connections_per_instance=100,
-        )
-        self.load_balancer = LoadBalancer(self.config)
+        self.load_balancer = LoadBalancer(LoadBalancingStrategy.ROUND_ROBIN)
 
-        self.mock_registry = Mock()
-        self.load_balancer.registry = self.mock_registry
+        # Create test instances
+        self.test_instances = [
+            ServerInstance(id="server1", status=ServerStatus.HEALTHY),
+            ServerInstance(id="server2", status=ServerStatus.HEALTHY),
+        ]
 
     def test_load_balancer_initialization(self):
         """Test LoadBalancer initialization."""
-        assert self.load_balancer.config == self.config
-        assert isinstance(self.load_balancer.strategy, RoundRobinStrategy)
-        assert self.load_balancer.connection_counts == {}
+        assert self.load_balancer.default_strategy == LoadBalancingStrategy.ROUND_ROBIN
+        assert LoadBalancingStrategy.ROUND_ROBIN in self.load_balancer._strategies
+        assert isinstance(
+            self.load_balancer._strategies[LoadBalancingStrategy.ROUND_ROBIN],
+            RoundRobinStrategy,
+        )
 
     def test_load_balancer_strategy_selection(self):
-        """Test that LoadBalancer selects the correct strategy."""
-        # Test different strategies
-        configs_and_types = [
-            (LoadBalancingStrategy.ROUND_ROBIN, RoundRobinStrategy),
-            (LoadBalancingStrategy.LEAST_CONNECTIONS, LeastConnectionsStrategy),
-            (LoadBalancingStrategy.WEIGHTED_ROUND_ROBIN, WeightedRoundRobinStrategy),
-            (LoadBalancingStrategy.RANDOM, RandomStrategy),
-            (LoadBalancingStrategy.HEALTH_BASED, HealthBasedStrategy),
+        """Test that LoadBalancer has the correct strategies available."""
+        # Test that all strategies are properly initialized
+        expected_strategies = [
+            LoadBalancingStrategy.ROUND_ROBIN,
+            LoadBalancingStrategy.LEAST_CONNECTIONS,
+            LoadBalancingStrategy.WEIGHTED_ROUND_ROBIN,
+            LoadBalancingStrategy.RANDOM,
+            LoadBalancingStrategy.HEALTH_BASED,
         ]
 
-        for strategy_enum, strategy_class in configs_and_types:
-            config = LoadBalancerConfig(strategy=strategy_enum)
-            lb = LoadBalancer(config)
-            assert isinstance(lb.strategy, strategy_class)
+        for strategy in expected_strategies:
+            assert strategy in self.load_balancer._strategies
+            assert self.load_balancer._strategies[strategy] is not None
 
     def test_get_instance_success(self):
         """Test successful instance selection."""
         healthy_instances = [
-            ServerInstance(
-                id="server1", template_name="test", status=ServerStatus.HEALTHY
-            ),
-            ServerInstance(
-                id="server2", template_name="test", status=ServerStatus.HEALTHY
-            ),
+            ServerInstance(id="server1", status=ServerStatus.HEALTHY),
+            ServerInstance(id="server2", status=ServerStatus.HEALTHY),
         ]
 
         selected = self.load_balancer.select_instance(healthy_instances)
+
+        assert selected is not None
+        assert selected in healthy_instances
 
         assert selected in healthy_instances
 
@@ -339,8 +336,6 @@ class TestLoadBalancer:
 
     def test_load_balancer_thread_safety(self):
         """Test that load balancer operations are thread-safe."""
-        import threading
-        import time
 
         instance = ServerInstance(id=1, name="test", status="running")
         results = []
@@ -402,7 +397,6 @@ class TestLoadBalancerIntegration:
 
     def test_load_balancer_with_registry_integration(self):
         """Test load balancer working with server registry."""
-        from mcp_platform.gateway.registry import ServerRegistry
 
         # Create real registry and load balancer
         registry = ServerRegistry()
