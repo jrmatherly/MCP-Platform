@@ -298,7 +298,7 @@ class GatewayTestManager:
         auth_manager = AuthManager(auth_config, MockDB())
 
         # Test API key generation
-        api_key = auth_manager.generate_api_key("testuser")
+        api_key = auth_manager.generate_api_key()
         assert api_key is not None
         assert len(api_key) > 10
 
