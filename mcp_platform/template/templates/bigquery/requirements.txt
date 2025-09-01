@@ -30,3 +30,6 @@ aiohttp>=3.12.0
 
 # Configuration and environment management
 python-dotenv>=1.1.0
+
+# SQL
+sqlparse>=0.5.3

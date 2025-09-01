@@ -13,6 +13,7 @@ import re
 import sys
 from typing import Any, Dict, List
 
+import sqlparse
 from fastmcp import FastMCP
 from starlette.requests import Request
 from starlette.responses import JSONResponse
@@ -211,21 +212,25 @@ class BigQueryMCPServer:
         """Check if a query contains write operations."""
         if self.config_data.get("read_only", True):
             # Simple check for write operations
-            write_keywords = [
-                "INSERT",
-                "UPDATE",
-                "DELETE",
-                "DROP",
-                "CREATE",
-                "ALTER",
-                "TRUNCATE",
-                "MERGE",
-                "REPLACE",
-            ]
-            query_upper = query.upper()
-            for keyword in write_keywords:
-                if keyword in query_upper:
-                    return True
+            try:
+                parsed = sqlparse.parse(query)
+                for stmt in parsed:
+                    if stmt.get_type() in [
+                        "INSERT",
+                        "UPDATE",
+                        "DELETE",
+                        "DROP",
+                        "CREATE",
+                        "ALTER",
+                        "TRUNCATE",
+                        "MERGE",
+                        "REPLACE",
+                    ]:
+                        return True
+            except Exception as e:
+                self.logger.warning("Failed to parse SQL query for write check: %s", e)
+                return True
+
         return False
 
     def register_tools(self):

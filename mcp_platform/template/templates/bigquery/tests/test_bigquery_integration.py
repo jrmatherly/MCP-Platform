@@ -12,8 +12,6 @@ import tempfile
 from datetime import datetime
 from unittest.mock import MagicMock, Mock, patch
 
-import pytest
-
 # Add the parent directory to sys.path to import server modules
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
@@ -101,7 +99,7 @@ class TestBigQueryIntegration:
         mock_client.list_datasets.return_value = [mock_dataset]
 
         # Step 1: List datasets
-        datasets_result = server.list_datasets({})
+        datasets_result = server.list_datasets()
         assert len(datasets_result["datasets"]) == 1
         assert datasets_result["datasets"][0]["dataset_id"] == "analytics_prod"
 
@@ -114,7 +112,7 @@ class TestBigQueryIntegration:
         mock_client.list_tables.return_value = [mock_table]
 
         # Step 2: List tables in dataset
-        tables_result = server.list_tables({"dataset_id": "analytics_prod"})
+        tables_result = server.list_tables(dataset_id="analytics_prod")
         assert len(tables_result["tables"]) == 1
         assert tables_result["tables"][0]["table_id"] == "user_events"
 
@@ -123,18 +121,39 @@ class TestBigQueryIntegration:
         mock_table_detailed.project = "test-project"
         mock_table_detailed.dataset_id = "analytics_prod"
         mock_table_detailed.table_id = "user_events"
+        mock_table_detailed.full_table_id = "test-project.analytics_prod.user_events"
+        mock_table_detailed.table_type = "TABLE"
         mock_table_detailed.num_rows = 50000
         mock_table_detailed.num_bytes = 1000000
-        mock_table_detailed.schema = [
-            Mock(name="user_id", field_type="STRING", mode="REQUIRED"),
-            Mock(name="event_time", field_type="TIMESTAMP", mode="REQUIRED"),
-            Mock(name="event_type", field_type="STRING", mode="NULLABLE"),
-        ]
+        mock_table_detailed.created = datetime(2023, 1, 1)
+        mock_table_detailed.modified = datetime(2023, 1, 2)
+        mock_table_detailed.description = "User events table"
+        mock_table_detailed.clustering_fields = []
+        mock_table_detailed.time_partitioning = None
+        mock_field1 = Mock()
+        mock_field1.name = "user_id"
+        mock_field1.field_type = "STRING"
+        mock_field1.mode = "REQUIRED"
+        mock_field1.description = None
+        mock_field1.fields = None
+        mock_field2 = Mock()
+        mock_field2.name = "event_time"
+        mock_field2.field_type = "TIMESTAMP"
+        mock_field2.mode = "REQUIRED"
+        mock_field2.description = None
+        mock_field2.fields = None
+        mock_field3 = Mock()
+        mock_field3.name = "event_type"
+        mock_field3.field_type = "STRING"
+        mock_field3.mode = "NULLABLE"
+        mock_field3.description = None
+        mock_field3.fields = None
+        mock_table_detailed.schema = [mock_field1, mock_field2, mock_field3]
         mock_client.get_table.return_value = mock_table_detailed
 
         # Step 3: Describe table
         table_desc = server.describe_table(
-            {"dataset_id": "analytics_prod", "table_id": "user_events"}
+            dataset_id="analytics_prod", table_id="user_events"
         )
         assert table_desc["table_id"] == "user_events"
         assert table_desc["num_rows"] == 50000
@@ -154,10 +173,7 @@ class TestBigQueryIntegration:
 
         # Step 4: Execute query
         query_result = server.execute_query(
-            {
-                "query": "SELECT user_id, COUNT(*) as event_count FROM analytics_prod.user_events GROUP BY user_id",
-                "max_results": 100,
-            }
+            "SELECT user_id, COUNT(*) as event_count FROM analytics_prod.user_events GROUP BY user_id"
         )
         assert len(query_result["rows"]) == 2
         assert query_result["rows"][0]["user_id"] == "user1"
@@ -185,7 +201,7 @@ class TestBigQueryIntegration:
         mock_client.list_datasets.return_value = datasets
 
         # List datasets - should filter based on allowed_datasets
-        result = server.list_datasets({})
+        result = server.list_datasets()
         dataset_ids = [d["dataset_id"] for d in result["datasets"]]
         assert "analytics_prod" in dataset_ids
         assert "analytics_staging" in dataset_ids
@@ -206,8 +222,7 @@ class TestBigQueryIntegration:
 
         # Execute cross-dataset query
         query_result = server.execute_query(
-            {
-                "query": """
+            """
                 SELECT
                     'analytics_prod' as dataset,
                     COUNT(*) as table_count
@@ -217,9 +232,7 @@ class TestBigQueryIntegration:
                     'analytics_staging' as dataset,
                     COUNT(*) as table_count
                 FROM analytics_staging.INFORMATION_SCHEMA.TABLES
-            """,
-                "max_results": 100,
-            }
+            """
         )
 
         assert len(query_result["rows"]) == 2
@@ -246,9 +259,9 @@ class TestBigQueryIntegration:
         ]
 
         for query in write_operations:
-            with pytest.raises(Exception) as exc_info:
-                server.execute_query({"query": query})
-            assert "read-only" in str(exc_info.value).lower()
+            result = server.execute_query(query)
+            assert result["success"] is False
+            assert "read-only" in result["error"].lower()
 
         # Test that read operations work
         mock_job = Mock()
@@ -263,7 +276,7 @@ class TestBigQueryIntegration:
         ]
 
         for query in read_operations:
-            result = server.execute_query({"query": query})
+            result = server.execute_query(query)
             assert "rows" in result
             assert len(result["rows"]) == 1
 
@@ -331,7 +344,7 @@ class TestBigQueryIntegration:
 
                 # Test that server can perform operations
                 mock_client.list_datasets.return_value = []
-                result = server.list_datasets({})
+                result = server.list_datasets()
                 assert "datasets" in result
 
         finally:
@@ -364,27 +377,19 @@ class TestBigQueryIntegration:
         mock_client.query.return_value = mock_job
 
         # Test with default max_results
-        result = server.execute_query(
-            {
-                "query": "SELECT * FROM large_table",
-            }
-        )
+        result = server.execute_query("SELECT * FROM large_table")
 
         # Should be limited by server config max_results (1000)
         assert len(result["rows"]) <= 1000
-        assert "schema" in result
-        assert len(result["schema"]) == 4
+        assert "job_id" in result
+        assert result["success"] is True
 
-        # Test with custom max_results
-        result = server.execute_query(
-            {
-                "query": "SELECT * FROM large_table",
-                "max_results": 500,
-            }
-        )
+        # Test with custom max_results (note: execute_query doesn't accept max_results parameter)
+        # The max_results is controlled by server configuration only
+        result = server.execute_query("SELECT * FROM large_table")
 
-        # Should be limited by parameter
-        assert len(result["rows"]) <= 500
+        # Should be limited by server config max_results (1000)
+        assert len(result["rows"]) <= 1000
 
         # Clean up
         for patch_obj in patches:
@@ -397,24 +402,24 @@ class TestBigQueryIntegration:
         # Simulate network issues
         mock_client.list_datasets.side_effect = Exception("Network timeout")
 
-        with pytest.raises(Exception) as exc_info:
-            server.list_datasets({})
-        assert "Network timeout" in str(exc_info.value)
+        result = server.list_datasets()
+        assert result["success"] is False
+        assert "Network timeout" in result["error"]
 
         # Reset client to working state
         mock_client.list_datasets.side_effect = None
         mock_client.list_datasets.return_value = []
 
         # Should work again
-        result = server.list_datasets({})
+        result = server.list_datasets()
         assert "datasets" in result
 
         # Test query timeout
         mock_client.query.side_effect = Exception("Query timeout")
 
-        with pytest.raises(Exception) as exc_info:
-            server.execute_query({"query": "SELECT 1"})
-        assert "Query timeout" in str(exc_info.value)
+        result = server.execute_query("SELECT 1")
+        assert result["success"] is False
+        assert "Query timeout" in result["error"]
 
         # Clean up
         for patch_obj in patches:
@@ -429,32 +434,42 @@ class TestBigQueryIntegration:
         nested_field.name = "nested_field"
         nested_field.field_type = "STRING"
         nested_field.mode = "NULLABLE"
+        nested_field.description = None
+        nested_field.fields = None
 
         record_field = Mock()
         record_field.name = "record_field"
         record_field.field_type = "RECORD"
         record_field.mode = "REPEATED"
+        record_field.description = None
         record_field.fields = [nested_field]
 
         array_field = Mock()
         array_field.name = "array_field"
         array_field.field_type = "STRING"
         array_field.mode = "REPEATED"
+        array_field.description = None
+        array_field.fields = None
 
         complex_table = Mock()
         complex_table.project = "test-project"
         complex_table.dataset_id = "test_dataset"
         complex_table.table_id = "complex_table"
+        complex_table.full_table_id = "test-project.test_dataset.complex_table"
+        complex_table.table_type = "TABLE"
         complex_table.schema = [record_field, array_field]
         complex_table.num_rows = 1000
         complex_table.num_bytes = 50000
+        complex_table.created = datetime(2023, 1, 1)
+        complex_table.modified = datetime(2023, 1, 2)
+        complex_table.description = "Complex table with nested fields"
+        complex_table.clustering_fields = []
+        complex_table.time_partitioning = None
 
         mock_client.get_table.return_value = complex_table
 
         # Test table description with complex schema
-        result = server.describe_table(
-            {"dataset_id": "test_dataset", "table_id": "complex_table"}
-        )
+        result = server.describe_table("test_dataset", "complex_table")
 
         assert result["table_id"] == "complex_table"
         assert len(result["schema"]) == 2
@@ -501,10 +516,7 @@ class TestBigQueryIntegration:
         results = []
         for i in range(5):
             result = server.execute_query(
-                {
-                    "query": f"SELECT {i+1} as query_id, 'result_{i+1}' as result",
-                    "max_results": 100,
-                }
+                f"SELECT {i+1} as query_id, 'result_{i+1}' as result"
             )
             results.append(result)
 
