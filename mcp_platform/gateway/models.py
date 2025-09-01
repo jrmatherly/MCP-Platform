@@ -5,6 +5,7 @@ This module provides type-safe data models with validation, serialization,
 and optional database persistence capabilities.
 """
 
+import os
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
@@ -71,6 +72,7 @@ class ServerInstanceBase(SQLModel):
     # Health tracking
     last_health_check: Optional[datetime] = None
     consecutive_failures: int = 0
+    is_active: bool = True  # Whether the instance is active/enabled
 
     # Metadata
     instance_metadata: Optional[Dict[str, Any]] = SQLField(
@@ -413,7 +415,9 @@ class DatabaseConfig(SQLModel):
 class AuthConfig(SQLModel):
     """Authentication configuration model."""
 
-    secret_key: str = "change-this-in-production"  # Default for development
+    secret_key: str = os.getenv(
+        "MCP_PLATFORM_AUTH_SECRET_KEY", "change-this-in-production"
+    )  # Default for development
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     api_key_expire_days: int = 30

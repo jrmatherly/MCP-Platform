@@ -16,6 +16,7 @@ from sqlmodel import SQLModel
 
 from .models import (
     APIKey,
+    APIKeyCreate,
     GatewayConfig,
     LoadBalancerConfig,
     ServerInstance,
@@ -636,11 +637,22 @@ class APIKeyCRUD(BaseCRUD):
     def __init__(self, db: DatabaseManager):
         super().__init__(db)
 
-    async def create(self, api_key_data: dict, key_hash: str) -> APIKey:
+    async def create(self, api_key_data: APIKeyCreate, key_hash: str) -> APIKey:
         """Create a new API key with hashed key."""
-        api_key_data = api_key_data.copy()
-        api_key_data["key_hash"] = key_hash
-        return await self.db.create_api_key(api_key_data)
+        # Convert to dict if it's a Pydantic model
+        if hasattr(api_key_data, "model_dump"):
+            api_key_dict = api_key_data.model_dump()
+        elif hasattr(api_key_data, "dict"):
+            api_key_dict = api_key_data.dict()
+        else:
+            api_key_dict = (
+                dict(api_key_data)
+                if not isinstance(api_key_data, dict)
+                else api_key_data.copy()
+            )
+
+        api_key_dict["key_hash"] = key_hash
+        return await self.db.create_api_key(api_key_dict)
 
     async def create_api_key(self, api_key_data: dict) -> APIKey:
         """Create a new API key."""

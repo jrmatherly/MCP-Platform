@@ -451,7 +451,7 @@ class TestDatabaseIntegration:
             mock_get_session.return_value.__aexit__ = AsyncMock()
 
             user_crud = UserCRUD(db_manager)
-            user_data = UserCreate(username="testuser")
+            user_data = UserCreate(username="testuser", password="testpass123")
 
             with pytest.raises(Exception, match="Database error"):
                 await user_crud.create(user_data, hashed_password="hash")
