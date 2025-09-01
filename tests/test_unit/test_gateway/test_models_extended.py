@@ -4,8 +4,7 @@ Additional tests for gateway models to reach 70% test coverage goal.
 Simple tests focusing on model validation and edge cases.
 """
 
-from datetime import datetime, timezone
-from typing import List
+from datetime import datetime
 
 import pytest
 
@@ -22,6 +21,8 @@ from mcp_platform.gateway.models import (
     TransportType,
     User,
 )
+
+pytestmark = pytest.mark.unit
 
 
 class TestModelValidationEdgeCases:

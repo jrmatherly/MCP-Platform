@@ -8,7 +8,6 @@ and relationships.
 from datetime import datetime, timezone
 
 import pytest
-from pydantic import ValidationError
 
 from mcp_platform.gateway.models import (
     APIKey,
@@ -19,14 +18,14 @@ from mcp_platform.gateway.models import (
     GatewayConfig,
     LoadBalancerConfig,
     LoadBalancingStrategy,
-    ServerInstance,
     ServerInstanceCreate,
     ServerStatus,
     ServerTemplate,
     TransportType,
-    User,
     UserCreate,
 )
+
+pytestmark = pytest.mark.unit
 
 
 class TestEnums:

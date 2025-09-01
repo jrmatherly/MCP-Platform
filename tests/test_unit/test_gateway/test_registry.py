@@ -5,23 +5,23 @@ Tests cover server registry functionality, template management, instance registr
 health monitoring, and database persistence with fallback mechanisms.
 """
 
-import asyncio
 import json
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
 from mcp_platform.gateway.models import (
-    LoadBalancerConfig,
     ServerInstance,
     ServerStatus,
     ServerTemplate,
     TransportType,
 )
 from mcp_platform.gateway.registry import RegistryError, ServerRegistry
+
+pytestmark = pytest.mark.unit
 
 
 class TestServerRegistry:
