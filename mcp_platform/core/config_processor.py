@@ -476,21 +476,19 @@ class ConfigProcessor:
                         logger.warning("Invalid volume mount format: %s", path_part)
                         continue  # Skip this path and continue with others
 
-                    if host_path and host_path.startswith(
-                        "/"
-                    ):  # Only process absolute paths
+                    if host_path:
                         if container_mount_path:
                             volumes[host_path] = container_mount_path
                             final_container_paths.append(container_mount_path)
                         else:
-                            container_path = (
+                            container_mount_path = (
                                 f"{default_mount_path}/{host_path.lstrip('/')}"
                             )
-                            volumes[host_path] = container_path
-                            final_container_paths.append(container_path)
+                            volumes[host_path] = container_mount_path
+                            final_container_paths.append(container_mount_path)
 
-                # If we are to pass this to container then it should be mounted path
-                updated_config_container_path = container_path
+                    # If we are to pass this to container then it should be mounted path
+                    updated_config_container_path = container_mount_path
 
             # Check if this property is a command argument
             if (

@@ -175,18 +175,23 @@ class MCPClient:
 
         return templates
 
-    def get_template_info(self, template_id: str) -> Optional[Dict[str, Any]]:
+    def get_template_info(
+        self, template_id: str, include_deployed_status: bool = False
+    ) -> Optional[Dict[str, Any]]:
         """
         Get detailed information about a specific template.
 
         Args:
             template_id: ID of the template
+            include_deployed_status: Whether to include deployment status
 
         Returns:
             Template information or None if not found
         """
         try:
-            return self.template_manager.get_template_info(template_id)
+            return self.template_manager.get_template_info(
+                template_id, include_deployed_status=include_deployed_status
+            )
         except Exception as e:
             logger.error(f"Failed to get template info for {template_id}: {e}")
             return None

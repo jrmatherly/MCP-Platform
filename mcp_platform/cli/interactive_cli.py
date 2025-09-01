@@ -440,8 +440,10 @@ def call_tool(
         )
 
         # Check for missing required configuration
-        template_info = session.client.get_template_info(template)
-        if template_info:
+        template_info = session.client.get_template_info(
+            template, include_deployed_status=True
+        )
+        if template_info and not template_info.get("deployment_count", None):
             missing_config = _check_missing_config(
                 template_info, final_config, env_vars
             )

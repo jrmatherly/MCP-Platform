@@ -130,7 +130,9 @@ class TemplateManager:
             logger.error(f"Failed to list templates: {e}")
             return {}
 
-    def get_template_info(self, template_id: str) -> Optional[Dict]:
+    def get_template_info(
+        self, template_id: str, include_deployed_status: bool = False
+    ) -> Optional[Dict]:
         """
         Get detailed information for a specific template.
 
@@ -141,7 +143,9 @@ class TemplateManager:
             Template metadata dictionary or None if not found
         """
         try:
-            templates = self.list_templates()
+            templates = self.list_templates(
+                include_deployed_status=include_deployed_status
+            )
             return templates.get(template_id)
         except Exception as e:
             logger.error(f"Failed to get template info for {template_id}: {e}")
