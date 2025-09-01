@@ -194,13 +194,6 @@ List all accessible BigQuery datasets in the project, filtered by access control
 
 **Returns:** Array of datasets with metadata including ID, friendly name, location, and creation time.
 
-**Example:**
-```bash
-curl -X POST http://localhost:8000/v1/call \
-  -H "Content-Type: application/json" \
-  -d '{"method": "list_datasets", "params": {}}'
-```
-
 ### list_tables
 
 List tables in a specific dataset with metadata.
@@ -212,9 +205,7 @@ List tables in a specific dataset with metadata.
 
 **Example:**
 ```bash
-curl -X POST http://localhost:8000/v1/call \
-  -H "Content-Type: application/json" \
-  -d '{"method": "list_tables", "params": {"dataset_id": "analytics_prod"}}'
+mcpt interactive'{"method": "list_tables", "params": {"dataset_id": "analytics_prod"}}'
 ```
 
 ### describe_table
@@ -229,15 +220,10 @@ Get detailed schema information for a specific table.
 
 **Example:**
 ```bash
-curl -X POST http://localhost:8000/v1/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "method": "describe_table",
-    "params": {
+mcpt interactive
+mcpt> call bigquery describe_table '{
       "dataset_id": "analytics_prod",
-      "table_id": "user_events"
-    }
-  }'
+      "table_id": "user_events" }'
 ```
 
 ### execute_query
@@ -253,25 +239,15 @@ Execute SQL queries against BigQuery with safety controls and result limiting.
 **Example:**
 ```bash
 # Execute query
-curl -X POST http://localhost:8000/v1/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "method": "execute_query",
-    "params": {
-      "query": "SELECT COUNT(*) as total_events FROM `my-project.analytics.events` WHERE DATE(timestamp) = CURRENT_DATE()"
-    }
-  }'
+mcpt interactive
+mcpt> call bigquery execute_query '{
+      "query": "SELECT COUNT(*) as total_events FROM `my-project.analytics.events` WHERE DATE(timestamp) = CURRENT_DATE()" }'
 
 # Dry run validation
-curl -X POST http://localhost:8000/v1/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "method": "execute_query",
-    "params": {
+mcpt interactive
+mcpt> call bigquery execute_query '{
       "query": "SELECT user_id, COUNT(*) FROM `my-project.analytics.events` GROUP BY user_id",
-      "dry_run": true
-    }
-  }'
+      "dry_run": true }'
 ```
 
 ### get_job_status
@@ -285,9 +261,8 @@ Monitor BigQuery job status and execution progress.
 
 **Example:**
 ```bash
-curl -X POST http://localhost:8000/v1/call \
-  -H "Content-Type: application/json" \
-  -d '{"method": "get_job_status", "params": {"job_id": "job_abc123"}}'
+mcpt interactive
+mcpt> call bigquery get_job_status '{"job_id": "job_abc123"}'
 ```
 
 ### get_dataset_info
@@ -301,9 +276,8 @@ Get comprehensive information about a dataset.
 
 **Example:**
 ```bash
-curl -X POST http://localhost:8000/v1/call \
-  -H "Content-Type: application/json" \
-  -d '{"method": "get_dataset_info", "params": {"dataset_id": "analytics_prod"}}'
+mcpt interactive
+mcpt> call bigquery get_dataset_info '{"dataset_id": "analytics_prod"}'
 ```
 
 ## Usage Examples
@@ -312,64 +286,42 @@ curl -X POST http://localhost:8000/v1/call \
 
 ```bash
 # List all accessible datasets
-curl -X POST http://localhost:8000/v1/call \
-  -H "Content-Type: application/json" \
-  -d '{"method": "list_datasets", "params": {}}'
+mcpt interactive
+mcpt> call bigquery list_datasets
 
 # Explore a specific dataset
-curl -X POST http://localhost:8000/v1/call \
-  -H "Content-Type: application/json" \
-  -d '{"method": "list_tables", "params": {"dataset_id": "analytics"}}'
+mcpt interactive
+mcpt> call bigquery list_tables '{"dataset_id": "analytics"}'
 
 # Get table schema
-curl -X POST http://localhost:8000/v1/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "method": "describe_table",
-    "params": {
+mcpt interactive
+mcpt> call bigquery describe_table '{
       "dataset_id": "analytics",
-      "table_id": "user_events"
-    }
-  }'
+      "table_id": "user_events" }'
 ```
 
 ### Analytics Queries
 
 ```bash
 # Daily active users
-curl -X POST http://localhost:8000/v1/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "method": "execute_query",
-    "params": {
-      "query": "SELECT DATE(timestamp) as date, COUNT(DISTINCT user_id) as dau FROM `my-project.analytics.events` WHERE DATE(timestamp) >= DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY) GROUP BY DATE(timestamp) ORDER BY date"
-    }
-  }'
+mcpt interactive
+mcpt> call bigquery execute_query '{
+      "query": "SELECT DATE(timestamp) as date, COUNT(DISTINCT user_id) as dau FROM `my-project.analytics.events` WHERE DATE(timestamp) >= DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY) GROUP BY DATE(timestamp) ORDER BY date" }'
 
 # Top events by volume
-curl -X POST http://localhost:8000/v1/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "method": "execute_query",
-    "params": {
-      "query": "SELECT event_name, COUNT(*) as event_count FROM `my-project.analytics.events` WHERE DATE(timestamp) = CURRENT_DATE() GROUP BY event_name ORDER BY event_count DESC LIMIT 10"
-    }
-  }'
+mcpt interactive
+mcpt> call bigquery execute_query '{
+      "query": "SELECT event_name, COUNT(*) as event_count FROM `my-project.analytics.events` WHERE DATE(timestamp) = CURRENT_DATE() GROUP BY event_name ORDER BY event_count DESC LIMIT 10" }'
 ```
 
 ### Query Validation
 
 ```bash
 # Validate complex query before execution
-curl -X POST http://localhost:8000/v1/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "method": "execute_query",
-    "params": {
+mcpt interactive
+mcpt> call bigquery execute_query '{
       "query": "WITH user_metrics AS (SELECT user_id, COUNT(*) as session_count, AVG(session_duration) as avg_duration FROM `my-project.analytics.sessions` GROUP BY user_id) SELECT * FROM user_metrics WHERE session_count > 10",
-      "dry_run": true
-    }
-  }'
+      "dry_run": true }'
 ```
 
 ## Transport Modes
@@ -809,7 +761,7 @@ bq ls --project_id=$GOOGLE_CLOUD_PROJECT dataset_name
 SELECT * FROM large_table LIMIT 1000
 
 # Use dry_run to validate without executing
-{"method": "execute_query", "params": {"query": "...", "dry_run": true}}
+mcpt> call bigquery execute_query '{"query": "...", "dry_run": true}' --dry-run
 ```
 
 #### Result size exceeded maximum
@@ -863,11 +815,6 @@ Enable detailed logging for troubleshooting:
 
 # Check server logs
 docker logs -f container_id
-
-# Test individual operations
-curl -X POST http://localhost:8000/v1/call \
-  -H "Content-Type: application/json" \
-  -d '{"method": "list_datasets", "params": {}}' | jq .
 ```
 
 ## Performance Optimization

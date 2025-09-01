@@ -364,11 +364,14 @@ class MCPClient:
             result = self.deployment_manager.deploy_template(
                 template_id, config_sources, deployment_options
             )
-
+            if not result.success:
+                logger.error(
+                    "Failed to start server for %s: %s", template_id, result.error
+                )
             return result.to_dict() if result.success else None
 
         except Exception as e:
-            logger.error(f"Failed to start server for {template_id}: {e}")
+            logger.error("Failed to start server for %s: %s", template_id, e)
             return None
 
     def deploy_template(
@@ -409,6 +412,7 @@ class MCPClient:
         Returns:
             Server deployment information or None if failed
         """
+
         try:
             # Process volumes
             processed_volumes = None
