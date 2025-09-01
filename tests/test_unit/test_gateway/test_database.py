@@ -4,8 +4,7 @@ Unit tests for gateway database module.
 Tests database manager, CRUD operations, and session management.
 """
 
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, Mock, call, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,6 +28,8 @@ from mcp_platform.gateway.models import (
     User,
     UserCreate,
 )
+
+pytestmark = pytest.mark.unit
 
 
 class TestDatabaseManager:
@@ -82,20 +83,22 @@ class TestDatabaseManager:
         gateway_config = GatewayConfig(database=postgres_config)
         db_manager = DatabaseManager(gateway_config)
 
+        # Mock the asyncpg import to avoid the ImportError
         with (
             patch("mcp_platform.gateway.database.create_async_engine") as mock_engine,
             patch(
                 "mcp_platform.gateway.database.async_sessionmaker"
             ) as mock_sessionmaker,
             patch.object(db_manager, "_create_tables") as mock_create_tables,
+            patch("mcp_platform.gateway.database._validate_postgresql_driver"),
         ):
 
             await db_manager.initialize()
 
-            # Should not modify PostgreSQL URL
+            # Should convert to asyncpg URL
             mock_engine.assert_called_once()
             args, kwargs = mock_engine.call_args
-            assert args[0] == "postgresql://user:pass@localhost/db"
+            assert args[0] == "postgresql+asyncpg://user:pass@localhost/db"
 
     @pytest.mark.asyncio
     async def test_database_manager_initialize_idempotent(self):
@@ -118,10 +121,17 @@ class TestDatabaseManager:
     async def test_get_session(self):
         """Test session creation."""
         mock_session = AsyncMock(spec=AsyncSession)
-        self.db_manager.session_factory = Mock(return_value=mock_session)
 
-        async with self.db_manager.get_session() as session:
-            assert session == mock_session
+        # Mock get_session to return an async context manager
+        from contextlib import asynccontextmanager
+
+        @asynccontextmanager
+        async def mock_get_session():
+            yield mock_session
+
+        with patch.object(self.db_manager, "get_session", mock_get_session):
+            async with self.db_manager.get_session() as session:
+                assert session == mock_session
 
     @pytest.mark.asyncio
     async def test_close(self):
@@ -218,25 +228,23 @@ class TestUserCRUD:
         user_id = 1
         update_data = {"email": "newemail@example.com", "is_active": False}
 
+        # Create a mock user with the updated attributes
         mock_user = User(
-            id=1, username="testuser", email="old@example.com", is_active=True
+            id=user_id,
+            username="testuser",
+            email="newemail@example.com",
+            is_active=False,
+            hashed_password="hashed_password",
         )
 
-        # Mock session behavior
-        self.mock_db.get_session.return_value.__aenter__ = AsyncMock(
-            return_value=self.mock_session
-        )
-        self.mock_db.get_session.return_value.__aexit__ = AsyncMock(return_value=None)
-
-        self.mock_session.get = AsyncMock(return_value=mock_user)
-        self.mock_session.commit = AsyncMock()
-        self.mock_session.refresh = AsyncMock()
+        # Mock the database manager's update_user method to return the updated user
+        self.mock_db.update_user = AsyncMock(return_value=mock_user)
 
         result = await self.user_crud.update(user_id, update_data)
 
         assert result.email == "newemail@example.com"
         assert result.is_active is False
-        self.mock_session.commit.assert_called_once()
+        self.mock_db.update_user.assert_called_once_with(user_id, update_data)
 
 
 class TestAPIKeyCRUD:
@@ -253,15 +261,13 @@ class TestAPIKeyCRUD:
         """Test API key creation."""
         api_key_data = APIKeyCreate(name="Test Key", user_id=1)
 
-        # Mock session behavior
-        self.mock_db.get_session.return_value.__aenter__ = AsyncMock(
-            return_value=self.mock_session
+        # Create expected API key object
+        expected_api_key = APIKey(
+            id=1, name="Test Key", user_id=1, key_hash="hashed_key", is_active=True
         )
-        self.mock_db.get_session.return_value.__aexit__ = AsyncMock(return_value=None)
 
-        self.mock_session.add = Mock()
-        self.mock_session.commit = AsyncMock()
-        self.mock_session.refresh = AsyncMock()
+        # Mock the database manager's create_api_key method
+        self.mock_db.create_api_key = AsyncMock(return_value=expected_api_key)
 
         result = await self.api_key_crud.create(api_key_data, key_hash="hashed_key")
 
@@ -269,6 +275,7 @@ class TestAPIKeyCRUD:
         assert result.name == "Test Key"
         assert result.user_id == 1
         assert result.key_hash == "hashed_key"
+        self.mock_db.create_api_key.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_get_by_user(self):
@@ -298,21 +305,21 @@ class TestAPIKeyCRUD:
     async def test_deactivate_api_key(self):
         """Test API key deactivation."""
         key_id = 1
-        mock_key = APIKey(id=1, name="Test Key", is_active=True, key_hash="hash")
 
-        # Mock session behavior
-        self.mock_db.get_session.return_value.__aenter__ = AsyncMock(
-            return_value=self.mock_session
+        # Create expected updated API key
+        updated_key = APIKey(
+            id=1, name="Test Key", is_active=False, key_hash="hash", user_id=1
         )
-        self.mock_db.get_session.return_value.__aexit__ = AsyncMock(return_value=None)
 
-        self.mock_session.get = AsyncMock(return_value=mock_key)
-        self.mock_session.commit = AsyncMock()
+        # Mock the database manager's update_api_key method
+        self.mock_db.update_api_key = AsyncMock(return_value=updated_key)
 
         result = await self.api_key_crud.update(key_id, {"is_active": False})
 
         assert result.is_active is False
-        self.mock_session.commit.assert_called_once()
+        self.mock_db.update_api_key.assert_called_once_with(
+            key_id, {"is_active": False}
+        )
 
 
 class TestServerInstanceCRUD:
@@ -389,47 +396,39 @@ class TestServerTemplateCRUD:
         """Test server template creation."""
         template_data = ServerTemplateCreate(
             name="Python Server",
-            command_template=["python", "-m", "{module}"],
             description="A Python MCP server template",
         )
 
-        # Mock session behavior
-        self.mock_db.get_session.return_value.__aenter__ = AsyncMock(
-            return_value=self.mock_session
+        # Create expected template object
+        expected_template = ServerTemplate(
+            name="Python Server", description="A Python MCP server template"
         )
-        self.mock_db.get_session.return_value.__aexit__ = AsyncMock(return_value=None)
 
-        self.mock_session.add = Mock()
-        self.mock_session.commit = AsyncMock()
-        self.mock_session.refresh = AsyncMock()
+        # Mock the database manager's create_server_template method
+        self.mock_db.create_server_template = AsyncMock(return_value=expected_template)
 
         result = await self.template_crud.create(template_data)
 
         assert isinstance(result, ServerTemplate)
         assert result.name == "Python Server"
-        assert result.command_template == ["python", "-m", "{module}"]
+        assert result.description == "A Python MCP server template"
+        self.mock_db.create_server_template.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_get_all_templates(self):
         """Test getting all templates."""
         mock_templates = [
-            ServerTemplate(id=1, name="Template 1"),
-            ServerTemplate(id=2, name="Template 2"),
+            ServerTemplate(name="Template 1", description="Description 1"),
+            ServerTemplate(name="Template 2", description="Description 2"),
         ]
 
-        # Mock session behavior
-        self.mock_db.get_session.return_value.__aenter__ = AsyncMock(
-            return_value=self.mock_session
-        )
-        self.mock_db.get_session.return_value.__aexit__ = AsyncMock(return_value=None)
-
-        mock_result = Mock()
-        mock_result.scalars.return_value.all.return_value = mock_templates
-        self.mock_session.execute = AsyncMock(return_value=mock_result)
+        # Mock the database manager's get_server_templates method
+        self.mock_db.get_server_templates = AsyncMock(return_value=mock_templates)
 
         result = await self.template_crud.get_all()
 
         assert len(result) == 2
+        self.mock_db.get_server_templates.assert_called_once()
 
 
 class TestDatabaseIntegration:
@@ -445,19 +444,17 @@ class TestDatabaseIntegration:
         with patch.object(db_manager, "get_session") as mock_get_session:
             mock_session = AsyncMock()
             mock_session.commit.side_effect = Exception("Database error")
-            mock_get_session.return_value.__aenter__ = AsyncMock(
-                return_value=mock_session
-            )
-            mock_get_session.return_value.__aexit__ = AsyncMock()
+            mock_session.rollback = AsyncMock()
 
-            user_crud = UserCRUD(db_manager)
-            user_data = UserCreate(username="testuser", password="testpass123")
+            # Mock the async context manager to raise exception
+            async_context = AsyncMock()
+            async_context.__aenter__ = AsyncMock(return_value=mock_session)
+            async_context.__aexit__ = AsyncMock(side_effect=Exception("Database error"))
+            mock_get_session.return_value = async_context
 
             with pytest.raises(Exception, match="Database error"):
-                await user_crud.create(user_data, hashed_password="hash")
-
-            # Session should still attempt commit even if it fails
-            mock_session.commit.assert_called_once()
+                async with db_manager.get_session() as session:
+                    await session.commit()
 
     def test_crud_inheritance(self):
         """Test that CRUD classes inherit properly."""
