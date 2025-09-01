@@ -29,17 +29,19 @@ try:
 except ImportError as e:
     print(f"Warning: Could not import TemplateDiscovery: {e}")
     print("Falling back to standalone template discovery...")
-    
+
     # Fallback class for standalone operation
     class TemplateDiscovery:
         def __init__(self):
             pass
-        
+
         def discover_templates(self):
             """Fallback template discovery."""
             templates = {}
-            templates_dir = Path(__file__).parent.parent / "mcp_platform" / "template" / "templates"
-            
+            templates_dir = (
+                Path(__file__).parent.parent / "mcp_platform" / "template" / "templates"
+            )
+
             for template_dir in templates_dir.iterdir():
                 if template_dir.is_dir():
                     template_json = template_dir / "template.json"
@@ -51,13 +53,15 @@ except ImportError as e:
                             print(f"  ✅ Found template: {template_dir.name}")
                         except Exception as exc:
                             print(f"  ⚠️  Error loading {template_dir.name}: {exc}")
-            
+
             return templates
+
 
 # Try to import MCPClient for dynamic tool discovery
 try:
     from mcp_platform.client import MCPClient
     from mcp_platform.core.tool_manager import ToolManager
+
     MCP_CLIENT_AVAILABLE = True
 except ImportError as e:
     print(f"Warning: Could not import MCPClient: {e}")
@@ -94,32 +98,34 @@ async def discover_tools_dynamically(template_id: str) -> List[Dict]:
     if not MCP_CLIENT_AVAILABLE:
         print(f"  ⚠️  MCPClient not available, using static discovery for {template_id}")
         return []
-    
+
     try:
         print(f"  🔍 Attempting dynamic tool discovery for {template_id}...")
-        
+
         # Use ToolManager directly for better control
         tool_manager = ToolManager(backend_type="docker")
-        
+
         # Try to discover tools dynamically with a short timeout
         result = tool_manager.list_tools(
             template_id,
             static=False,  # Only use dynamic discovery
             dynamic=True,
             timeout=60,  # Longer timeout for CI environment
-            force_refresh=True
+            force_refresh=True,
         )
-        
+
         tools = result.get("tools", [])
         discovery_method = result.get("discovery_method", "unknown")
-        
+
         if tools:
-            print(f"  ✅ Dynamic discovery found {len(tools)} tools via {discovery_method}")
+            print(
+                f"  ✅ Dynamic discovery found {len(tools)} tools via {discovery_method}"
+            )
             return tools
         else:
             print(f"  ⚠️  Dynamic discovery found no tools for {template_id}")
             return []
-            
+
     except Exception as e:
         print(f"  ⚠️  Dynamic tool discovery failed for {template_id}: {e}")
         return []
@@ -168,17 +174,19 @@ async def generate_usage_md(template_id: str, template_info: Dict) -> str:
     """Generate standardized usage.md content for a template using dynamic tool discovery."""
     template_config = template_info["config"]
     template_name = template_config.get("name", template_id.title())
-    
+
     # Try dynamic tool discovery first, fall back to static
     tools = await discover_tools_dynamically(template_id)
     discovery_method = "dynamic"
-    
+
     if not tools:
         tools = discover_tools_static(template_config)
         discovery_method = "static"
-        
-    print(f"  📝 Generating usage.md for {template_id} using {discovery_method} discovery ({len(tools)} tools)")
-    
+
+    print(
+        f"  📝 Generating usage.md for {template_id} using {discovery_method} discovery ({len(tools)} tools)"
+    )
+
     usage_content = f"""# {template_name} Usage Guide
 
 ## Overview
@@ -219,13 +227,13 @@ This guide shows how to use the {template_name} with different MCP clients and i
 ## Available Tools
 
 """
-    
+
     # Add tool documentation
     if tools:
         for tool in tools:
             tool_name = tool.get("name", "unknown_tool")
             tool_desc = tool.get("description", "No description available")
-            
+
             # Handle different parameter formats
             tool_params = []
             if "parameters" in tool:
@@ -233,18 +241,23 @@ This guide shows how to use the {template_name} with different MCP clients and i
                 if isinstance(tool["parameters"], list):
                     tool_params = tool["parameters"]
                 # Handle parameters as schema with properties
-                elif isinstance(tool["parameters"], dict) and "properties" in tool["parameters"]:
+                elif (
+                    isinstance(tool["parameters"], dict)
+                    and "properties" in tool["parameters"]
+                ):
                     properties = tool["parameters"]["properties"]
                     required = tool["parameters"].get("required", [])
                     for param_name, param_def in properties.items():
                         param_obj = {
                             "name": param_name,
                             "type": param_def.get("type", "string"),
-                            "description": param_def.get("description", "No description"),
-                            "required": param_name in required
+                            "description": param_def.get(
+                                "description", "No description"
+                            ),
+                            "required": param_name in required,
                         }
                         tool_params.append(param_obj)
-            
+
             usage_content += f"""### {tool_name}
 
 **Description**: {tool_desc}
@@ -256,11 +269,13 @@ This guide shows how to use the {template_name} with different MCP clients and i
                     param_name = param.get("name", "unknown")
                     param_desc = param.get("description", "No description")
                     param_type = param.get("type", "string")
-                    param_required = " (required)" if param.get("required", False) else " (optional)"
+                    param_required = (
+                        " (required)" if param.get("required", False) else " (optional)"
+                    )
                     usage_content += f"- `{param_name}` ({param_type}){param_required}: {param_desc}\n"
             else:
                 usage_content += "- No parameters required\n"
-            
+
             usage_content += "\n"
     else:
         # Handle templates without defined tools (like GitHub MCP Server)
@@ -269,7 +284,7 @@ This guide shows how to use the {template_name} with different MCP clients and i
 Use the tool discovery methods above to see the full list of available tools for this template.
 
 """
-    
+
     # Add usage examples section with tabs
     usage_content += f"""## Usage Examples
 
@@ -287,27 +302,30 @@ Use the tool discovery methods above to see the full list of available tools for
     ```
 
 """
-    
+
     if tools:
         usage_content += "    Then call tools:\n\n"
         # Add interactive CLI examples for each tool
         for tool in tools[:3]:  # Show examples for first 3 tools
             tool_name = tool.get("name", "unknown_tool")
-            
+
             # Handle different parameter formats for examples
             tool_params = []
             if "parameters" in tool:
                 if isinstance(tool["parameters"], list):
                     tool_params = tool["parameters"]
-                elif isinstance(tool["parameters"], dict) and "properties" in tool["parameters"]:
+                elif (
+                    isinstance(tool["parameters"], dict)
+                    and "properties" in tool["parameters"]
+                ):
                     properties = tool["parameters"]["properties"]
                     for param_name, param_def in properties.items():
                         param_obj = {
                             "name": param_name,
-                            "type": param_def.get("type", "string")
+                            "type": param_def.get("type", "string"),
                         }
                         tool_params.append(param_obj)
-            
+
             if tool_params:
                 # Create example parameters
                 example_params = {}
@@ -322,7 +340,7 @@ Use the tool discovery methods above to see the full list of available tools for
                         example_params[param_name] = 123
                     else:
                         example_params[param_name] = "example_value"
-                
+
                 params_json = json.dumps(example_params)
                 usage_content += f"""    ```bash
     mcpp> call {template_id} {tool_name} '{params_json}'
@@ -338,14 +356,14 @@ Use the tool discovery methods above to see the full list of available tools for
     else:
         # Generic example for templates without predefined tools
         usage_content += f"""    Example tool calls (replace with actual tool names discovered above):
-    
+
     ```bash
     # Example - replace 'tool_name' with actual tool from discovery
     mcpp> call {template_id} tool_name '{{"param": "value"}}'
     ```
 
 """
-    
+
     # Add CLI deployment section with tabs
     usage_content += f"""=== "Regular CLI"
 
@@ -371,39 +389,42 @@ Use the tool discovery methods above to see the full list of available tools for
 
     async def use_{template_id.replace('-', '_')}():
         client = MCPClient()
-        
+
         # Start the server
         deployment = client.start_server("{template_id}", {{}})
-        
+
         if deployment["success"]:
             deployment_id = deployment["deployment_id"]
-            
+
             try:
                 # Discover available tools
                 tools = client.list_tools("{template_id}")
                 print(f"Available tools: {{[t['name'] for t in tools]}}")
-                
+
 """
-    
+
     # Add Python client examples for each tool
     if tools:
         for tool in tools[:2]:  # Show examples for first 2 tools
             tool_name = tool.get("name", "unknown_tool")
-            
-            # Handle different parameter formats for examples  
+
+            # Handle different parameter formats for examples
             tool_params = []
             if "parameters" in tool:
                 if isinstance(tool["parameters"], list):
                     tool_params = tool["parameters"]
-                elif isinstance(tool["parameters"], dict) and "properties" in tool["parameters"]:
+                elif (
+                    isinstance(tool["parameters"], dict)
+                    and "properties" in tool["parameters"]
+                ):
                     properties = tool["parameters"]["properties"]
                     for param_name, param_def in properties.items():
                         param_obj = {
                             "name": param_name,
-                            "type": param_def.get("type", "string")
+                            "type": param_def.get("type", "string"),
                         }
                         tool_params.append(param_obj)
-            
+
             if tool_params:
                 example_params = {}
                 for param in tool_params:
@@ -417,26 +438,26 @@ Use the tool discovery methods above to see the full list of available tools for
                         example_params[param_name] = 123
                     else:
                         example_params[param_name] = "example_value"
-                
+
                 usage_content += f"""                # Call {tool_name}
                 result = client.call_tool("{template_id}", "{tool_name}", {example_params})
                 print(f"{tool_name} result: {{result}}")
-                
+
 """
             else:
                 usage_content += f"""                # Call {tool_name}
                 result = client.call_tool("{template_id}", "{tool_name}", {{}})
                 print(f"{tool_name} result: {{result}}")
-                
+
 """
     else:
         # Generic example for templates without predefined tools
         usage_content += f"""                # Example tool call (replace with actual tool name)
                 # result = client.call_tool("{template_id}", "tool_name", {{"param": "value"}})
                 # print(f"Tool result: {{result}}")
-                
+
 """
-    
+
     usage_content += f"""            finally:
                 # Clean up
                 client.stop_server(deployment_id)
@@ -503,7 +524,7 @@ For template-specific configuration options, see the main template documentation
 === "Environment Variables"
 
     ```bash
-    # Deploy with environment variables  
+    # Deploy with environment variables
     python -m mcp_platform deploy {template_id} --env KEY=VALUE
     ```
 
@@ -512,7 +533,7 @@ For template-specific configuration options, see the main template documentation
     ```bash
     # Deploy with configuration
     python -m mcp_platform deploy {template_id} --config key=value
-    
+
     # Deploy with nested configuration
     python -m mcp_platform deploy {template_id} --config category__property=value
     ```
@@ -563,7 +584,7 @@ Enable debug logging for troubleshooting:
 
 For more help, see the [main documentation](../../) or open an issue in the repository.
 """
-    
+
     return usage_content
 
 
@@ -681,61 +702,61 @@ async def copy_template_docs(template_docs: Dict[str, Dict], docs_dir: Path):
 def remove_usage_sections_and_add_link(content: str, template_id: str) -> str:
     """Remove usage sections from content and add link to usage.md."""
     import re
-    
+
     # Common usage section patterns to remove
     usage_patterns = [
         r"### Usage\s*\n.*?(?=### |## |\Z)",  # ### Usage section
-        r"## Usage\s*\n.*?(?=### |## |\Z)",   # ## Usage section  
+        r"## Usage\s*\n.*?(?=### |## |\Z)",  # ## Usage section
         r"### Available Tools\s*\n.*?(?=### |## |\Z)",  # ### Available Tools section
-        r"## Available Tools\s*\n.*?(?=### |## |\Z)",   # ## Available Tools section
-        r"### API Reference\s*\n.*?(?=### |## |\Z)",    # ### API Reference section
-        r"## API Reference\s*\n.*?(?=### |## |\Z)",     # ## API Reference section
-        r"### Usage Examples\s*\n.*?(?=### |## |\Z)",   # ### Usage Examples section
-        r"## Usage Examples\s*\n.*?(?=### |## |\Z)",    # ## Usage Examples section
-        r"### Client Integration\s*\n.*?(?=### |## |\Z)", # ### Client Integration section
+        r"## Available Tools\s*\n.*?(?=### |## |\Z)",  # ## Available Tools section
+        r"### API Reference\s*\n.*?(?=### |## |\Z)",  # ### API Reference section
+        r"## API Reference\s*\n.*?(?=### |## |\Z)",  # ## API Reference section
+        r"### Usage Examples\s*\n.*?(?=### |## |\Z)",  # ### Usage Examples section
+        r"## Usage Examples\s*\n.*?(?=### |## |\Z)",  # ## Usage Examples section
+        r"### Client Integration\s*\n.*?(?=### |## |\Z)",  # ### Client Integration section
         r"## Client Integration\s*\n.*?(?=### |## |\Z)",  # ## Client Integration section
-        r"### Integration Examples\s*\n.*?(?=### |## |\Z)", # ### Integration Examples section
+        r"### Integration Examples\s*\n.*?(?=### |## |\Z)",  # ### Integration Examples section
         r"## Integration Examples\s*\n.*?(?=### |## |\Z)",  # ## Integration Examples section
-        r"### FastMCP Client\s*\n.*?(?=### |## |\Z)",    # ### FastMCP Client section
-        r"## FastMCP Client\s*\n.*?(?=### |## |\Z)",     # ## FastMCP Client section
-        r"### Claude Desktop Integration\s*\n.*?(?=### |## |\Z)", # ### Claude Desktop Integration section
+        r"### FastMCP Client\s*\n.*?(?=### |## |\Z)",  # ### FastMCP Client section
+        r"## FastMCP Client\s*\n.*?(?=### |## |\Z)",  # ## FastMCP Client section
+        r"### Claude Desktop Integration\s*\n.*?(?=### |## |\Z)",  # ### Claude Desktop Integration section
         r"## Claude Desktop Integration\s*\n.*?(?=### |## |\Z)",  # ## Claude Desktop Integration section
-        r"### VS Code Integration\s*\n.*?(?=### |## |\Z)", # ### VS Code Integration section
+        r"### VS Code Integration\s*\n.*?(?=### |## |\Z)",  # ### VS Code Integration section
         r"## VS Code Integration\s*\n.*?(?=### |## |\Z)",  # ## VS Code Integration section
-        r"### cURL Testing\s*\n.*?(?=### |## |\Z)",      # ### cURL Testing section
-        r"## cURL Testing\s*\n.*?(?=### |## |\Z)",       # ## cURL Testing section
+        r"### cURL Testing\s*\n.*?(?=### |## |\Z)",  # ### cURL Testing section
+        r"## cURL Testing\s*\n.*?(?=### |## |\Z)",  # ## cURL Testing section
     ]
-    
+
     # Remove usage-related sections
     for pattern in usage_patterns:
         content = re.sub(pattern, "", content, flags=re.DOTALL)
-    
+
     # Clean up multiple consecutive newlines
-    content = re.sub(r'\n{3,}', '\n\n', content)
-    
+    content = re.sub(r"\n{3,}", "\n\n", content)
+
     # Add link to usage.md before troubleshooting, contributing, or at the end
     usage_link = f"\n## Usage\n\nFor detailed usage examples, tool documentation, and integration guides, see the **[Usage Guide](usage.md)**.\n\n"
-    
+
     # Insert before common end sections
     insert_patterns = [
         "## Troubleshooting",
-        "## Contributing", 
+        "## Contributing",
         "## License",
         "## Support",
-        "## Development"
+        "## Development",
     ]
-    
+
     inserted = False
     for pattern in insert_patterns:
         if pattern in content:
             content = content.replace(pattern, usage_link + pattern)
             inserted = True
             break
-    
+
     # If no suitable place found, add at the end
     if not inserted:
         content = content.rstrip() + "\n" + usage_link
-    
+
     return content
 
 
@@ -861,22 +882,26 @@ def update_mkdocs_nav(template_docs: Dict[str, Dict], mkdocs_file: Path):
         if isinstance(section, dict) and "Templates" in section:
             nav[i]["Templates"] = template_nav_items
             templates_section_found = True
-            print(f"  ✅ Updated existing Templates section with {len(template_nav_items)} items")
+            print(
+                f"  ✅ Updated existing Templates section with {len(template_nav_items)} items"
+            )
             break
 
     # If Templates section not found, add it after Getting Started
     if not templates_section_found:
         templates_section = {"Templates": template_nav_items}
-        
+
         # Find where to insert (after Getting Started if it exists)
         insert_index = 1  # Default to after Home
         for i, section in enumerate(nav):
             if isinstance(section, dict) and "Getting Started" in section:
                 insert_index = i + 1
                 break
-        
+
         nav.insert(insert_index, templates_section)
-        print(f"  ✅ Created new Templates section with {len(template_nav_items)} items")
+        print(
+            f"  ✅ Created new Templates section with {len(template_nav_items)} items"
+        )
 
     # Write back the updated config
     with open(mkdocs_file, "w", encoding="utf-8") as f:
