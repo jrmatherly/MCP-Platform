@@ -519,7 +519,7 @@ class MCPClient:
 
         try:
             targets = self.list_servers(
-                template_name=template, all_backends=all_backends, status="running"
+                template_name=template, all_backends=all_backends
             )
 
             if not targets:

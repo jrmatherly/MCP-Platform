@@ -50,6 +50,10 @@ except ImportError:
         gcp_exceptions.BadRequest = Exception
 
         def default():
+            """
+            Default credentials for Google Cloud.
+            """
+
             return (None, None)
 
         service_account = types.ModuleType("service_account")
@@ -107,10 +111,10 @@ class BigQueryMCPServer:
                 int(
                     os.getenv(
                         "MCP_PORT",
-                        self.template_data.get("transport", {}).get("port", 7072),
+                        self.template_data.get("transport", {}).get("port", 7090),
                     )
                 )
-                if not os.getenv("MCP_TRANSPORT") == "stdio"
+                if os.getenv("MCP_TRANSPORT") != "stdio"
                 else None
             ),
         )
@@ -121,6 +125,7 @@ class BigQueryMCPServer:
 
     def _initialize_bigquery_client(self):
         """Initialize the BigQuery client with the configured authentication method."""
+
         auth_method = self.config_data.get("auth_method", "application_default")
         project_id = self.config_data.get("project_id")
 
@@ -128,7 +133,6 @@ class BigQueryMCPServer:
             raise ValueError(
                 "project_id is required for BigQuery client initialization"
             )
-
         try:
             if auth_method == "service_account":
                 service_account_path = self.config_data.get("service_account_path")
@@ -177,7 +181,7 @@ class BigQueryMCPServer:
                 raise ValueError(f"Unsupported authentication method: {auth_method}")
 
         except Exception as e:
-            self.logger.error(f"Failed to initialize BigQuery client: {e}")
+            self.logger.error("Failed to initialize BigQuery client: %s", e)
             raise
 
     def _is_dataset_allowed(self, dataset_id: str) -> bool:
@@ -188,7 +192,7 @@ class BigQueryMCPServer:
             try:
                 return bool(re.match(dataset_regex, dataset_id))
             except re.error as e:
-                self.logger.warning(f"Invalid regex pattern '{dataset_regex}': {e}")
+                self.logger.warning("Invalid regex pattern '%s': %s", dataset_regex, e)
                 return False
 
         # Check allowed_datasets patterns
@@ -259,7 +263,7 @@ class BigQueryMCPServer:
             }
 
         except Exception as e:
-            self.logger.error(f"Error listing datasets: {e}")
+            self.logger.error("Error listing datasets: %s", e)
             return {"success": False, "error": str(e), "datasets": []}
 
     def list_tables(self, dataset_id: str) -> Dict[str, Any]:
@@ -342,7 +346,9 @@ class BigQueryMCPServer:
             }
 
         except Exception as e:
-            self.logger.error(f"Error describing table '{dataset_id}.{table_id}': {e}")
+            self.logger.error(
+                "Error describing table '%s.%s': %s", dataset_id, table_id, e
+            )
             return {"success": False, "error": str(e)}
 
     def _format_nested_fields(self, fields) -> List[Dict[str, Any]]:
@@ -416,7 +422,7 @@ class BigQueryMCPServer:
             }
 
         except Exception as e:
-            self.logger.error(f"Error executing query: {e}")
+            self.logger.error("Error executing query: %s", e)
             return {"success": False, "error": str(e), "query": query}
 
     def get_job_status(self, job_id: str) -> Dict[str, Any]:
@@ -438,7 +444,7 @@ class BigQueryMCPServer:
             }
 
         except Exception as e:
-            self.logger.error(f"Error getting job status for '{job_id}': {e}")
+            self.logger.error("Error getting job status for '%s': %s", job_id, e)
             return {"success": False, "error": str(e), "job_id": job_id}
 
     def get_dataset_info(self, dataset_id: str) -> Dict[str, Any]:
@@ -470,13 +476,18 @@ class BigQueryMCPServer:
             }
 
         except Exception as e:
-            self.logger.error(f"Error getting dataset info for '{dataset_id}': {e}")
+            self.logger.error("Error getting dataset info for '%s': %s", dataset_id, e)
             return {"success": False, "error": str(e), "dataset_id": dataset_id}
 
     def run(self):
         """Run the BigQuery MCP server."""
         self.logger.info("Starting BigQuery MCP server...")
-        self.mcp.run()
+        self.mcp.run(
+            transport=os.getenv(
+                "MCP_TRANSPORT",
+                self.template_data.get("transport", {}).get("default", "http"),
+            ),
+        )
 
 
 def create_server(config_dict: dict = None) -> BigQueryMCPServer:

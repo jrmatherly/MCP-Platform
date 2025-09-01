@@ -335,7 +335,7 @@ Perfect for web applications and API integration:
 python -m mcp_platform deploy bigquery \
   --config project_id=my-project \
   --config mcp_transport=http \
-  --config mcp_port=7072
+  --config mcp_port=7090
 
 # Access via HTTP
 curl http://localhost:8000/health
@@ -491,14 +491,14 @@ async function analyzeUserBehavior() {
 
 ```bash
 # Basic deployment
-docker run -p 7072:7072 \
+docker run -p 7090:7090 \
   -e GOOGLE_CLOUD_PROJECT=my-project \
   -e GOOGLE_APPLICATION_CREDENTIALS=/creds/service-account.json \
   -v /path/to/service-account.json:/creds/service-account.json:ro \
   dataeverything/mcp-bigquery:latest
 
 # With security controls
-docker run -p 7072:7072 \
+docker run -p 7090:7090 \
   -e GOOGLE_CLOUD_PROJECT=my-project \
   -e BIGQUERY_READ_ONLY=true \
   -e BIGQUERY_ALLOWED_DATASETS="analytics_*,public_*" \
@@ -516,7 +516,7 @@ services:
   bigquery-mcp:
     image: dataeverything/mcp-bigquery:latest
     ports:
-      - "7072:7072"
+      - "7090:7090"
     environment:
       GOOGLE_CLOUD_PROJECT: my-project
       BIGQUERY_AUTH_METHOD: service_account
@@ -559,7 +559,7 @@ spec:
       - name: bigquery-mcp
         image: dataeverything/mcp-bigquery:latest
         ports:
-        - containerPort: 7072
+        - containerPort: 7090
         env:
         - name: GOOGLE_CLOUD_PROJECT
           value: "my-project"
@@ -578,13 +578,13 @@ spec:
         livenessProbe:
           httpGet:
             path: /health
-            port: 7072
+            port: 7090
           initialDelaySeconds: 30
           periodSeconds: 30
         readinessProbe:
           httpGet:
             path: /health
-            port: 7072
+            port: 7090
           initialDelaySeconds: 10
           periodSeconds: 10
       volumes:
@@ -600,8 +600,8 @@ spec:
   selector:
     app: bigquery-mcp
   ports:
-  - port: 7072
-    targetPort: 7072
+  - port: 7090
+    targetPort: 7090
   type: ClusterIP
 ```
 
@@ -688,7 +688,7 @@ Implement network-level security controls:
 
 ```bash
 # Bind to localhost only (for local deployment)
-docker run -p 127.0.0.1:7072:7072 dataeverything/mcp-bigquery
+docker run -p 127.0.0.1:7090:7090 dataeverything/mcp-bigquery
 
 # Use reverse proxy with authentication
 # nginx, Traefik, or cloud load balancer with auth
@@ -798,7 +798,7 @@ docker run --rm -e GOOGLE_CLOUD_PROJECT=test dataeverything/mcp-bigquery
 curl -v http://localhost:8000/health
 
 # Verify port binding
-netstat -tulpn | grep 7072
+netstat -tulpn | grep 7090
 
 # Check container status
 docker ps
@@ -863,7 +863,7 @@ curl http://localhost:8000/health | jq .
   "server_info": {
     "version": "1.0.0",
     "transport": "http",
-    "port": 7072
+    "port": 7090
   }
 }
 ```

@@ -256,7 +256,7 @@ class TemplateManager:
             return template_info.get("tools", [])
 
         except Exception as e:
-            logger.error(f"Failed to get tools for {template_id}: {e}")
+            logger.error("Failed to get tools for %s: %s", template_id, e)
             return []
 
     def refresh_cache(self):

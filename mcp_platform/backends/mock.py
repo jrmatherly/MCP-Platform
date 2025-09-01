@@ -174,10 +174,6 @@ class MockDeploymentService(BaseDeploymentBackend):
             "lines_returned": 0,
         }
 
-    def force_stop_deployment(self, deployment_name: str) -> bool:
-        """Force stop mock deployment."""
-        return self.stop_deployment(deployment_name, force=True)
-
     def stream_deployment_logs(self, deployment_name: str, lines: int = 100):
         """Stream mock deployment logs."""
         logs = self.get_deployment_logs(deployment_name, lines)

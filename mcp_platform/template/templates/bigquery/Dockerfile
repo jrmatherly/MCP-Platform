@@ -37,11 +37,10 @@ RUN mkdir -p /app/credentials /app/data && \
 USER mcpuser
 
 # Expose the default port
-EXPOSE 7072
+EXPOSE 7090
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:7072/health')" || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD curl -f http://localhost:7090/health || exit 1
 
 # Default command - can be overridden
 CMD ["python", "server.py"]

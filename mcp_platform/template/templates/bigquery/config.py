@@ -6,9 +6,11 @@ This module handles configuration loading, validation, and management for the
 BigQuery MCP server template.
 """
 
+import fnmatch
 import json
 import logging
 import os
+import re
 import sys
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -67,6 +69,77 @@ class BigQueryServerConfig(ServerConfig):
         # Set up logging based on config
         self._setup_logging()
 
+    def _get_config(
+        self, key: str, env_var: str, default: Any, cast_to: Optional[type] = str
+    ) -> Any:
+        """
+        Get configuration value with precedence handling.
+
+        Args:
+            key: Configuration key in config_dict
+            env_var: Environment variable name
+            default: Default value if not found
+            cast_to: Cast environment variable value to this type
+
+        Returns:
+            Configuration value
+        """
+        # Check config_dict first
+        if key in self.config_dict:
+            self.logger.debug(
+                "Using config_dict value for '%s': %s", key, self.config_dict[key]
+            )
+            return self.config_dict[key]
+
+        # Check environment variable
+        env_value = os.getenv(env_var)
+        if env_value is not None:
+            self.logger.debug("Using environment variable '%s': %s", env_var, env_value)
+            try:
+                return cast_to(env_value)
+            except (ValueError, TypeError) as e:
+                self.logger.error(
+                    "Error casting environment variable '%s': %s", env_var, e
+                )
+                return env_value
+
+        # Return default
+        self.logger.debug("Using default value for '%s': %s", key, default)
+
+        return default
+
+    def get_template_config(self) -> Dict[str, Any]:
+        """
+        Get configuration properties from the template.
+
+        Args:
+            template_path: Path to the template JSON file
+
+        Returns:
+            Dictionary containing template configuration properties
+        """
+
+        properties_dict = {}
+        properties = self.template_data.get("config_schema", {}).get("properties", {})
+        for key, value in properties.items():
+            # Load default values from environment or template
+            env_var = value.get("env_mapping", key.upper())
+            default_value = value.get("default", None)
+            data_type = value.get("type", "string")
+            if data_type == "integer":
+                cast_to = int
+            elif data_type == "float":
+                cast_to = float
+            elif data_type == "boolean":
+                cast_to = bool
+            else:
+                cast_to = str
+            properties_dict[key] = self._get_config(
+                key, env_var, default_value, cast_to
+            )
+
+        return properties_dict
+
     def _validate_config(self):
         """Validate BigQuery-specific configuration requirements."""
         config = self.get_template_config()
@@ -119,7 +192,11 @@ class BigQueryServerConfig(ServerConfig):
 
         # Validate numeric ranges and set defaults
         query_timeout = config.get("query_timeout", 300)
-        config["query_timeout"] = query_timeout
+        try:
+            query_timeout = int(query_timeout)
+        except (ValueError, TypeError) as exception:
+            raise ValueError("query_timeout must be an integer") from exception
+
         if (
             not isinstance(query_timeout, int)
             or query_timeout < 10
@@ -167,7 +244,7 @@ class BigQueryServerConfig(ServerConfig):
         valid_log_levels = ["debug", "info", "warning", "error"]
         if log_level not in valid_log_levels:
             self.logger.warning(
-                f"Invalid log_level '{log_level}', defaulting to 'info'"
+                "Invalid log_level '%s', defaulting to 'info'", log_level
             )
             config["log_level"] = "info"
 
@@ -258,8 +335,6 @@ class BigQueryServerConfig(ServerConfig):
         Returns:
             bool: True if access is allowed, False otherwise
         """
-        import fnmatch
-        import re
 
         security_config = self.get_security_config()
 
@@ -269,7 +344,7 @@ class BigQueryServerConfig(ServerConfig):
             try:
                 return bool(re.match(dataset_regex, dataset_id))
             except re.error as e:
-                self.logger.warning(f"Invalid regex pattern '{dataset_regex}': {e}")
+                self.logger.warning("Invalid regex pattern '%s': %s", dataset_regex, e)
                 return False
 
         # Check allowed_datasets patterns
@@ -305,7 +380,7 @@ class BigQueryServerConfig(ServerConfig):
 
         self.logger.info("BigQuery MCP Server Configuration:")
         for key, value in safe_config.items():
-            self.logger.info(f"  {key}: {value}")
+            self.logger.info("  %s: %s", key, value)
 
     def _load_template(self, template_path: str = None) -> Dict[str, Any]:
         """
@@ -332,7 +407,7 @@ class BigQueryServerConfig(ServerConfig):
                 "name": "BigQuery MCP Server",
                 "version": "1.0.0",
                 "description": "BigQuery MCP Server",
-                "transport": {"port": 7072},
+                "transport": {"port": 7090},
             }
 
     def get_template_data(self) -> Dict[str, Any]:
