@@ -12,9 +12,11 @@ This script:
 
 import asyncio
 import json
+import re
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import Dict, List
 
@@ -94,6 +96,7 @@ async def discover_tools_dynamically(template_id: str) -> List[Dict]:
     """
     Discover tools dynamically using MCPClient if available.
     Falls back to static discovery if MCPClient is not available.
+    Runs in a separate process to avoid event loop conflicts.
     """
     if not MCP_CLIENT_AVAILABLE:
         print(f"  ⚠️  MCPClient not available, using static discovery for {template_id}")
@@ -102,29 +105,97 @@ async def discover_tools_dynamically(template_id: str) -> List[Dict]:
     try:
         print(f"  🔍 Attempting dynamic tool discovery for {template_id}...")
 
-        # Use ToolManager directly for better control
-        tool_manager = ToolManager(backend_type="docker")
+        # Use subprocess to avoid event loop conflicts
 
-        # Try to discover tools dynamically with a short timeout
-        result = tool_manager.list_tools(
-            template_id,
-            static=False,  # Only use dynamic discovery
-            dynamic=True,
-            timeout=60,  # Longer timeout for CI environment
-            force_refresh=True,
-        )
+        # Create a temporary script to run discovery in a separate process
+        discovery_script = f"""
+import sys
+import json
+from pathlib import Path
 
-        tools = result.get("tools", [])
-        discovery_method = result.get("discovery_method", "unknown")
+# Add the project root to the path
+sys.path.insert(0, "{Path(__file__).parent.parent}")
 
-        if tools:
-            print(
-                f"  ✅ Dynamic discovery found {len(tools)} tools via {discovery_method}"
+try:
+    from mcp_platform.core.tool_manager import ToolManager
+
+    # Use ToolManager directly for better control
+    tool_manager = ToolManager(backend_type="docker")
+
+    # Try to discover tools dynamically with a short timeout
+    result = tool_manager.list_tools(
+        "{template_id}",
+        static=False,  # Only use dynamic discovery
+        dynamic=True,
+        timeout=60,  # Longer timeout for CI environment
+        force_refresh=True,
+    )
+
+    tools = result.get("tools", [])
+    discovery_method = result.get("discovery_method", "unknown")
+
+    print(json.dumps({{"tools": tools, "discovery_method": discovery_method}}))
+
+except Exception as e:
+    print(json.dumps({{"tools": [], "error": str(e)}}))
+"""
+
+        # Write script to temporary file and execute
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
+            f.write(discovery_script)
+            script_path = f.name
+
+        try:
+            # Run in subprocess with timeout
+            result = subprocess.run(
+                [sys.executable, script_path],
+                capture_output=True,
+                text=True,
+                timeout=120,  # 2 minute timeout
+                cwd=Path(__file__).parent.parent,
             )
-            return tools
-        else:
-            print(f"  ⚠️  Dynamic discovery found no tools for {template_id}")
-            return []
+
+            if result.returncode == 0:
+                try:
+                    output_lines = result.stdout.strip().split("\n")
+                    # Get the last line which should be our JSON output
+                    json_line = output_lines[-1]
+                    data = json.loads(json_line)
+
+                    tools = data.get("tools", [])
+                    discovery_method = data.get("discovery_method", "unknown")
+                    error = data.get("error")
+
+                    if error:
+                        print(
+                            f"  ⚠️  Dynamic discovery error for {template_id}: {error}"
+                        )
+                        return []
+                    elif tools:
+                        print(
+                            f"  ✅ Dynamic discovery found {len(tools)} tools via {discovery_method}"
+                        )
+                        return tools
+                    else:
+                        print(
+                            f"  ⚠️  Dynamic discovery found no tools for {template_id}"
+                        )
+                        return []
+
+                except (json.JSONDecodeError, IndexError) as e:
+                    print(
+                        f"  ⚠️  Failed to parse discovery output for {template_id}: {e}"
+                    )
+                    return []
+            else:
+                print(
+                    f"  ⚠️  Discovery process failed for {template_id}: {result.stderr}"
+                )
+                return []
+
+        finally:
+            # Clean up temporary file
+            Path(script_path).unlink(missing_ok=True)
 
     except Exception as e:
         print(f"  ⚠️  Dynamic tool discovery failed for {template_id}: {e}")
@@ -588,6 +659,127 @@ For more help, see the [main documentation](../../) or open an issue in the repo
     return usage_content
 
 
+def generate_api_reference(
+    template_id: str, template_info: Dict, tools: List[Dict]
+) -> str:
+    """Generate API reference documentation for a template."""
+    template_name = template_info["name"]
+    description = template_info.get("description", "")
+
+    content = f"""# {template_name} API Reference
+
+{description}
+
+This reference provides detailed information about all available tools and their parameters.
+
+## Available Tools
+
+"""
+
+    # Group tools by category if available
+    categorized_tools = {}
+    for tool in tools:
+        category = tool.get("category", "General")
+        if category not in categorized_tools:
+            categorized_tools[category] = []
+        categorized_tools[category].append(tool)
+
+    # Generate documentation for each category
+    for category, category_tools in categorized_tools.items():
+        if len(categorized_tools) > 1:
+            content += f"### {category}\n\n"
+
+        for tool in category_tools:
+            name = tool.get("name", "Unknown")
+            description = tool.get("description", "No description available")
+
+            content += f"#### `{name}`\n\n"
+            content += f"**Description**: {description}\n\n"
+
+            # Parameters
+            params = tool.get("parameters", {})
+
+            # Handle both old format (list) and new format (dict)
+            if isinstance(params, list):
+                # Old format: list of parameter objects
+                if params:
+                    content += "**Parameters**:\n\n"
+                    for param in params:
+                        param_name = param.get("name", "unknown")
+                        param_type = param.get("type", "unknown")
+                        param_desc = param.get("description", "No description")
+                        is_required = param.get("required", False)
+
+                        required_badge = (
+                            " *(required)*" if is_required else " *(optional)*"
+                        )
+                        content += f"- **`{param_name}`** ({param_type}){required_badge}: {param_desc}\n"
+                    content += "\n"
+                else:
+                    content += "**Parameters**: No parameters required\n\n"
+            elif isinstance(params, dict) and params.get("properties"):
+                # New format: dict with properties
+                content += "**Parameters**:\n\n"
+
+                properties = params.get("properties", {})
+                required = params.get("required", [])
+
+                for param_name, param_info in properties.items():
+                    param_type = param_info.get("type", "unknown")
+                    param_desc = param_info.get("description", "No description")
+                    is_required = param_name in required
+
+                    required_badge = " *(required)*" if is_required else " *(optional)*"
+                    content += f"- **`{param_name}`** ({param_type}){required_badge}: {param_desc}\n"
+
+                content += "\n"
+            else:
+                content += "**Parameters**: No parameters required\n\n"
+
+            # Example usage
+            content += f"""**Example Usage**:
+
+=== "CLI"
+    ```bash
+    python -m mcp_platform call {template_id} {name}
+    ```
+
+=== "Python"
+    ```python
+    from mcp_platform.client import MCPClient
+
+    client = MCPClient()
+    result = client.call_tool("{template_id}", "{name}", {{}})
+    ```
+
+=== "HTTP API"
+    ```bash
+    curl -X POST http://localhost:8000/v1/call \\
+      -H "Content-Type: application/json" \\
+      -d '{{"template_id": "{template_id}", "tool_name": "{name}", "arguments": {{}}}}'
+    ```
+
+---
+
+"""
+
+    # Add footer
+    content += f"""
+## Integration Examples
+
+For more integration examples and usage patterns, see the [Usage Guide](usage.md).
+
+## Support
+
+For questions and issues related to the {template_name}, please refer to:
+- [Usage Guide](usage.md) for comprehensive examples
+- [Template Overview](index.md) for setup and configuration
+- [MCP Platform Documentation](../../index.md) for general platform usage
+"""
+
+    return content
+
+
 async def copy_template_docs(template_docs: Dict[str, Dict], docs_dir: Path):
     """Copy template documentation to docs directory and fix CLI commands."""
     print("📄 Copying template documentation...")
@@ -604,6 +796,14 @@ async def copy_template_docs(template_docs: Dict[str, Dict], docs_dir: Path):
         with open(template_doc_dir / "usage.md", "w", encoding="utf-8") as f:
             f.write(usage_content)
         print(f"  📝 Generated usage.md for {template_id}")
+
+        # Generate API reference if template has tools
+        tools = template_info["config"].get("tools", [])
+        if tools and len(tools) > 0:
+            api_content = generate_api_reference(template_id, template_info, tools)
+            with open(template_doc_dir / "api.md", "w", encoding="utf-8") as f:
+                f.write(api_content)
+            print(f"  📝 Generated api.md for {template_id} ({len(tools)} tools)")
 
         # Copy the index.md file and fix CLI commands
         dest_file = template_doc_dir / "index.md"
@@ -672,7 +872,6 @@ async def copy_template_docs(template_docs: Dict[str, Dict], docs_dir: Path):
             # Replace or append configuration section
             if "## Configuration" in content and "This template supports" in content:
                 # Replace simple configuration section with detailed one
-                import re
 
                 pattern = r"## Configuration.*?(?=##|\Z)"
                 content = re.sub(
@@ -686,6 +885,9 @@ async def copy_template_docs(template_docs: Dict[str, Dict], docs_dir: Path):
                     )
                 else:
                     content += "\n" + config_section
+
+        # Apply usage section addition AFTER configuration processing
+        content = remove_usage_sections_and_add_link(content, template_id)
 
         with open(dest_file, "w", encoding="utf-8") as f:
             f.write(content)
@@ -703,42 +905,70 @@ def remove_usage_sections_and_add_link(content: str, template_id: str) -> str:
     """Remove usage sections from content and add link to usage.md."""
     import re
 
-    # Common usage section patterns to remove
+    # More comprehensive usage section patterns to remove
     usage_patterns = [
-        r"### Usage\s*\n.*?(?=### |## |\Z)",  # ### Usage section
-        r"## Usage\s*\n.*?(?=### |## |\Z)",  # ## Usage section
-        r"### Available Tools\s*\n.*?(?=### |## |\Z)",  # ### Available Tools section
-        r"## Available Tools\s*\n.*?(?=### |## |\Z)",  # ## Available Tools section
-        r"### API Reference\s*\n.*?(?=### |## |\Z)",  # ### API Reference section
-        r"## API Reference\s*\n.*?(?=### |## |\Z)",  # ## API Reference section
-        r"### Usage Examples\s*\n.*?(?=### |## |\Z)",  # ### Usage Examples section
-        r"## Usage Examples\s*\n.*?(?=### |## |\Z)",  # ## Usage Examples section
-        r"### Client Integration\s*\n.*?(?=### |## |\Z)",  # ### Client Integration section
-        r"## Client Integration\s*\n.*?(?=### |## |\Z)",  # ## Client Integration section
-        r"### Integration Examples\s*\n.*?(?=### |## |\Z)",  # ### Integration Examples section
-        r"## Integration Examples\s*\n.*?(?=### |## |\Z)",  # ## Integration Examples section
-        r"### FastMCP Client\s*\n.*?(?=### |## |\Z)",  # ### FastMCP Client section
-        r"## FastMCP Client\s*\n.*?(?=### |## |\Z)",  # ## FastMCP Client section
-        r"### Claude Desktop Integration\s*\n.*?(?=### |## |\Z)",  # ### Claude Desktop Integration section
-        r"## Claude Desktop Integration\s*\n.*?(?=### |## |\Z)",  # ## Claude Desktop Integration section
-        r"### VS Code Integration\s*\n.*?(?=### |## |\Z)",  # ### VS Code Integration section
-        r"## VS Code Integration\s*\n.*?(?=### |## |\Z)",  # ## VS Code Integration section
-        r"### cURL Testing\s*\n.*?(?=### |## |\Z)",  # ### cURL Testing section
-        r"## cURL Testing\s*\n.*?(?=### |## |\Z)",  # ## cURL Testing section
+        r"## Available Tools\s*\n.*?(?=##|\Z)",  # ## Available Tools section
+        r"### Available Tools\s*\n.*?(?=###|##|\Z)",  # ### Available Tools section
+        r"## Usage\s*\n.*?(?=##|\Z)",  # ## Usage section
+        r"### Usage\s*\n.*?(?=###|##|\Z)",  # ### Usage section
+        r"## Usage Examples\s*\n.*?(?=##|\Z)",  # ## Usage Examples section
+        r"### Usage Examples\s*\n.*?(?=###|##|\Z)",  # ### Usage Examples section
+        r"## API Reference\s*\n.*?(?=##|\Z)",  # ## API Reference section
+        r"### API Reference\s*\n.*?(?=###|##|\Z)",  # ### API Reference section
+        r"## Tool Documentation\s*\n.*?(?=##|\Z)",  # ## Tool Documentation section
+        r"### Tool Documentation\s*\n.*?(?=###|##|\Z)",  # ### Tool Documentation section
+        r"## Client Integration\s*\n.*?(?=##|\Z)",  # ## Client Integration section
+        r"### Client Integration\s*\n.*?(?=###|##|\Z)",  # ### Client Integration section
+        r"## Integration Examples\s*\n.*?(?=##|\Z)",  # ## Integration Examples section
+        r"### Integration Examples\s*\n.*?(?=###|##|\Z)",  # ### Integration Examples section
+        r"## FastMCP Client\s*\n.*?(?=##|\Z)",  # ## FastMCP Client section
+        r"### FastMCP Client\s*\n.*?(?=###|##|\Z)",  # ### FastMCP Client section
+        r"## Claude Desktop Integration\s*\n.*?(?=##|\Z)",  # ## Claude Desktop Integration section
+        r"### Claude Desktop Integration\s*\n.*?(?=###|##|\Z)",  # ### Claude Desktop Integration section
+        r"## VS Code Integration\s*\n.*?(?=##|\Z)",  # ## VS Code Integration section
+        r"### VS Code Integration\s*\n.*?(?=###|##|\Z)",  # ### VS Code Integration section
+        r"## cURL Testing\s*\n.*?(?=##|\Z)",  # ## cURL Testing section
+        r"### cURL Testing\s*\n.*?(?=###|##|\Z)",  # ### cURL Testing section
+        r"## HTTP Endpoints\s*\n.*?(?=##|\Z)",  # ## HTTP Endpoints section
+        r"### HTTP Endpoints\s*\n.*?(?=###|##|\Z)",  # ### HTTP Endpoints section
+        r"## Tool Management\s*\n.*?(?=##|\Z)",  # ## Tool Management section
+        r"### Tool Management\s*\n.*?(?=###|##|\Z)",  # ### Tool Management section
+    ]
+
+    # Remove curl examples that show direct server access
+    curl_patterns = [
+        r"```bash\s*\n.*?curl.*?:707[0-9]/call.*?\n.*?```",  # curl examples with port 7070-7079
+        r"```bash\s*\n.*?curl.*?localhost:707[0-9].*?\n.*?```",  # curl examples with localhost:707x
+        r"```\s*\n.*?curl.*?:707[0-9]/call.*?\n.*?```",  # curl examples without bash
     ]
 
     # Remove usage-related sections
     for pattern in usage_patterns:
         content = re.sub(pattern, "", content, flags=re.DOTALL)
 
+    # Remove incorrect curl examples
+    for pattern in curl_patterns:
+        content = re.sub(pattern, "", content, flags=re.DOTALL | re.MULTILINE)
+
     # Clean up multiple consecutive newlines
     content = re.sub(r"\n{3,}", "\n\n", content)
 
-    # Add link to usage.md before troubleshooting, contributing, or at the end
-    usage_link = f"\n## Usage\n\nFor detailed usage examples, tool documentation, and integration guides, see the **[Usage Guide](usage.md)**.\n\n"
+    # Create a more prominent usage section with better integration
+    usage_section = (
+        "## Usage & API Reference\n\n"
+        "For comprehensive usage examples, tool documentation, and integration guides:\n\n"
+        "**[View Complete Usage Guide](usage.md)**\n\n"
+        "The usage guide includes:\n"
+        "- **Available Tools** - Complete list of tools with parameters and examples\n"
+        "- **Integration Examples** - Python, JavaScript, and CLI usage\n"
+        "- **HTTP API** - REST endpoint documentation\n"
+        "- **Configuration** - Setup and deployment options\n"
+        "- **Best Practices** - Tips for optimal usage\n\n"
+    )
 
     # Insert before common end sections
     insert_patterns = [
+        "## Configuration",
         "## Troubleshooting",
         "## Contributing",
         "## License",
@@ -749,13 +979,13 @@ def remove_usage_sections_and_add_link(content: str, template_id: str) -> str:
     inserted = False
     for pattern in insert_patterns:
         if pattern in content:
-            content = content.replace(pattern, usage_link + pattern)
+            content = content.replace(pattern, usage_section + pattern)
             inserted = True
             break
 
-    # If no suitable place found, add at the end
+    # If no insertion point found, append at the end
     if not inserted:
-        content = content.rstrip() + "\n" + usage_link
+        content = content.rstrip() + "\n" + usage_section
 
     return content
 
@@ -854,8 +1084,8 @@ This page lists all available MCP Platform server templates.
 
 
 def update_mkdocs_nav(template_docs: Dict[str, Dict], mkdocs_file: Path):
-    """Update mkdocs.yml navigation with template pages dynamically."""
-    print("⚙️  Updating mkdocs navigation dynamically...")
+    """Update mkdocs.yml navigation with modern template structure."""
+    print("⚙️  Updating mkdocs navigation with modern template structure...")
 
     with open(mkdocs_file, "r", encoding="utf-8") as f:
         mkdocs_config = yaml.safe_load(f)
@@ -863,18 +1093,33 @@ def update_mkdocs_nav(template_docs: Dict[str, Dict], mkdocs_file: Path):
     # Find the Templates section in nav
     nav = mkdocs_config.get("nav", [])
 
-    # Build template navigation dynamically
+    # Build modern template navigation structure
     template_nav_items = [
         {"Overview": "server-templates/index.md"},
         {"Available Templates": "server-templates/available.md"},
     ]
 
-    # Add individual template pages sorted by name
+    # Add each template with subsections for overview and usage
     sorted_templates = sorted(template_docs.items(), key=lambda x: x[1]["name"])
     for template_id, template_info in sorted_templates:
-        template_nav_items.append(
-            {template_info["name"]: f"server-templates/{template_id}/index.md"}
-        )
+        template_name = template_info["name"]
+
+        # Create subsection for each template with multiple pages
+        template_subsection = {
+            template_name: [
+                {"Overview": f"server-templates/{template_id}/index.md"},
+                {"Usage Guide": f"server-templates/{template_id}/usage.md"},
+            ]
+        }
+
+        # Add API Reference if the template has tools
+        tools = template_info["config"].get("tools", [])
+        if tools and len(tools) > 0:
+            template_subsection[template_name].append(
+                {"API Reference": f"server-templates/{template_id}/api.md"}
+            )
+
+        template_nav_items.append(template_subsection)
 
     # Find and update the Templates section, or create it if not found
     templates_section_found = False
@@ -883,7 +1128,7 @@ def update_mkdocs_nav(template_docs: Dict[str, Dict], mkdocs_file: Path):
             nav[i]["Templates"] = template_nav_items
             templates_section_found = True
             print(
-                f"  ✅ Updated existing Templates section with {len(template_nav_items)} items"
+                f"  ✅ Updated Templates section with modern structure for {len(sorted_templates)} templates"
             )
             break
 
@@ -900,7 +1145,7 @@ def update_mkdocs_nav(template_docs: Dict[str, Dict], mkdocs_file: Path):
 
         nav.insert(insert_index, templates_section)
         print(
-            f"  ✅ Created new Templates section with {len(template_nav_items)} items"
+            f"  ✅ Created Templates section with modern structure for {len(sorted_templates)} templates"
         )
 
     # Write back the updated config
@@ -914,7 +1159,7 @@ def update_mkdocs_nav(template_docs: Dict[str, Dict], mkdocs_file: Path):
             width=1000,
         )
 
-    print("✅ MkDocs navigation updated dynamically")
+    print("✅ MkDocs navigation updated with modern template structure")
 
 
 def build_docs():
@@ -969,6 +1214,16 @@ async def main():
 
     # Update mkdocs navigation dynamically
     update_mkdocs_nav(template_docs, mkdocs_file)
+
+    # Generate Gateway API documentation
+    print("📝 Generating Gateway API documentation...")
+    try:
+        from scripts.generate_gateway_docs import generate_gateway_api_docs
+
+        generate_gateway_api_docs()
+        print("✅ Gateway API documentation generated successfully")
+    except Exception as e:
+        print(f"⚠️  Warning: Could not generate Gateway API docs: {e}")
 
     # Build documentation
     if build_docs():
