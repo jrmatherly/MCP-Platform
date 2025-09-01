@@ -1,4 +1,20 @@
-# MCP Gateway API Reference
+#!/usr/bin/env python3
+"""
+Generate Gateway API documentation from FastAPI OpenAPI schema.
+
+This script generates static markdown documentation for the Gateway API.
+"""
+
+import sys
+from pathlib import Path
+
+# Add the project root to the path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+
+def create_api_reference_content() -> str:
+    """Create the complete API reference content."""
+    return """# MCP Gateway API Reference
 
 Enhanced unified HTTP gateway for Model Context Protocol servers with authentication, database persistence, and comprehensive management capabilities.
 
@@ -18,8 +34,8 @@ The MCP Gateway supports multiple authentication methods:
 
 1. **Login to get a token:**
    ```bash
-   curl -X POST "http://localhost:8000/auth/login" \
-     -H "Content-Type: application/x-www-form-urlencoded" \
+   curl -X POST "http://localhost:8000/auth/login" \\
+     -H "Content-Type: application/x-www-form-urlencoded" \\
      -d "username=your_username&password=your_password"
    ```
 
@@ -32,9 +48,9 @@ The MCP Gateway supports multiple authentication methods:
 
 1. **Create an API key** (requires admin access):
    ```bash
-   curl -X POST "http://localhost:8000/auth/api-keys" \
-     -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-     -H "Content-Type: application/json" \
+   curl -X POST "http://localhost:8000/auth/api-keys" \\
+     -H "Authorization: Bearer YOUR_JWT_TOKEN" \\
+     -H "Content-Type: application/json" \\
      -d '{"name": "my-api-key", "permissions": ["gateway:read", "tools:call"]}'
    ```
 
@@ -95,8 +111,8 @@ Authenticate user and return JWT token.
 
 **Example:**
 ```bash
-curl -X POST "http://localhost:8000/auth/login" \
-  -H "Content-Type: application/x-www-form-urlencoded" \
+curl -X POST "http://localhost:8000/auth/login" \\
+  -H "Content-Type: application/x-www-form-urlencoded" \\
   -d "username=admin&password=password"
 ```
 
@@ -118,9 +134,9 @@ Create a new user (admin only).
 
 **Example:**
 ```bash
-curl -X POST "http://localhost:8000/auth/users" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -H "Content-Type: application/json" \
+curl -X POST "http://localhost:8000/auth/users" \\
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \\
+  -H "Content-Type: application/json" \\
   -d '{"username": "newuser", "email": "user@example.com", "password": "password123"}'
 ```
 
@@ -141,9 +157,9 @@ Create a new API key.
 
 **Example:**
 ```bash
-curl -X POST "http://localhost:8000/auth/api-keys" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -H "Content-Type: application/json" \
+curl -X POST "http://localhost:8000/auth/api-keys" \\
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \\
+  -H "Content-Type: application/json" \\
   -d '{"name": "my-service-key", "permissions": ["gateway:read", "tools:call"]}'
 ```
 
@@ -162,7 +178,7 @@ List all registered MCP servers.
 
 **Example:**
 ```bash
-curl -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+curl -H "Authorization: Bearer YOUR_JWT_TOKEN" \\
   "http://localhost:8000/servers?include_health=true"
 ```
 
@@ -183,9 +199,9 @@ Register a new MCP server.
 
 **Example:**
 ```bash
-curl -X POST "http://localhost:8000/servers" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -H "Content-Type: application/json" \
+curl -X POST "http://localhost:8000/servers" \\
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \\
+  -H "Content-Type: application/json" \\
   -d '{"template_name": "file-server", "config": {"base_path": "/data"}}'
 ```
 
@@ -203,7 +219,7 @@ Get details of a specific server.
 
 **Example:**
 ```bash
-curl -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+curl -H "Authorization: Bearer YOUR_JWT_TOKEN" \\
   "http://localhost:8000/servers/server-123"
 ```
 
@@ -221,8 +237,8 @@ Unregister a server.
 
 **Example:**
 ```bash
-curl -X DELETE \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+curl -X DELETE \\
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \\
   "http://localhost:8000/servers/server-123"
 ```
 
@@ -247,9 +263,9 @@ Execute a tool on an MCP server.
 
 **Example:**
 ```bash
-curl -X POST "http://localhost:8000/tools/call" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -H "Content-Type: application/json" \
+curl -X POST "http://localhost:8000/tools/call" \\
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \\
+  -H "Content-Type: application/json" \\
   -d '{
     "server_id": "file-server-1",
     "tool_name": "read_file",
@@ -269,7 +285,7 @@ Get gateway performance and usage statistics.
 
 **Example:**
 ```bash
-curl -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+curl -H "Authorization: Bearer YOUR_JWT_TOKEN" \\
   "http://localhost:8000/stats"
 ```
 
@@ -480,3 +496,33 @@ client = GatewayClient("http://localhost:8000", api_key="your-api-key")
 # Use client normally - authentication is handled automatically
 servers = await client.list_servers()
 ```
+"""
+
+
+def generate_gateway_api_docs():
+    """Generate Gateway API documentation."""
+    print("📝 Generating Gateway API documentation...")
+
+    try:
+        # Create the markdown content
+        markdown_content = create_api_reference_content()
+
+        print("✅ Generated markdown content")
+
+        # Save to docs directory
+        docs_dir = Path(__file__).parent.parent / "docs" / "gateway"
+        docs_dir.mkdir(exist_ok=True)
+
+        api_docs_file = docs_dir / "api-reference.md"
+        with open(api_docs_file, "w", encoding="utf-8") as f:
+            f.write(markdown_content)
+
+        print(f"✅ Generated Gateway API documentation: {api_docs_file}")
+
+    except Exception as e:
+        print(f"❌ Error generating Gateway API docs: {e}")
+        raise
+
+
+if __name__ == "__main__":
+    generate_gateway_api_docs()

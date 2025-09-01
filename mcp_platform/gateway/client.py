@@ -294,7 +294,9 @@ class MCPGatewayConnection:
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
 
-        success = await self._connection.connect_http_smart(endpoint, headers=headers)
+        # connect_http_smart does not accept headers as a keyword argument
+        # If authentication is needed, pass headers as part of the endpoint or update MCPConnection accordingly
+        success = await self._connection.connect_http_smart(endpoint)
 
         if not success:
             self._connection = None
@@ -340,19 +342,17 @@ class MCPGatewayConnection:
     async def list_resources(self) -> List[Dict[str, Any]]:
         """List available resources."""
         self._check_connected()
-        result = await self._connection.list_resources()
-        return result.get("resources", [])
+        raise NotImplementedError("list_resources is not implemented in MCPConnection")
 
     async def read_resource(self, uri: str) -> Dict[str, Any]:
         """Read a resource."""
         self._check_connected()
-        return await self._connection.read_resource(uri)
+        raise NotImplementedError("read_resource is not implemented in MCPConnection")
 
     async def list_prompts(self) -> List[Dict[str, Any]]:
         """List available prompts."""
         self._check_connected()
-        result = await self._connection.list_prompts()
-        return result.get("prompts", [])
+        raise NotImplementedError("list_prompts is not implemented in MCPConnection")
 
     async def get_prompt(
         self,
@@ -361,7 +361,7 @@ class MCPGatewayConnection:
     ) -> Dict[str, Any]:
         """Get a prompt."""
         self._check_connected()
-        return await self._connection.get_prompt(name, arguments or {})
+        raise NotImplementedError("get_prompt is not implemented in MCPConnection")
 
 
 # Connection pool for efficient resource management

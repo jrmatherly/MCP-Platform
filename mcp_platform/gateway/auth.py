@@ -161,7 +161,7 @@ class AuthManager:
             expires_at=expires_at,
         )
 
-        created_key = await self.api_key_crud.create(api_key_record)
+        created_key = await self.api_key_crud.create(api_key_record, key_hash=key_hash)
         return created_key, api_key
 
 

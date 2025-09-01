@@ -56,6 +56,31 @@ nav:
   - Configuration: getting-started/configuration.md
 - Templates:
   - Overview: server-templates/index.md
+  - Available Templates: server-templates/available.md
+  - BigQuery MCP Server:
+    - Overview: server-templates/bigquery/index.md
+    - Usage Guide: server-templates/bigquery/usage.md
+    - API Reference: server-templates/bigquery/api.md
+  - Demo Hello MCP Server:
+    - Overview: server-templates/demo/index.md
+    - Usage Guide: server-templates/demo/usage.md
+    - API Reference: server-templates/demo/api.md
+  - Filesystem:
+    - Overview: server-templates/filesystem/index.md
+    - Usage Guide: server-templates/filesystem/usage.md
+  - GitLab MCP Server:
+    - Overview: server-templates/gitlab/index.md
+    - Usage Guide: server-templates/gitlab/usage.md
+  - Github:
+    - Overview: server-templates/github/index.md
+    - Usage Guide: server-templates/github/usage.md
+  - Slack MCP Server:
+    - Overview: server-templates/slack/index.md
+    - Usage Guide: server-templates/slack/usage.md
+  - Zendesk MCP Server:
+    - Overview: server-templates/zendesk/index.md
+    - Usage Guide: server-templates/zendesk/usage.md
+    - API Reference: server-templates/zendesk/api.md
 - Guides:
   - Usage Guide: guides/usage.md
   - Creating Templates: guides/creating-templates.md

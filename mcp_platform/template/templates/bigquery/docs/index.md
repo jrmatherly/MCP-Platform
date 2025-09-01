@@ -196,7 +196,7 @@ List all accessible BigQuery datasets in the project, filtered by access control
 
 **Example:**
 ```bash
-curl -X POST http://localhost:7072/call \
+curl -X POST http://localhost:8000/v1/call \
   -H "Content-Type: application/json" \
   -d '{"method": "list_datasets", "params": {}}'
 ```
@@ -212,7 +212,7 @@ List tables in a specific dataset with metadata.
 
 **Example:**
 ```bash
-curl -X POST http://localhost:7072/call \
+curl -X POST http://localhost:8000/v1/call \
   -H "Content-Type: application/json" \
   -d '{"method": "list_tables", "params": {"dataset_id": "analytics_prod"}}'
 ```
@@ -229,12 +229,12 @@ Get detailed schema information for a specific table.
 
 **Example:**
 ```bash
-curl -X POST http://localhost:7072/call \
+curl -X POST http://localhost:8000/v1/call \
   -H "Content-Type: application/json" \
   -d '{
-    "method": "describe_table", 
+    "method": "describe_table",
     "params": {
-      "dataset_id": "analytics_prod", 
+      "dataset_id": "analytics_prod",
       "table_id": "user_events"
     }
   }'
@@ -253,7 +253,7 @@ Execute SQL queries against BigQuery with safety controls and result limiting.
 **Example:**
 ```bash
 # Execute query
-curl -X POST http://localhost:7072/call \
+curl -X POST http://localhost:8000/v1/call \
   -H "Content-Type: application/json" \
   -d '{
     "method": "execute_query",
@@ -263,7 +263,7 @@ curl -X POST http://localhost:7072/call \
   }'
 
 # Dry run validation
-curl -X POST http://localhost:7072/call \
+curl -X POST http://localhost:8000/v1/call \
   -H "Content-Type: application/json" \
   -d '{
     "method": "execute_query",
@@ -285,7 +285,7 @@ Monitor BigQuery job status and execution progress.
 
 **Example:**
 ```bash
-curl -X POST http://localhost:7072/call \
+curl -X POST http://localhost:8000/v1/call \
   -H "Content-Type: application/json" \
   -d '{"method": "get_job_status", "params": {"job_id": "job_abc123"}}'
 ```
@@ -301,7 +301,7 @@ Get comprehensive information about a dataset.
 
 **Example:**
 ```bash
-curl -X POST http://localhost:7072/call \
+curl -X POST http://localhost:8000/v1/call \
   -H "Content-Type: application/json" \
   -d '{"method": "get_dataset_info", "params": {"dataset_id": "analytics_prod"}}'
 ```
@@ -312,17 +312,17 @@ curl -X POST http://localhost:7072/call \
 
 ```bash
 # List all accessible datasets
-curl -X POST http://localhost:7072/call \
+curl -X POST http://localhost:8000/v1/call \
   -H "Content-Type: application/json" \
   -d '{"method": "list_datasets", "params": {}}'
 
 # Explore a specific dataset
-curl -X POST http://localhost:7072/call \
+curl -X POST http://localhost:8000/v1/call \
   -H "Content-Type: application/json" \
   -d '{"method": "list_tables", "params": {"dataset_id": "analytics"}}'
 
 # Get table schema
-curl -X POST http://localhost:7072/call \
+curl -X POST http://localhost:8000/v1/call \
   -H "Content-Type: application/json" \
   -d '{
     "method": "describe_table",
@@ -337,7 +337,7 @@ curl -X POST http://localhost:7072/call \
 
 ```bash
 # Daily active users
-curl -X POST http://localhost:7072/call \
+curl -X POST http://localhost:8000/v1/call \
   -H "Content-Type: application/json" \
   -d '{
     "method": "execute_query",
@@ -347,7 +347,7 @@ curl -X POST http://localhost:7072/call \
   }'
 
 # Top events by volume
-curl -X POST http://localhost:7072/call \
+curl -X POST http://localhost:8000/v1/call \
   -H "Content-Type: application/json" \
   -d '{
     "method": "execute_query",
@@ -361,7 +361,7 @@ curl -X POST http://localhost:7072/call \
 
 ```bash
 # Validate complex query before execution
-curl -X POST http://localhost:7072/call \
+curl -X POST http://localhost:8000/v1/call \
   -H "Content-Type: application/json" \
   -d '{
     "method": "execute_query",
@@ -386,7 +386,7 @@ python -m mcp_platform deploy bigquery \
   --config mcp_port=7072
 
 # Access via HTTP
-curl http://localhost:7072/health
+curl http://localhost:8000/health
 ```
 
 ### Stdio Transport
@@ -436,19 +436,19 @@ import asyncio
 
 async def bigquery_analytics():
     # Connect to BigQuery MCP server
-    client = FastMCPClient(endpoint='http://localhost:7072')
-    
+    client = FastMCPClient(endpoint='http://localhost:8000')
+
     # List available datasets
     datasets = await client.call('list_datasets')
     print(f"Found {len(datasets['datasets'])} datasets")
-    
+
     # Explore analytics dataset
     tables = await client.call('list_tables', dataset_id='analytics')
     print(f"Analytics dataset has {len(tables['tables'])} tables")
-    
+
     # Get daily active users
     dau_query = """
-    SELECT 
+    SELECT
         DATE(timestamp) as date,
         COUNT(DISTINCT user_id) as daily_active_users
     FROM `my-project.analytics.events`
@@ -456,16 +456,16 @@ async def bigquery_analytics():
     GROUP BY DATE(timestamp)
     ORDER BY date
     """
-    
+
     result = await client.call('execute_query', query=dau_query)
     print(f"DAU analysis returned {result['num_rows']} days of data")
-    
+
     # Analyze table schema
-    schema = await client.call('describe_table', 
-                              dataset_id='analytics', 
+    schema = await client.call('describe_table',
+                              dataset_id='analytics',
                               table_id='events')
     print(f"Events table has {len(schema['schema'])} columns")
-    
+
     await client.close()
 
 # Run the analytics
@@ -478,7 +478,7 @@ asyncio.run(bigquery_analytics())
 const axios = require('axios');
 
 class BigQueryMCPClient {
-    constructor(endpoint = 'http://localhost:7072') {
+    constructor(endpoint = 'http://localhost:8000') {
         this.endpoint = endpoint;
     }
 
@@ -506,7 +506,7 @@ class BigQueryMCPClient {
     async runAnalyticsQuery(query) {
         // Validate first
         await this.call('execute_query', { query, dry_run: true });
-        
+
         // Execute
         return await this.call('execute_query', { query });
     }
@@ -515,9 +515,9 @@ class BigQueryMCPClient {
 // Usage example
 async function analyzeUserBehavior() {
     const client = new BigQueryMCPClient();
-    
+
     const query = `
-        SELECT 
+        SELECT
             event_name,
             COUNT(*) as event_count,
             COUNT(DISTINCT user_id) as unique_users
@@ -527,7 +527,7 @@ async function analyzeUserBehavior() {
         ORDER BY event_count DESC
         LIMIT 10
     `;
-    
+
     const result = await client.runAnalyticsQuery(query);
     console.log('Top events today:', result.rows);
 }
@@ -578,7 +578,7 @@ services:
       - ./service-account.json:/creds/service-account.json:ro
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:7072/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -785,7 +785,7 @@ gcloud projects add-iam-policy-binding $GOOGLE_CLOUD_PROJECT \
 
 ```bash
 # Check current configuration
-curl http://localhost:7072/health
+curl http://localhost:8000/health
 
 # Update allowed datasets
 --config allowed_datasets="dataset_name,other_dataset"
@@ -843,7 +843,7 @@ docker run --rm -e GOOGLE_CLOUD_PROJECT=test dataeverything/mcp-bigquery
 
 ```bash
 # Check health endpoint
-curl -v http://localhost:7072/health
+curl -v http://localhost:8000/health
 
 # Verify port binding
 netstat -tulpn | grep 7072
@@ -865,7 +865,7 @@ Enable detailed logging for troubleshooting:
 docker logs -f container_id
 
 # Test individual operations
-curl -X POST http://localhost:7072/call \
+curl -X POST http://localhost:8000/v1/call \
   -H "Content-Type: application/json" \
   -d '{"method": "list_datasets", "params": {}}' | jq .
 ```
@@ -897,10 +897,10 @@ The server provides comprehensive health check endpoints:
 
 ```bash
 # Basic health check
-curl http://localhost:7072/health
+curl http://localhost:8000/health
 
 # Detailed status (includes authentication and configuration)
-curl http://localhost:7072/health | jq .
+curl http://localhost:8000/health | jq .
 ```
 
 **Health Check Response:**

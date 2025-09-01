@@ -95,7 +95,6 @@ async def lifespan(app: FastAPI):
                 email="admin@localhost",
                 is_superuser=True,
             )
-            logger.info(f"Created admin user with password: {admin_password}")
     except Exception as e:
         logger.warning(f"Could not create admin user: {e}")
 
