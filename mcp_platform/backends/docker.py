@@ -721,6 +721,7 @@ EOF""",
         """
         Prepare consistent deployment result from container result
         """
+
         try:
             labels = container.get(
                 "Labels", container.get("Config", {}).get("Labels", "")
@@ -746,7 +747,7 @@ EOF""",
             ports_display = self._get_host_port(ports_str) or ""
 
             # Handle Names field - can be array or string
-            names = container.get("Names", "unknown")
+            names = container.get("Names", container.get("Name", "unknown")).lstrip("/")
             if isinstance(names, list) and names:
                 name = names[0]
             else:
@@ -768,16 +769,39 @@ EOF""",
             endpoint = f"http://localhost:{host_port}"
             # Transport: if port is present, assume http, else stdio
             transport = "http" if ports_display else "stdio"
+            state = container.get("State", "unknown")
+
+            if isinstance(state, dict):
+                status = state.get("Status", "unknown")
+            elif isinstance(state, str):
+                status = container.get("Status", None) or state
+            running = (
+                status == "running" or (state.get("Running", False))
+                if isinstance(state, dict)
+                else False
+            )
             deployment = {
-                "id": container.get("ID", "unknown"),
+                "id": container.get("ID", container.get("Id", "unknown")),
                 "name": name,
                 "template": template_name,
-                "status": container.get("State", "unknown"),
-                "since": container.get("RunningFor", "unknown"),
-                "image": container.get("Image", "unknown"),
+                "state": state,
+                "status": status,
+                "running": running,
+                "created": container.get(
+                    "CreatedAt", container.get("Created", "unknown")
+                ),
+                "since": (
+                    container.get("RunningFor", state.get("StartedAt", "unknown"))
+                    if isinstance(state, dict)
+                    else "unknown"
+                ),
+                "image": container.get(
+                    "Image", container.get("Config", {}).get("Image", "unknown")
+                ),
                 "ports": ports_display,
                 "endpoint": endpoint,
                 "transport": transport,
+                "health": container.get("Health", {}).get("Status", "unknown"),
             }
             if include_logs:
                 try:
@@ -1026,7 +1050,6 @@ EOF""",
         Returns:
             None - Gives access to deployment shell
         """
-        import os
 
         # Check if container is running
         container_info = self.get_deployment_info(deployment_id)

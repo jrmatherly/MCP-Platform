@@ -230,7 +230,8 @@ def validate_template_structure(template_name: str) -> bool:
 def run_template_tests(template_name: str) -> subprocess.CompletedProcess:
     """Run pytest tests for a specific template."""
     # Tests are now located in templates/{template_name}/tests/
-    test_dir = TEMPLATES_DIR / template_name / "tests"
+    template_dir = TEMPLATES_DIR / template_name
+    test_dir = template_dir / "tests"
     if not test_dir.exists():
         raise ValueError(f"No tests found for template: {template_name}")
 
@@ -239,6 +240,34 @@ def run_template_tests(template_name: str) -> subprocess.CompletedProcess:
     # the functionality of user-provided templates, not the core application code.
     # Coverage metrics for these tests are not meaningful as they do not reflect
     # the coverage of the main application logic.
+    files = list(template_dir.iterdir())
+    if template_dir / "requirements.txt" in files:
+        subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "pip",
+                "install",
+                "-r",
+                template_dir / "requirements.txt",
+            ],
+            capture_output=True,
+            text=True,
+        )
+    elif template_dir / "requirement.txt" in files:
+        subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "pip",
+                "install",
+                "-r",
+                template_dir / "requirement.txt",
+            ],
+            capture_output=True,
+            text=True,
+        )
+
     return subprocess.run(
         [sys.executable, "-m", "pytest", str(test_dir), "-v", "--tb=short", "--no-cov"],
         capture_output=True,

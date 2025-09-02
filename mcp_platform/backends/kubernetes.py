@@ -80,8 +80,8 @@ class KubernetesDeploymentService(BaseDeploymentBackend):
             logger.info("Connected to Kubernetes API")
 
         except Exception as e:
-            logger.error(f"Failed to connect to Kubernetes API: {e}")
-            raise RuntimeError(f"Kubernetes backend unavailable: {e}")
+            logger.debug(f"Failed to connect to Kubernetes API: {e}")
+            raise RuntimeError("Kubernetes backend unavailable")
         finally:
             logger.setLevel(old_level)
 

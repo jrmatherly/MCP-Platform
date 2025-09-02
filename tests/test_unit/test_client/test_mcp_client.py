@@ -130,7 +130,9 @@ class TestMCPClientTemplates:
         result = self.client.get_template_info("demo")
 
         assert result == expected_info
-        self.mock_template_manager.get_template_info.assert_called_once_with("demo")
+        self.mock_template_manager.get_template_info.assert_called_once_with(
+            "demo", include_deployed_status=False
+        )
 
     def test_get_template_info_not_found(self):
         """Test template info retrieval for non-existent template."""
