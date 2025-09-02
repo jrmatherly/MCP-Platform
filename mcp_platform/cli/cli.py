@@ -464,7 +464,9 @@ def deploy(
         raise typer.Exit(1)
 
 
-@app.command()
+@app.command(
+    "list-tools/tools",
+)
 def list_tools(
     template: Annotated[str, typer.Argument(help="Template name or deployment ID")],
     backend: Annotated[

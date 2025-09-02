@@ -125,6 +125,7 @@ Our platform provides dynamic tool discovery to automatically catalog all availa
 
 ```bash
 # Discover all available tools
+mcpp interactive
 mcpp> tools elasticsearch --config ES_URL="https://your-cluster:9200" --config ES_API_KEY="your_key"
 
 # Refresh tool cache
@@ -179,8 +180,9 @@ docker run -e ES_URL -e ES_API_KEY elasticsearch-mcp-local
 mcpp deploy elasticsearch --config ES_URL="https://localhost:9200" --config ES_API_KEY="test_key"
 
 # Call tools directly
-mcpp call elasticsearch list_indices
-mcpp call elasticsearch search '{"index": "test-index", "query": {"match_all": {}}}'
+mcpp i
+mcpp> call elasticsearch list_indices
+mcpp> call elasticsearch search '{"index": "test-index", "query": {"match_all": {}}}'
 ```
 
 ## Monitoring & Troubleshooting
@@ -232,7 +234,8 @@ mcpp deploy elasticsearch --config LOG_LEVEL="DEBUG"
 mcpp logs elasticsearch --level debug
 
 # Test connectivity
-mcpp call elasticsearch list_indices --verbose
+mcpp i
+mcpp> call elasticsearch list_indices --verbose
 ```
 
 ## Security Best Practices

@@ -25,14 +25,15 @@ This MCP server is EXPERIMENTAL as noted in the official Elasticsearch repositor
    ```bash
    # Using API key (recommended)
    mcpp configure elasticsearch ES_URL="https://your-cluster:9200" ES_API_KEY="your_key"
-   
+
    # Using username/password
    mcpp configure elasticsearch ES_URL="https://your-cluster:9200" ES_USERNAME="elastic" ES_PASSWORD="your_password"
    ```
 
 3. Test the connection:
    ```bash
-   mcpp call elasticsearch list_indices
+   mcpp i
+   mcpp> call elasticsearch list_indices
    ```
 
 ## Available Tools

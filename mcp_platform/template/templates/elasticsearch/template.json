@@ -5,8 +5,8 @@
   "author": "Data Everything",
   "category": "Database",
   "tags": ["elasticsearch", "search", "database", "analytics", "indexing", "esql", "experimental"],
-  "docker_image": "docker.elastic.co/mcp/elasticsearch",
-  "docker_tag": "0.4.5",
+  "docker_image": "dataeverything/mcp-elasticsearch",
+  "docker_tag": "latest",
   "ports": {},
   "command": [],
   "transport": {
