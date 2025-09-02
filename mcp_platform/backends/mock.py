@@ -92,7 +92,7 @@ class MockDeploymentService(BaseDeploymentBackend):
         logger.info("Mock deployment created: %s", deployment_name)
         return deployment_info
 
-    def list_deployments(self) -> List[Dict[str, Any]]:
+    def list_deployments(self, template: str = None) -> List[Dict[str, Any]]:
         """List mock deployments."""
         deployments = []
         for name, info in self.deployments.items():
@@ -173,10 +173,6 @@ class MockDeploymentService(BaseDeploymentBackend):
             "logs": "",
             "lines_returned": 0,
         }
-
-    def force_stop_deployment(self, deployment_name: str) -> bool:
-        """Force stop mock deployment."""
-        return self.stop_deployment(deployment_name, force=True)
 
     def stream_deployment_logs(self, deployment_name: str, lines: int = 100):
         """Stream mock deployment logs."""

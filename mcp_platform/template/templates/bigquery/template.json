@@ -16,13 +16,13 @@
   "docker_image": "dataeverything/mcp-bigquery",
   "docker_tag": "latest",
   "ports": {
-    "7072": 7072
+    "7090": 7090
   },
   "command": [],
   "transport": {
     "default": "http",
     "supported": ["http", "stdio"],
-    "port": 7072
+    "port": 7090
   },
   "config_schema": {
     "type": "object",
@@ -212,15 +212,15 @@
   "has_image": true,
   "origin": "internal",
   "examples": {
-    "http_endpoint": "http://localhost:7072",
+    "http_endpoint": "http://localhost:7090",
     "cli_usage": [
       "python -m mcp_platform deploy bigquery --config project_id='my-gcp-project'",
       "python -m mcp_platform deploy bigquery --config project_id='my-project' --config auth_method='service_account' --config service_account_path='/path/to/key.json'",
       "python -m mcp_platform deploy bigquery --config project_id='my-project' --config allowed_datasets='analytics_*,public_*' --config read_only=false"
     ],
     "client_integration": {
-      "fastmcp": "from fastmcp.client import FastMCPClient\nclient = FastMCPClient(endpoint='http://localhost:7072')\nresult = client.call('list_datasets')",
-      "curl": "curl -X POST http://localhost:7072/call -H 'Content-Type: application/json' -d '{\"method\": \"execute_query\", \"params\": {\"query\": \"SELECT COUNT(*) FROM `my-project.my_dataset.my_table`\"}}'"
+      "fastmcp": "from fastmcp.client import FastMCPClient\nclient = FastMCPClient(endpoint='http://localhost:7090')\nresult = client.call('list_datasets')",
+      "curl": "curl -X POST http://localhost:7090/call -H 'Content-Type: application/json' -d '{\"method\": \"execute_query\", \"params\": {\"query\": \"SELECT COUNT(*) FROM `my-project.my_dataset.my_table`\"}}'"
     }
   }
 }

@@ -22,7 +22,7 @@ from typing import Any, Dict, List
 from rich.console import Console
 from rich.panel import Panel
 
-from mcp_platform.backends import BaseDeploymentBackend
+from mcp_platform.backends import DockerDeploymentService
 
 logger = logging.getLogger(__name__)
 console = Console()
@@ -39,7 +39,7 @@ if isinstance(STDIO_TIMEOUT, str):
         STDIO_TIMEOUT = 30
 
 
-class PodmanDeploymentService(BaseDeploymentBackend):
+class PodmanDeploymentService(DockerDeploymentService):
     """Podman deployment service using CLI commands.
 
     This service manages container deployments using Podman CLI commands.

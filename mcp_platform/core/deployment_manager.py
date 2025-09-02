@@ -245,7 +245,7 @@ class DeploymentManager:
 
             if not success and force:
                 # Force stop if graceful failed
-                success = self.backend.force_stop_deployment(deployment_id)
+                success = self.backend.stop_deployment(deployment_id, force=True)
 
             return {
                 "success": success,
@@ -256,7 +256,7 @@ class DeploymentManager:
             }
 
         except Exception as e:
-            logger.error(f"Failed to stop deployment {deployment_id}: {e}")
+            logger.error("Failed to stop deployment %s: %s", deployment_id, e)
             return {
                 "success": False,
                 "error": str(e),

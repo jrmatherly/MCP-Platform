@@ -230,3 +230,7 @@ site/
 docs/server-templates/available.md
 docs/server-templates/*/
 !docs/server-templates/index.md
+
+
+# Secrets
+secrets/

@@ -167,7 +167,7 @@ def demonstrate_bigquery_mcp_server():
         "  --config allowed_datasets='analytics_*,reporting_*'",
         "",
         "# Docker deployment",
-        "docker run -p 7072:7072 \\",
+        "docker run -p 7090:7090 \\",
         "  -e GOOGLE_CLOUD_PROJECT=my-project \\",
         "  -e BIGQUERY_READ_ONLY=true \\",
         "  -e BIGQUERY_ALLOWED_DATASETS='analytics_*' \\",

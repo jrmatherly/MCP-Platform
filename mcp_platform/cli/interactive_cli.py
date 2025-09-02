@@ -375,6 +375,7 @@ def call_tool(
     ] = False,
 ):
     """Call a tool from a template."""
+
     try:
         session = get_session()
 
@@ -440,8 +441,12 @@ def call_tool(
         )
 
         # Check for missing required configuration
-        template_info = session.client.get_template_info(template)
-        if template_info:
+        template_info = session.client.get_template_info(
+            template, include_deployed_status=True
+        )
+        if (
+            template_info and not template_info.get("deployment_count", None)
+        ) or force_stdio:
             missing_config = _check_missing_config(
                 template_info, final_config, env_vars
             )
@@ -625,6 +630,8 @@ def show_config(
         table.add_column("Current Value", style="yellow", width=25)
         table.add_column("Type", style="blue", width=10)
         table.add_column("Description", style="white", width=40)
+        table.add_column("Default", style="magenta", width=30)
+        table.add_column("Options", style="magenta", width=30)
 
         for prop_name, prop_info in properties.items():
             # Determine status
@@ -663,11 +670,23 @@ def show_config(
 
             # Get property type
             prop_type = prop_info.get("type", "unknown")
+            default_value = str(prop_info.get("default", ""))
 
             # Get description
             description = prop_info.get("description", "No description available")
+            options = prop_info.get(
+                "enum", prop_info.get("options", prop_info.get("choices", []))
+            )
 
-            table.add_row(prop_name, status, display_value, prop_type, description)
+            table.add_row(
+                prop_name,
+                status,
+                display_value,
+                prop_type,
+                description,
+                default_value,
+                ", ".join(options),
+            )
 
         console.print(table)
 

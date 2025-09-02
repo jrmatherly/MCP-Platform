@@ -137,7 +137,7 @@ For advanced filtering, use regex patterns:
 
 By default, the server operates in read-only mode, blocking:
 - INSERT, UPDATE, DELETE operations
-- CREATE, DROP, ALTER statements  
+- CREATE, DROP, ALTER statements
 - TRUNCATE, MERGE operations
 - Any data modification queries
 
@@ -167,7 +167,7 @@ List all accessible BigQuery datasets in the project.
 
 **Example**:
 ```bash
-curl -X POST http://localhost:7072/call \
+curl -X POST http://localhost:7090/call \
   -H "Content-Type: application/json" \
   -d '{"method": "list_datasets", "params": {}}'
 ```
@@ -180,7 +180,7 @@ List tables in a specific dataset.
 
 **Example**:
 ```bash
-curl -X POST http://localhost:7072/call \
+curl -X POST http://localhost:7090/call \
   -H "Content-Type: application/json" \
   -d '{"method": "list_tables", "params": {"dataset_id": "analytics_prod"}}'
 ```
@@ -194,7 +194,7 @@ Get detailed schema information for a table.
 
 **Example**:
 ```bash
-curl -X POST http://localhost:7072/call \
+curl -X POST http://localhost:7090/call \
   -H "Content-Type: application/json" \
   -d '{"method": "describe_table", "params": {"dataset_id": "analytics_prod", "table_id": "user_events"}}'
 ```
@@ -208,7 +208,7 @@ Execute a SQL query against BigQuery.
 
 **Example**:
 ```bash
-curl -X POST http://localhost:7072/call \
+curl -X POST http://localhost:7090/call \
   -H "Content-Type: application/json" \
   -d '{"method": "execute_query", "params": {"query": "SELECT COUNT(*) as total FROM `my-project.analytics.events` WHERE DATE(timestamp) = CURRENT_DATE()"}}'
 ```
@@ -231,7 +231,7 @@ Get detailed information about a dataset.
 
 ```bash
 # Count rows in a table
-curl -X POST http://localhost:7072/call \
+curl -X POST http://localhost:7090/call \
   -H "Content-Type: application/json" \
   -d '{
     "method": "execute_query",
@@ -241,10 +241,10 @@ curl -X POST http://localhost:7072/call \
   }'
 
 # Get recent data
-curl -X POST http://localhost:7072/call \
+curl -X POST http://localhost:7090/call \
   -H "Content-Type: application/json" \
   -d '{
-    "method": "execute_query", 
+    "method": "execute_query",
     "params": {
       "query": "SELECT * FROM `my-project.logs.events` WHERE timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 HOUR) LIMIT 10"
     }
@@ -255,12 +255,12 @@ curl -X POST http://localhost:7072/call \
 
 ```bash
 # List all datasets
-curl -X POST http://localhost:7072/call \
+curl -X POST http://localhost:7090/call \
   -H "Content-Type: application/json" \
   -d '{"method": "list_datasets", "params": {}}'
 
 # Explore table structure
-curl -X POST http://localhost:7072/call \
+curl -X POST http://localhost:7090/call \
   -H "Content-Type: application/json" \
   -d '{
     "method": "describe_table",
@@ -275,7 +275,7 @@ curl -X POST http://localhost:7072/call \
 
 ```bash
 # Dry run to validate query
-curl -X POST http://localhost:7072/call \
+curl -X POST http://localhost:7090/call \
   -H "Content-Type: application/json" \
   -d '{
     "method": "execute_query",
@@ -291,7 +291,7 @@ curl -X POST http://localhost:7072/call \
 ### Using Pre-built Image
 
 ```bash
-docker run -p 7072:7072 \
+docker run -p 7090:7090 \
   -e GOOGLE_CLOUD_PROJECT=my-project \
   -e GOOGLE_APPLICATION_CREDENTIALS=/creds/service-account.json \
   -v /path/to/service-account.json:/creds/service-account.json:ro \
@@ -307,7 +307,7 @@ cd MCP-Platform/mcp_platform/template/templates/bigquery
 docker build -t mcp-bigquery .
 
 # Run with environment variables
-docker run -p 7072:7072 \
+docker run -p 7090:7090 \
   -e GOOGLE_CLOUD_PROJECT=my-project \
   -e BIGQUERY_READ_ONLY=true \
   -e BIGQUERY_ALLOWED_DATASETS="analytics_*,public_*" \
@@ -322,7 +322,7 @@ docker run -p 7072:7072 \
 from fastmcp.client import FastMCPClient
 
 # Connect to server
-client = FastMCPClient(endpoint='http://localhost:7072')
+client = FastMCPClient(endpoint='http://localhost:7090')
 
 # List datasets
 datasets = client.call('list_datasets')
@@ -348,7 +348,7 @@ Add to your Claude Desktop configuration:
       "command": "docker",
       "args": [
         "run",
-        "-i", 
+        "-i",
         "--rm",
         "-e", "GOOGLE_CLOUD_PROJECT=my-project",
         "-e", "GOOGLE_APPLICATION_CREDENTIALS=/creds/service-account.json",
@@ -475,12 +475,12 @@ Enable debug logging for detailed troubleshooting:
 The server provides a health check endpoint:
 
 ```bash
-curl http://localhost:7072/health
+curl http://localhost:7090/health
 ```
 
 Response includes:
 - Server status
-- BigQuery connection status  
+- BigQuery connection status
 - Configuration summary
 - Authentication method
 

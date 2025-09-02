@@ -806,6 +806,7 @@ class ToolManager:
         Returns:
             Tool call result with success/error information
         """
+
         try:
             self.tool_caller = ToolCaller()
 
@@ -820,13 +821,11 @@ class ToolManager:
                         deployment_manager = DeploymentManager(
                             self.backend.backend_type
                         )
-                        deployments = deployment_manager.find_deployments_by_criteria(
-                            template_name=template_or_deployment
+                        running_deployments = (
+                            deployment_manager.find_deployments_by_criteria(
+                                template_name=template_or_deployment, status="running"
+                            )
                         )
-                        # Find the first running deployment
-                        running_deployments = [
-                            d for d in deployments if d.get("status") == "running"
-                        ]
                         if running_deployments:
                             deployment_info = running_deployments[0]
 

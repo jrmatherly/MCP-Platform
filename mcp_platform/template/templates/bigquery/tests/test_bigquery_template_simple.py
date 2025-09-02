@@ -284,7 +284,7 @@ class TestBigQueryTemplateValidation:
         # Test security best practices
         assert "USER mcpuser" in dockerfile_content  # Non-root user
         assert "HEALTHCHECK" in dockerfile_content  # Health check
-        assert "EXPOSE 7072" in dockerfile_content  # Port exposure
+        assert "EXPOSE 7090" in dockerfile_content  # Port exposure
 
         # Test build optimization
         assert "COPY requirements.txt" in dockerfile_content  # Copy requirements first
@@ -438,9 +438,9 @@ class TestBigQueryToolCategorization:
         assert transport["default"] == "http", "Default transport should be HTTP"
 
         # Should have proper port configuration
-        assert transport["port"] == 7072, "Should use port 7072"
+        assert transport["port"] == 7090, "Should use port 7090"
         assert (
-            template_data["ports"]["7072"] == 7072
+            template_data["ports"]["7090"] == 7090
         ), "Port mapping should be consistent"
 
     def test_authentication_method_coverage(self):
