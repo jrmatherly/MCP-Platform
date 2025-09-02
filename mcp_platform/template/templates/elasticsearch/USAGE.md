@@ -93,27 +93,6 @@ export LOG_LEVEL="DEBUG"
 mcpp deploy elasticsearch
 ```
 
-## Docker Run Examples
-
-If using the Docker image directly:
-
-```bash
-# Stdio mode
-docker run -i --rm \
-  -e ES_URL="https://your-cluster:9200" \
-  -e ES_API_KEY="your_api_key" \
-  docker.elastic.co/mcp/elasticsearch:0.4.5 \
-  stdio
-
-# HTTP mode
-docker run --rm \
-  -e ES_URL="https://your-cluster:9200" \
-  -e ES_API_KEY="your_api_key" \
-  -e MCP_TRANSPORT="http" \
-  -p 8080:8080 \
-  docker.elastic.co/mcp/elasticsearch:0.4.5
-```
-
 ## Troubleshooting
 
 ### Connection Issues
