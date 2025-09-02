@@ -375,6 +375,7 @@ def call_tool(
     ] = False,
 ):
     """Call a tool from a template."""
+
     try:
         session = get_session()
 
@@ -443,7 +444,9 @@ def call_tool(
         template_info = session.client.get_template_info(
             template, include_deployed_status=True
         )
-        if template_info and not template_info.get("deployment_count", None):
+        if (
+            template_info and not template_info.get("deployment_count", None)
+        ) or force_stdio:
             missing_config = _check_missing_config(
                 template_info, final_config, env_vars
             )

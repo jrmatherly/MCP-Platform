@@ -92,7 +92,7 @@ class MockDeploymentService(BaseDeploymentBackend):
         logger.info("Mock deployment created: %s", deployment_name)
         return deployment_info
 
-    def list_deployments(self) -> List[Dict[str, Any]]:
+    def list_deployments(self, template: str = None) -> List[Dict[str, Any]]:
         """List mock deployments."""
         deployments = []
         for name, info in self.deployments.items():

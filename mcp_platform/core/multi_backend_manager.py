@@ -379,68 +379,68 @@ class MultiBackendManager:
         """
 
         # Check if template_name is actually a deployment ID
-        deployment = self.get_deployment_by_id(template_name)
-        if deployment:
-            deployment_backend = deployment.get("backend_type")
-            deployment_template = deployment.get("template", template_name)
-            if deployment_backend in self.tool_managers:
-                try:
-                    tool_manager = self.tool_managers[deployment_backend]
-                    result = tool_manager.call_tool(
-                        deployment_template,
-                        tool_name,
-                        arguments,
-                        config_values=config_values,
-                        timeout=timeout,
-                        pull_image=pull_image,
-                        force_stdio=force_stdio,
-                    )
-                    if isinstance(result, dict):
-                        result["backend_type"] = deployment_backend
-                        result["deployment_id"] = template_name
-                    return result
-                except Exception as e:
-                    return {
-                        "success": False,
-                        "error": str(e),
-                        "backend_type": deployment_backend,
-                        "deployment_id": template_name,
-                    }
+        if not force_stdio:
+            deployment = self.get_deployment_by_id(template_name)
+            if deployment:
+                deployment_backend = deployment.get("backend_type")
+                deployment_template = deployment.get("template", template_name)
+                if deployment_backend in self.tool_managers:
+                    try:
+                        tool_manager = self.tool_managers[deployment_backend]
+                        result = tool_manager.call_tool(
+                            deployment_template,
+                            tool_name,
+                            arguments,
+                            config_values=config_values,
+                            timeout=timeout,
+                            pull_image=pull_image,
+                            force_stdio=force_stdio,
+                        )
+                        if isinstance(result, dict):
+                            result["backend_type"] = deployment_backend
+                            result["deployment_id"] = template_name
+                        return result
+                    except Exception as e:
+                        return {
+                            "success": False,
+                            "error": str(e),
+                            "backend_type": deployment_backend,
+                            "deployment_id": template_name,
+                        }
 
-        # Priority 1: Find existing deployment for template
-        all_deployments = self.get_all_deployments(template_name=template_name)
-        running_deployments = [
-            d for d in all_deployments if d.get("status") == "running"
-        ]
+            # Priority 1: Find existing deployment for template
+            running_deployments = self.get_all_deployments(
+                template_name=template_name, status="running"
+            )
 
-        if running_deployments:
-            # Use the first running deployment
-            deployment = running_deployments[0]
-            deployment_backend = deployment.get("backend_type")
-            deployment_id = deployment.get("id")
+            if running_deployments:
+                # Use the first running deployment
+                deployment = running_deployments[0]
+                deployment_backend = deployment.get("backend_type")
+                deployment_id = deployment.get("id")
 
-            if deployment_backend in self.tool_managers:
-                try:
-                    tool_manager = self.tool_managers[deployment_backend]
-                    result = tool_manager.call_tool(
-                        template_name,
-                        tool_name,
-                        arguments,
-                        config_values=config_values,
-                        timeout=timeout,
-                        pull_image=pull_image,
-                        force_stdio=force_stdio,
-                    )
-                    if isinstance(result, dict):
-                        result["backend_type"] = deployment_backend
-                        result["deployment_id"] = deployment_id
-                        result["used_existing_deployment"] = True
-                    return result
-                except Exception as e:
-                    logger.warning(
-                        f"Failed to call tool on existing deployment {deployment_id}: {e}"
-                    )
-                    # Fall through to stdio attempt
+                if deployment_backend in self.tool_managers:
+                    try:
+                        tool_manager = self.tool_managers[deployment_backend]
+                        result = tool_manager.call_tool(
+                            deployment_id,
+                            tool_name,
+                            arguments,
+                            config_values=config_values,
+                            timeout=timeout,
+                            pull_image=pull_image,
+                            force_stdio=force_stdio,
+                        )
+                        if isinstance(result, dict):
+                            result["backend_type"] = deployment_backend
+                            result["deployment_id"] = deployment_id
+                            result["used_existing_deployment"] = True
+                        return result
+                    except Exception as e:
+                        logger.warning(
+                            f"Failed to call tool on existing deployment {deployment_id}: {e}"
+                        )
+                        # Fall through to stdio attempt
 
         # Priority 2: Check if stdio is supported and try backends in order
         first_backend = next(iter(self.tool_managers.keys()))

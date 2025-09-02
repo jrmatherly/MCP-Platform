@@ -29,8 +29,9 @@ ENV MCP_PORT=7071
 EXPOSE ${MCP_PORT}
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f "http://localhost:${MCP_PORT}/health" || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD \
+  python -c "import sys, urllib.request; \
+  sys.exit(0) if urllib.request.urlopen('http://127.0.0.1:${MCP_PORT}/health').getcode() == 200 else sys.exit(1)"
 
 # Set environment variables
 ENV MCP_LOG_LEVEL=info

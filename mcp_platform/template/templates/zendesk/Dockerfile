@@ -24,8 +24,9 @@ RUN useradd --create-home --shell /bin/bash app && \
 USER app
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:7072/health || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD \
+  python -c "import sys, urllib.request; \
+  sys.exit(0) if urllib.request.urlopen('http://127.0.0.1:7072/health').getcode() == 200 else sys.exit(1)"
 
 # Expose port
 EXPOSE 7072

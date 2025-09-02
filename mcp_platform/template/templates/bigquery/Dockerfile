@@ -40,7 +40,10 @@ USER mcpuser
 EXPOSE 7090
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD curl -f http://localhost:7090/health || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD \
+  python -c "import sys, urllib.request; \
+  sys.exit(0) if urllib.request.urlopen('http://127.0.0.1:7090/health').getcode() == 200 else sys.exit(1)"
+
 
 # Default command - can be overridden
 CMD ["python", "server.py"]

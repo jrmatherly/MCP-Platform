@@ -142,14 +142,14 @@ def main(
         console.print(f"[dim]Using backend: {backend}[/dim]")
 
 
-@app.command(name="show-config")
+@app.command(name="config")
 def show_config(
     template: Annotated[
         str,
-        typer.Argument(help="Template name (optional if template is selected)"),
+        typer.Argument(help="Template name (opßtional if template is selected)"),
     ],
 ):
-    """Show current configuration for a template with all available properties."""
+    """Show configurable properties for a template."""
     try:
         client = MCPClient(backend_type=cli_state["backend_type"])
         # Get template info to understand schema
