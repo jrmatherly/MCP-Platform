@@ -142,7 +142,7 @@ class ToolManager:
                         )
 
             except Exception as e:
-                logger.error(f"Tool listing failed for {template_or_id}: {e}")
+                logger.error("Tool listing failed for %s: %s", template_or_id, e)
                 return {
                     "tools": [],
                     "count": 0,
@@ -196,7 +196,7 @@ class ToolManager:
         if not force_refresh:
             cached_tools = self.get_cached_tools(template_or_deployment)
             if cached_tools:
-                logger.info(f"✓ Found tools in cache for {template_or_deployment}")
+                logger.info("✓ Found tools in cache for %s", template_or_deployment)
                 if "data" in cached_tools:
                     cached_tools = cached_tools["data"]
                 return {
@@ -206,7 +206,7 @@ class ToolManager:
                 }
 
         # 2. PRIORITY: Check for running deployments (dynamic discovery via HTTP)
-        logger.info(f"Checking for running deployments of {template_or_deployment}")
+        logger.info("Checking for running deployments of %s", template_or_deployment)
         try:
             deployment_manager = DeploymentManager(self.backend_type)
             deployments = deployment_manager.find_deployments_by_criteria(
@@ -221,7 +221,7 @@ class ToolManager:
                 deployment = running_deployments[0]
                 tools = self._discover_from_running_deployment(deployment, timeout)
                 if tools:
-                    logger.info(f"✓ Found {len(tools)} tools from running deployment")
+                    logger.info("✓ Found %d tools from running deployment", len(tools))
                     self._cache_tools(template_or_deployment, tools, "http", "dynamic")
                     return {
                         "tools": tools,
@@ -229,16 +229,16 @@ class ToolManager:
                         "source": "dynamic",
                     }
         except Exception as e:
-            logger.debug(f"Running deployment check failed: {e}")
+            logger.debug("Running deployment check failed: %s", e)
 
         # 3. PRIORITY: Try stdio discovery (if template supports it)
-        logger.info(f"Attempting stdio discovery for {template_or_deployment}")
+        logger.info("Attempting stdio discovery for %s", template_or_deployment)
         try:
             tools = self._discover_via_stdio(
                 template_or_deployment, timeout, config_values
             )
             if tools:
-                logger.info(f"✓ Found {len(tools)} tools via stdio")
+                logger.info("✓ Found %d tools via stdio", len(tools))
                 self._cache_tools(template_or_deployment, tools, "stdio", "image")
                 return {
                     "tools": tools,
@@ -246,14 +246,14 @@ class ToolManager:
                     "source": "image",
                 }
         except Exception as e:
-            logger.debug(f"Stdio discovery failed: {e}")
+            logger.debug("Stdio discovery failed: %s", e)
 
         # 4. PRIORITY: Try HTTP discovery (for deployed templates)
-        logger.info(f"Attempting HTTP discovery for {template_or_deployment}")
+        logger.info("Attempting HTTP discovery for %s", template_or_deployment)
         try:
             tools = self._discover_via_http(template_or_deployment, timeout)
             if tools:
-                logger.info(f"✓ Found {len(tools)} tools via HTTP")
+                logger.info("✓ Found %d tools via HTTP", len(tools))
                 self._cache_tools(template_or_deployment, tools, "http", "dynamic")
                 return {
                     "tools": tools,
@@ -261,14 +261,14 @@ class ToolManager:
                     "source": "dynamic",
                 }
         except Exception as e:
-            logger.debug(f"HTTP discovery failed: {e}")
+            logger.debug("HTTP discovery failed: %s", e)
 
         # 5. PRIORITY: Fall back to static tools from template definition
-        logger.info(f"Falling back to static tools for {template_or_deployment}")
+        logger.info("Falling back to static tools for %s", template_or_deployment)
         try:
             tools = self.discover_tools_static(template_or_deployment)
             if tools:
-                logger.info(f"✓ Found {len(tools)} static tools from template")
+                logger.info("✓ Found %d static tools from template", len(tools))
                 self._cache_tools(template_or_deployment, tools, "static", "template")
                 return {
                     "tools": tools,
@@ -276,9 +276,9 @@ class ToolManager:
                     "source": "template",
                 }
         except Exception as e:
-            logger.debug(f"Static discovery failed: {e}")
+            logger.debug("Static discovery failed: %s", e)
 
-        logger.warning(f"No tools found for {template_or_deployment} using any method")
+        logger.warning("No tools found for %s using any method", template_or_deployment)
         return {
             "tools": [],
             "discovery_method": "none",
@@ -301,7 +301,7 @@ class ToolManager:
             return probe.discover_tools_from_deployment(deployment, timeout)
 
         except Exception as e:
-            logger.debug(f"Failed to discover from running deployment: {e}")
+            logger.debug("Failed to discover from running deployment: %s", e)
             return []
 
     def _discover_via_stdio(
@@ -326,7 +326,7 @@ class ToolManager:
                 "image"
             )
             if not docker_image:
-                logger.debug(f"No docker_image specified for template {template_name}")
+                logger.debug("No docker_image specified for template %s", template_name)
                 return []
 
             if not len(docker_image.split(":")) > 1:
@@ -339,7 +339,7 @@ class ToolManager:
                 docker_image, timeout, env_vars=env_vars
             )
         except Exception as e:
-            logger.debug(f"Stdio discovery failed: {e}")
+            logger.debug("Stdio discovery failed: %s", e)
         return []
 
     def _generate_discovery_env_vars(
@@ -356,14 +356,15 @@ class ToolManager:
 
         # Get config schema to understand required fields
         config_schema = template_info.get("config_schema", {})
-        required_props = config_schema.get("required", [])
         properties = config_schema.get("properties", {})
 
         # Generate dummy values for required properties that aren't provided
-        for prop in required_props:
+        for prop in properties:
             if prop not in discovery_config:
                 prop_config = properties.get(prop, {})
-                discovery_config[prop] = self._generate_dummy_value(prop, prop_config)
+                discovery_config[prop] = prop_config.get(
+                    "default", self._generate_dummy_value(prop, prop_config)
+                )
 
         # Use the same configuration processor as deployment to generate env vars
         config_processor = ConfigProcessor()
@@ -484,7 +485,7 @@ class ToolManager:
 
         except Exception as e:
             logger.debug(
-                f"MCP JSON-RPC discovery failed for {template_or_deployment}: {e}"
+                "MCP JSON-RPC discovery failed for %s: %s", template_or_deployment, e
             )
             return []
 
@@ -531,7 +532,7 @@ class ToolManager:
             return tools
 
         except Exception as e:
-            logger.error(f"Failed to discover static tools for {template_id}: {e}")
+            logger.error("Failed to discover static tools for %s: %s", template_id, e)
             return []
 
     def discover_tools_dynamic(
@@ -566,7 +567,7 @@ class ToolManager:
 
             if not deployment_info:
                 logger.warning(
-                    f"No running deployment found for {template_or_deployment_id}"
+                    "No running deployment found for %s", template_or_deployment_id
                 )
                 return []
 
@@ -577,7 +578,7 @@ class ToolManager:
 
             # If HTTP fails, try stdio discovery as fallback
             logger.info(
-                f"HTTP discovery failed, trying stdio for {template_or_deployment_id}"
+                "HTTP discovery failed, trying stdio for %s", template_or_deployment_id
             )
             try:
                 stdio_tools = self._discover_via_stdio(
@@ -586,7 +587,7 @@ class ToolManager:
                 if stdio_tools:
                     return stdio_tools
             except Exception as e:
-                logger.debug(f"Stdio fallback failed: {e}")
+                logger.debug("Stdio fallback failed: %s", e)
 
             logger.warning(
                 f"Both HTTP and stdio discovery failed for {template_or_deployment_id}"
@@ -595,7 +596,9 @@ class ToolManager:
 
         except Exception as e:
             logger.error(
-                f"Failed to discover dynamic tools for {template_or_deployment_id}: {e}"
+                "Failed to discover dynamic tools for %s: %s",
+                template_or_deployment_id,
+                e,
             )
             return []
 
@@ -632,7 +635,7 @@ class ToolManager:
             return []
 
         except Exception as e:
-            logger.error(f"Failed to discover tools from image {image}: {e}")
+            logger.error("Failed to discover tools from image %s: %s", image, e)
             return []
 
     def normalize_tool_schema(self, tool_data: Dict, source: str) -> Dict:
@@ -709,7 +712,7 @@ class ToolManager:
             return normalized
 
         except Exception as e:
-            logger.error(f"Failed to normalize tool schema: {e}")
+            logger.error("Failed to normalize tool schema: %s", e)
             # Fallback handling for Pydantic objects
             try:
                 if hasattr(tool_data, "model_dump"):
@@ -772,7 +775,7 @@ class ToolManager:
             return True
 
         except Exception as e:
-            logger.error(f"Tool validation failed: {e}")
+            logger.error("Tool validation failed: %s", e)
             return False
 
     def call_tool(
@@ -845,7 +848,9 @@ class ToolManager:
 
                         if endpoint:
                             logger.info(
-                                f"Using HTTP transport for {template_or_deployment} at {endpoint}"
+                                "Using HTTP transport for %s at %s",
+                                template_or_deployment,
+                                endpoint,
                             )
                             result = self.tool_caller.call_tool(
                                 endpoint, transport, tool_name, parameters, timeout
@@ -853,7 +858,7 @@ class ToolManager:
                             return result
 
                 except Exception as e:
-                    logger.debug(f"HTTP transport failed, trying stdio: {e}")
+                    logger.debug("HTTP transport failed, trying stdio: %s", e)
 
             # Second try: Use stdio if template supports it
             try:
@@ -873,7 +878,7 @@ class ToolManager:
                 default_transport = transport_config.get("default", "http")
 
                 if "stdio" in supported_transports or default_transport == "stdio":
-                    logger.info(f"Using stdio transport for {template_or_deployment}")
+                    logger.info("Using stdio transport for %s", template_or_deployment)
 
                     # Mock required config values if not provided
                     if config_values is None:
@@ -927,14 +932,14 @@ class ToolManager:
                     }
 
             except Exception as e:
-                logger.error(f"Stdio transport failed: {e}")
+                logger.error("Stdio transport failed: %s", e)
                 return {
                     "success": False,
                     "error": f"Failed to call tool via stdio: {e}",
                 }
 
         except Exception as e:
-            logger.error(f"Failed to call tool {tool_name}: {e}")
+            logger.error("Failed to call tool %s: %s", tool_name, e)
             return {"success": False, "error": str(e)}
 
     def _discover_tools_auto(self, template_or_id: str, timeout: int) -> List[Dict]:
@@ -993,7 +998,7 @@ class ToolManager:
             self.cache_manager.delete(cache_key)
         else:
             # Clear entire cache
-            self.cache_manager.clear()
+            self.cache_manager.clear_all()
 
     def get_cached_tools(
         self, template_or_id: str, discovery_method: str = "auto"
@@ -1064,5 +1069,5 @@ class ToolManager:
             return "static"
 
         except Exception as e:
-            logger.debug(f"Could not determine discovery method: {e}")
+            logger.debug("Could not determine discovery method: %s", e)
             return "static"  # Default fallback

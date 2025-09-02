@@ -1,7 +1,7 @@
 {
   "name": "Elasticsearch",
   "description": "Official Elasticsearch MCP server implementation for connecting to Elasticsearch data",
-  "version": "1.0.0",
+  "version": "0.4.5",
   "author": "Data Everything",
   "category": "Database",
   "tags": ["elasticsearch", "search", "database", "analytics", "indexing", "esql", "experimental"],
