@@ -181,8 +181,8 @@ mcpp deploy elasticsearch --config ES_URL="https://localhost:9200" --config ES_A
 
 # Call tools directly
 mcpp i
-mcpp> call elasticsearch list_indices
-mcpp> call elasticsearch search '{"index": "test-index", "query": {"match_all": {}}}'
+mcpp> call elasticsearch list_indices --no-pull -C es_username=elastic -C es_password="jezTfCghVFjmYh2Y3N4k" -C es_url="http://host.docker.internal:9300" -C es_ssl_skip_verify=true '{"index_pattern":"*"}'
+mcpp> call elasticsearch search --no-pull -C es_username=elastic -C es_password="jezTfCghVFjmYh2Y3N4k" -C es_url="http://host.docker.internal:9300" -C es_ssl_skip_verify=true '{"index": "test-index", "query": {"match_all": {}}}'
 ```
 
 ## Monitoring & Troubleshooting

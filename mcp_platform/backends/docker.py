@@ -171,9 +171,6 @@ class DockerDeploymentService(BaseDeploymentBackend):
                 try:
                     discovery_result = tool_manager.list_tools(
                         template_id,
-                        discovery_method="static",
-                        use_cache=True,
-                        force_refresh=False,
                     )
                     tools = discovery_result.get("tools", [])
                     tool_names = [tool.get("name", "unknown") for tool in tools]
@@ -537,8 +534,8 @@ class DockerDeploymentService(BaseDeploymentBackend):
             image_name = template_data.get("image", f"mcp-{template_id}:latest")
 
             # Pull image if requested
-            if pull_image:
-                self._run_command([BACKEND_TYPE, "pull", image_name])
+            # if pull_image:
+            #    self._run_command([BACKEND_TYPE, "pull", image_name])
 
             # Generate a temporary container name for this execution
             container_name = f"mcp-{template_id}-stdio-{str(uuid.uuid4())[:8]}"

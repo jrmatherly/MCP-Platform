@@ -33,7 +33,7 @@ This MCP server is EXPERIMENTAL as noted in the official Elasticsearch repositor
 3. Test the connection:
    ```bash
    mcpp i
-   mcpp> call elasticsearch list_indices
+   mcpp> call elasticsearch list_indices --no-pull -C es_username=elastic -C es_password="jezTfCghVFjmYh2Y3N4k" -C es_url="http://host.docker.internal:9300" -C es_ssl_skip_verify=true '{"index_pattern":"*"}'
    ```
 
 ## Available Tools

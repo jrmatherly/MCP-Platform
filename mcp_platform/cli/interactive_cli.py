@@ -365,7 +365,7 @@ def call_tool(
         ),
     ] = None,
     no_pull: Annotated[
-        bool, typer.Option("--no-pull", help="Don't pull Docker images")
+        bool, typer.Option("--no-pull", "-np", help="Don't pull Docker images")
     ] = False,
     raw: Annotated[
         bool, typer.Option("--raw", "-R", help="Show raw JSON response")
