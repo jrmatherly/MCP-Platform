@@ -38,7 +38,7 @@ class TestElasticsearchConfig:
         assert template_data["experimental"] is True
         assert "elasticsearch" in template_data["tags"]
         assert template_data["docker_image"] == "dataeverything/mcp-elasticsearch"
-        assert template_data["docker_tag"] == "0.4.5"
+        assert template_data["docker_tag"] == "latest"
 
     def test_config_schema_validation(self):
         """Test configuration schema validation."""
@@ -202,7 +202,7 @@ class TestElasticsearchConfig:
         assert template_data["has_image"] is True
         assert template_data["origin"] == "external"
         assert template_data["docker_image"] == "dataeverything/mcp-elasticsearch"
-        assert template_data["docker_tag"] == "0.4.5"
+        assert template_data["docker_tag"] == "latest"
 
 
 if __name__ == "__main__":
