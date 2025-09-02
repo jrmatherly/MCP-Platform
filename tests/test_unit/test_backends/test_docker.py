@@ -92,7 +92,6 @@ class TestDockerDeploymentService:
         """Test listing deployments."""
         mock_response = """{"ID": "abc123def456", "Names": "mcp-test-123", "State": "running", "CreatedAt": "2024-01-01", "RunningFor": "2 hours ago", "Image": "test:latest", "Labels": "template=test,managed-by=mcp-template", "Ports": "0.0.0.0:8080->8080/tcp"}"""
         mock_run_command.return_value = Mock(stdout=mock_response)
-
         service = DockerDeploymentService()
         deployments = service.list_deployments()
 
@@ -147,7 +146,6 @@ class TestDockerDeploymentService:
         status = service.get_deployment_info(
             "test-container", include_logs=False
         )  # Don't include logs to avoid second call
-
         assert status is not None, "Status should not be None"
         assert status["status"] == "running"
         assert status["name"] == "test-container"

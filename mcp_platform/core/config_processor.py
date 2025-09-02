@@ -423,6 +423,7 @@ class ConfigProcessor:
         config_copy = config.copy()
         for prop_key, prop_value in config_properties.items():
             delete_key = False
+            updated_config_container_path = ""
             env_var_name = prop_value.get("env_mapping", prop_key.upper())
             container_mount_path = None
             host_path = None
@@ -475,20 +476,19 @@ class ConfigProcessor:
                         logger.warning("Invalid volume mount format: %s", path_part)
                         continue  # Skip this path and continue with others
 
-                    if host_path and host_path.startswith(
-                        "/"
-                    ):  # Only process absolute paths
+                    if host_path:
                         if container_mount_path:
                             volumes[host_path] = container_mount_path
                             final_container_paths.append(container_mount_path)
                         else:
-                            container_path = (
+                            container_mount_path = (
                                 f"{default_mount_path}/{host_path.lstrip('/')}"
                             )
-                            volumes[host_path] = container_path
-                            final_container_paths.append(container_path)
+                            volumes[host_path] = container_mount_path
+                            final_container_paths.append(container_mount_path)
 
-                delete_key = True
+                    # If we are to pass this to container then it should be mounted path
+                    updated_config_container_path = container_mount_path
 
             # Check if this property is a command argument
             if (
@@ -526,6 +526,8 @@ class ConfigProcessor:
             if delete_key:
                 # Remove the key from config to avoid duplication
                 config.pop(env_var_name, None)
+            elif updated_config_container_path:
+                config[env_var_name] = updated_config_container_path
 
         # Update template with volumes and commands
         if "volumes" not in template or template["volumes"] is None:

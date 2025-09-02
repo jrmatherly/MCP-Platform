@@ -35,12 +35,14 @@ from mcp_platform.core.response_formatter import (
     get_backend_indicator,
 )
 
-# from mcp_platform.gateway.cli import gateway_app
-
 response_formatter = ResponseFormatter()
 
 
 class AliasGroup(typer.core.TyperGroup):
+    """
+    Custom alias group for typer
+    """
+
     _CMD_SPLIT_P = re.compile(r"[,/] ?")
 
     def get_command(self, ctx, cmd_name):
@@ -73,7 +75,7 @@ cli_state = {
     "backend_type": os.getenv(
         "MCP_BACKEND",
         (
-            list(available_valid_backends().keys())[0]
+            builtins.list(available_valid_backends().keys())[0]
             if available_valid_backends()
             else None
         ),
@@ -138,6 +140,68 @@ def main(
 
     if verbose:
         console.print(f"[dim]Using backend: {backend}[/dim]")
+
+
+@app.command(name="config")
+def show_config(
+    template: Annotated[
+        str,
+        typer.Argument(help="Template name (opßtional if template is selected)"),
+    ],
+):
+    """Show configurable properties for a template."""
+    try:
+        client = MCPClient(backend_type=cli_state["backend_type"])
+        # Get template info to understand schema
+        template_info = client.get_template_info(template)
+        if not template_info:
+            console.print(f"[red]❌ Could not get template info for '{template}'[/red]")
+            return
+
+        config_schema = template_info.get("config_schema", {})
+        properties = config_schema.get("properties", {})
+        required_props = config_schema.get("required", [])
+
+        if not properties:
+            console.print(
+                f"[yellow]Template '{template}' has no configurable properties[/yellow]"
+            )
+            return
+
+        # Create enhanced table
+        table = Table(title=f"Configuration for {template}")
+        table.add_column("Property", style="cyan", width=20)
+        table.add_column("Required", style="bold", width=12)
+        table.add_column("Type", style="blue", width=10)
+        table.add_column("Description", style="white", width=40)
+        table.add_column("Default", style="magenta", width=30)
+        table.add_column("Options", style="magenta", width=30)
+
+        for prop_name, prop_info in properties.items():
+            is_required = prop_name in required_props
+
+            prop_type = prop_info.get("type", "unknown")
+            options = prop_info.get(
+                "enum", prop_info.get("options", prop_info.get("choices", []))
+            )
+            required_display = "[green]✅[/green]" if is_required else "[dim]⚪[/dim]"
+
+            # Get description
+            description = prop_info.get("description", "No description available")
+            default_value = str(prop_info.get("default", ""))
+
+            table.add_row(
+                prop_name,
+                required_display,
+                prop_type,
+                description,
+                default_value,
+                ", ".join(options),
+            )
+
+        console.print(table)
+    except Exception as e:
+        console.print(f"[red]❌ Error showing config: {e}[/red]")
 
 
 @app.command()

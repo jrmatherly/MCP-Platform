@@ -137,12 +137,12 @@ class TemplateDiscovery:
         else:
             # Use the mocked directories
             self.templates_dirs = [custom_dir, builtin_dir]
-        
+
         self.templates_dir = self.templates_dirs[0] if self.templates_dirs else None
 
     def discover_templates(self):
         templates = {}
-        
+
         for templates_dir in reversed(self.templates_dirs):
             if not templates_dir.exists():
                 continue
@@ -162,14 +162,14 @@ class TemplateDiscovery:
 
     def _load_template_config(self, template_dir):
         template_json = template_dir / "template.json"
-        
+
         if not template_json.exists():
             return None
 
         try:
             with open(template_json, encoding="utf-8") as f:
                 template_data = json.load(f)
-            
+
             # Simplified config generation for test
             config = {
                 "name": template_data.get("name", template_dir.name.title()),
@@ -178,7 +178,7 @@ class TemplateDiscovery:
                 "docker_image": template_data.get("docker_image", f"default/{template_dir.name}:latest"),
                 "config_schema": template_data.get("config_schema", {}),
             }
-            
+
             return config
 
         except (json.JSONDecodeError, KeyError, FileNotFoundError):
@@ -262,7 +262,6 @@ print("✅ All integration tests passed!")
 
             # Test with environment variable
             with patch.dict(os.environ, {"MCP_CUSTOM_TEMPLATES_DIR": str(custom_dir)}):
-
                 # Test environment variable detection
                 def get_custom_templates_dir():
                     custom_dir_env = os.environ.get("MCP_CUSTOM_TEMPLATES_DIR")
@@ -271,6 +270,4 @@ print("✅ All integration tests passed!")
                     return None
 
                 detected_dir = get_custom_templates_dir()
-                assert detected_dir == custom_dir
-
-                print("✅ Environment variable integration test passed!")
+                assert os.path.realpath(detected_dir) == os.path.realpath(custom_dir)

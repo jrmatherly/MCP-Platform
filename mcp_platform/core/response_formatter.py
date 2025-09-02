@@ -242,6 +242,14 @@ class ResponseFormatter:
 
     def _analyze_data_types(self, data: Any) -> Dict[str, Any]:
         """Analyze data structure and return metadata about its composition."""
+        ignore_keys = [
+            "success",
+            "error",
+            "isError",
+            "isSuccess",
+            "is_erorr",
+            "is_success",
+        ]
         analysis = {
             "primary_type": type(data).__name__,
             "is_homogeneous": True,
@@ -250,8 +258,10 @@ class ResponseFormatter:
             "complexity": "simple",
             "best_display": "raw",
         }
-
         if isinstance(data, dict):
+            for ikey in ignore_keys:
+                data.pop(ikey, None)
+
             analysis["size"] = len(data)
             analysis["element_types"] = {k: type(v).__name__ for k, v in data.items()}
 
@@ -260,8 +270,13 @@ class ResponseFormatter:
             analysis["is_homogeneous"] = len(value_types) == 1
             analysis["value_types"] = list(value_types)
 
+            # Check for common data service response patterns (BigQuery, databases, APIs)
+            if self._is_data_service_response(data):
+                analysis["complexity"] = "data_service"
+                analysis["best_display"] = "data_service"
+                analysis["structure_hints"].append("data_service_response")
             # Determine complexity and structure hints
-            if len(data) <= 6 and all(
+            elif len(data) <= 6 and all(
                 isinstance(v, (str, int, float, bool, type(None)))
                 for v in data.values()
             ):
@@ -340,6 +355,55 @@ class ResponseFormatter:
                 # Check if all lists have same length
                 lengths = [len(v) for v in values]
                 return len(set(lengths)) == 1
+        return False
+
+    def _is_data_service_response(self, data: dict) -> bool:
+        """
+        Check if dictionary contains data service response patterns like BigQuery, databases, etc.
+
+        Common patterns:
+        - {datasets: [...], total_count: n, message: "..."}
+        - {rows: [...], count: n, status: "..."}
+        - {records: [...], total: n}
+        - {results: [...], meta: {...}}
+        """
+        # Common list keys that contain tabular data
+        list_keys = [
+            "datasets",
+            "tables",
+            "rows",
+            "records",
+            "results",
+            "data",
+            "items",
+            "entries",
+        ]
+
+        # Check if we have one of these list keys with data
+        for list_key in list_keys:
+            if (
+                list_key in data
+                and isinstance(data[list_key], list)
+                and len(data[list_key]) > 0
+            ):
+
+                # Check if the list contains dict objects (records)
+                first_item = data[list_key][0]
+                if isinstance(first_item, dict):
+                    # Check if it has consistent keys (tabular structure)
+                    if self._has_consistent_keys(
+                        data[list_key][:5]
+                    ):  # Check first 5 items
+                        # Additional check: ensure there are metadata fields alongside the list
+                        metadata_keys = set(data.keys()) - {list_key}
+                        metadata_values = [data[k] for k in metadata_keys]
+                        # Should have simple metadata fields (not deeply nested)
+                        if metadata_values and all(
+                            isinstance(v, (str, int, float, bool, type(None)))
+                            for v in metadata_values
+                        ):
+                            return True
+
         return False
 
     def _has_consistent_keys(self, data: List[dict]) -> bool:
@@ -485,10 +549,11 @@ class ResponseFormatter:
                 or header.lower().endswith("_id"),
             }
 
-            # Determine display properties
+            # Determine display properties with better width handling for common data patterns
             if analysis["is_id_like"]:
                 analysis["style"] = "cyan"
-                analysis["width"] = min(20, max(10, analysis["max_length"] + 2))
+                # Give more space for dataset IDs and similar identifiers
+                analysis["width"] = min(25, max(15, analysis["max_length"] + 2))
             elif analysis["is_boolean_like"]:
                 analysis["style"] = "green"
                 analysis["width"] = 8
@@ -501,6 +566,16 @@ class ResponseFormatter:
             elif header.lower() in ["description", "content", "message", "text"]:
                 analysis["style"] = "white"
                 analysis["width"] = 40
+            elif "time" in header.lower() or "date" in header.lower():
+                # Special handling for timestamps and dates
+                analysis["style"] = "blue"
+                analysis["width"] = min(22, max(15, analysis["max_length"] + 2))
+            elif (
+                header.lower().endswith(("_id", "_name")) or "dataset" in header.lower()
+            ):
+                # Special handling for BigQuery-style fields
+                analysis["style"] = "cyan"
+                analysis["width"] = min(30, max(18, analysis["max_length"] + 2))
             else:
                 analysis["style"] = "white"
                 analysis["width"] = min(25, max(12, analysis["max_length"] + 2))
@@ -514,8 +589,18 @@ class ResponseFormatter:
 
         for header in headers:
             col_info = column_analysis[header]
+
+            # Smart header formatting for common BigQuery/database fields
+            if "_" in header:
+                # Convert snake_case to Title Case
+                display_header = " ".join(
+                    word.capitalize() for word in header.split("_")
+                )
+            else:
+                display_header = str(header).title()
+
             table.add_column(
-                str(header).title(),
+                display_header,
                 style=col_info["style"],
                 width=col_info["width"],
                 overflow="ellipsis",
@@ -534,7 +619,7 @@ class ResponseFormatter:
 
                 # Format different data types intelligently
                 if value is None:
-                    formatted = "[dim]null[/dim]"
+                    formatted = "[dim]—[/dim]"  # Use em dash for null values
                 elif isinstance(value, bool):
                     formatted = "[green]✓[/green]" if value else "[red]✗[/red]"
                 elif col_info["is_boolean_like"] and isinstance(value, str):
@@ -559,7 +644,21 @@ class ResponseFormatter:
                             else f"[link]{value[:32]}...[/link]"
                         )
                     elif len(value) > col_info["width"] - 3:
-                        formatted = value[: col_info["width"] - 6] + "..."
+                        # Smart truncation - try to keep meaningful parts
+                        if ":" in value and len(value) > 20:  # For full dataset IDs
+                            parts = value.split(":")
+                            if len(parts) == 2:
+                                # Show project:dataset format smartly
+                                available_space = (
+                                    col_info["width"] - 6
+                                )  # Account for "..." and ":"
+                                project_space = available_space // 2
+                                dataset_space = available_space - project_space
+                                formatted = f"{parts[0][:project_space]}...:{parts[1][:dataset_space]}..."
+                            else:
+                                formatted = value[: col_info["width"] - 3] + "..."
+                        else:
+                            formatted = value[: col_info["width"] - 3] + "..."
                     else:
                         formatted = value
                 elif isinstance(value, (dict, list)):
@@ -623,7 +722,11 @@ class ResponseFormatter:
             # Tools is just names or other simple data - fall through to generic display
 
         # Route to appropriate display method based on analysis
-        if structure_type == "key_value" and isinstance(data, dict):
+        if structure_type == "data_service" and isinstance(data, dict):
+            # Handle data service responses (BigQuery, databases, etc.)
+            self._display_data_service_response(data, title)
+
+        elif structure_type == "key_value" and isinstance(data, dict):
             table = self._create_key_value_table(data, title)
             self.console.print(table)
 
@@ -652,6 +755,74 @@ class ResponseFormatter:
         else:
             # Default to syntax-highlighted JSON with analysis hints
             self._display_json_syntax(data, title, analysis)
+
+    def _display_data_service_response(
+        self, data: dict, title: str = "Data Service Response"
+    ) -> None:
+        """
+        Display data service responses with tabular data and metadata.
+
+        Common patterns:
+        - BigQuery: {datasets: [...], total_count: n, message: "..."}
+        - Database queries: {rows: [...], count: n, execution_time: "..."}
+        """
+        # Find the main data list
+        list_keys = [
+            "datasets",
+            "rows",
+            "records",
+            "results",
+            "data",
+            "items",
+            "entries",
+        ]
+        main_data_key = None
+        main_data = None
+
+        for key in list_keys:
+            if key in data and isinstance(data[key], list) and len(data[key]) > 0:
+                main_data_key = key
+                main_data = data[key]
+                break
+
+        if not main_data_key or not main_data:
+            # Fallback to tree display if we can't find the expected structure
+            self._display_tree_structure(data, title)
+            return
+
+        # Create a table for the main data
+        table = self._create_data_table(main_data, f"{title} - {main_data_key.title()}")
+        if table:
+            self.console.print(table)
+        else:
+            # Fallback if table creation fails
+            self._display_json_syntax(main_data, f"{title} - {main_data_key.title()}")
+
+        # Display metadata in a compact format
+        metadata = {k: v for k, v in data.items() if k != main_data_key}
+        if metadata:
+            # Create a compact metadata display
+            metadata_items = []
+            for key, value in metadata.items():
+                if isinstance(value, (str, int, float, bool)):
+                    if isinstance(value, bool):
+                        display_value = "✓" if value else "✗"
+                    elif isinstance(value, str) and len(value) > 50:
+                        display_value = f"{value[:47]}..."
+                    else:
+                        display_value = str(value)
+
+                    metadata_items.append(f"[cyan]{key}[/]: {display_value}")
+                elif value is None:
+                    metadata_items.append(f"[cyan]{key}[/]: [dim]null[/dim]")
+                else:
+                    metadata_items.append(
+                        f"[cyan]{key}[/]: [yellow]{type(value).__name__}[/yellow]"
+                    )
+
+            if metadata_items:
+                metadata_text = " | ".join(metadata_items)
+                self.console.print(f"\n[dim]ℹ️  {metadata_text}[/dim]")
 
     def _display_tree_structure(self, data: dict, title: str = "Data") -> None:
         """Display hierarchical data as a tree structure."""
@@ -761,7 +932,14 @@ class ResponseFormatter:
                     ):
                         # Use structuredContent when available (already parsed JSON)
                         structured_data = result_data["structuredContent"]
-                        self.beautify_json(structured_data, "Tool Result")
+
+                        # Check if this looks like a BigQuery or database response
+                        if self._is_data_service_response(structured_data):
+                            self._display_data_service_response(
+                                structured_data, "Tool Result"
+                            )
+                        else:
+                            self.beautify_json(structured_data, "Tool Result")
 
                     elif isinstance(result_data, dict) and "content" in result_data:
                         content_items = result_data["content"]
@@ -773,9 +951,18 @@ class ResponseFormatter:
                                     try:
                                         # Try to parse as JSON for better formatting
                                         parsed_content = json.loads(text_content)
-                                        self.beautify_json(
-                                            parsed_content, f"Tool Result {i + 1}"
-                                        )
+
+                                        # Check if parsed content is a data service response
+                                        if self._is_data_service_response(
+                                            parsed_content
+                                        ):
+                                            self._display_data_service_response(
+                                                parsed_content, f"Tool Result {i + 1}"
+                                            )
+                                        else:
+                                            self.beautify_json(
+                                                parsed_content, f"Tool Result {i + 1}"
+                                            )
                                     except json.JSONDecodeError:
                                         # Display as text if not JSON
                                         self.console.print(

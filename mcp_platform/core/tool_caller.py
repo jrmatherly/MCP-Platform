@@ -10,9 +10,12 @@ import json
 import logging
 from dataclasses import dataclass
 from typing import Any, Dict, List, Literal, Optional
+from urllib.parse import urlparse
 
 import requests
 
+from mcp_platform.backends.docker import DockerDeploymentService
+from mcp_platform.core.config_processor import ConfigProcessor
 from mcp_platform.core.exceptions import ToolCallError
 from mcp_platform.core.mcp_connection import MCPConnection
 
@@ -60,10 +63,6 @@ class ToolCaller:
         self.backend_type = backend_type
         self.timeout = timeout
         self.caller_type = caller_type
-
-        # Import here to avoid circular imports
-        from mcp_platform.backends.docker import DockerDeploymentService
-        from mcp_platform.core.config_processor import ConfigProcessor
 
         self.config_processor = ConfigProcessor()
 
@@ -180,7 +179,6 @@ class ToolCaller:
             if transport == "http":
                 # Use MCPConnection for unified HTTP protocol handling
                 try:
-                    from urllib.parse import urlparse
 
                     parsed = urlparse(endpoint)
                     base_url = f"{parsed.scheme}://{parsed.netloc}"

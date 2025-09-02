@@ -56,7 +56,9 @@ class KubernetesDeploymentService(BaseDeploymentBackend):
 
     def _ensure_kubernetes_available(self):
         """Check if Kubernetes API is available and configure the client."""
+        old_level = logger.level
         try:
+            logger.setLevel(logging.ERROR)
             # Try to load configuration
             if self.kubeconfig_path:
                 config.load_kube_config(config_file=self.kubeconfig_path)
@@ -78,8 +80,10 @@ class KubernetesDeploymentService(BaseDeploymentBackend):
             logger.info("Connected to Kubernetes API")
 
         except Exception as e:
-            logger.error(f"Failed to connect to Kubernetes API: {e}")
-            raise RuntimeError(f"Kubernetes backend unavailable: {e}")
+            logger.debug(f"Failed to connect to Kubernetes API: {e}")
+            raise RuntimeError("Kubernetes backend unavailable")
+        finally:
+            logger.setLevel(old_level)
 
     def _ensure_namespace_exists(self, dry_run: bool = False):
         """Ensure the target namespace exists."""
@@ -681,12 +685,15 @@ class KubernetesDeploymentService(BaseDeploymentBackend):
         except ApiException as e:
             return {"error": str(e)}
 
-    def list_deployments(self) -> List[Dict[str, Any]]:
+    def list_deployments(self, template: str = None) -> List[Dict[str, Any]]:
         """List Kubernetes deployments."""
         try:
+            label_selector = "app.kubernetes.io/managed-by=mcp-platform"
+            if template:
+                label_selector += f",app.kubernetes.io/name={template}"
             deployments = self.apps_v1.list_namespaced_deployment(
                 namespace=self.namespace,
-                label_selector="app.kubernetes.io/managed-by=mcp-platform",
+                label_selector=label_selector,
             )
 
             result = []

@@ -54,7 +54,7 @@ class BaseDeploymentBackend(ABC):
         pass
 
     @abstractmethod
-    def list_deployments(self) -> List[Dict[str, Any]]:
+    def list_deployments(self, template: str = None) -> List[Dict[str, Any]]:
         """List all active deployments managed by this backend.
 
         Returns:

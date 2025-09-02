@@ -11,7 +11,7 @@ import time
 import uuid
 from contextlib import suppress
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from rich.console import Console
 from rich.panel import Panel
@@ -341,7 +341,10 @@ class DockerDeploymentService(BaseDeploymentBackend):
         for host_path, container_path in template_volumes.items():
             # Expand user paths
             expanded_path = os.path.expanduser(host_path)
-            os.makedirs(expanded_path, exist_ok=True)
+            try:
+                os.makedirs(expanded_path, exist_ok=True)
+            except FileExistsError:
+                pass
             volumes.extend(["--volume", f"{expanded_path}:{container_path}"])
         return volumes
 
@@ -670,6 +673,158 @@ EOF""",
         except Exception:
             pass  # Ignore cleanup failures
 
+    def _get_host_port(
+        self,
+        ports: Union[Dict, List, str],
+    ):
+        """
+        Resolve ports list to extract hot port
+        """
+
+        host_port = None
+        if isinstance(ports, list):
+            # Podman format: Ports is a list of port objects
+            if ports:
+                try:
+                    port_obj = ports[0]
+                    if isinstance(port_obj, dict):
+                        host_port = port_obj.get(
+                            "host_port", port_obj.get("HostPort", "")
+                        )
+                        host_port = str(host_port) if host_port else ""
+                except (IndexError, KeyError):
+                    host_port = ""
+
+        elif isinstance(ports, dict):
+            # Example - {'7090/tcp': [{'HostIp': '0.0.0.0', 'HostPort': '7090'}, {'HostIp': '::', 'HostPort': '7090'}]}
+            for _, val in ports.items():
+                host_port = self._get_host_port(val)
+                if host_port:
+                    break
+
+        elif isinstance(ports, str) and ports:
+            # Docker format: Ports is a string
+            try:
+                port_parts = ports.split(", ")[-1].split(":")[-1].split("/")
+                host_port = port_parts[0] if port_parts else ""
+            except (IndexError, AttributeError):
+                host_port = str(ports)
+
+        return host_port
+
+    def _prepare_deployment_result(
+        self,
+        container: Dict,
+        include_logs: bool = False,
+        lines: int = 100,
+    ):
+        """
+        Prepare consistent deployment result from container result
+        """
+
+        try:
+            labels = container.get(
+                "Labels", container.get("Config", {}).get("Labels", "")
+            )
+            template_name = "unknown"
+
+            # Handle different label formats
+            if isinstance(labels, dict):
+                # Podman format: Labels is a dictionary
+                template_name = labels.get("template", template_name)
+            elif isinstance(labels, str) and labels:
+                # Docker format: Labels is a comma-separated string
+                if "template=" in labels:
+                    for label in labels.split(","):
+                        if label.strip().startswith("template="):
+                            template_name = label.split("=", 1)[1]
+                            break
+
+            # Handle port parsing safely - Podman has different port format
+            ports_str = container.get(
+                "Ports", container.get("NetworkSettings", {}).get("Ports", "")
+            )
+            ports_display = self._get_host_port(ports_str) or ""
+
+            # Handle Names field - can be array or string
+            names = container.get("Names", container.get("Name", "unknown")).lstrip("/")
+            if isinstance(names, list) and names:
+                name = names[0]
+            else:
+                name = str(names)
+
+            # Compose endpoint (Docker: always localhost + port if available)
+            if ports_display:
+                splitters = ["->", "-", ":", "/"]
+                for splitter in splitters:
+                    parts = ports_display.split(splitter)
+                    if len(parts) > 1:
+                        host_port = parts[0].strip()
+                        break
+                else:
+                    host_port = ports_display.strip()
+            else:
+                host_port = "unknown"
+
+            endpoint = f"http://localhost:{host_port}"
+            # Transport: if port is present, assume http, else stdio
+            transport = "http" if ports_display else "stdio"
+            state = container.get("State", "unknown")
+
+            if isinstance(state, dict):
+                status = state.get("Status", "unknown")
+            elif isinstance(state, str):
+                status = container.get("Status", None) or state
+            running = (
+                status == "running" or (state.get("Running", False))
+                if isinstance(state, dict)
+                else False
+            )
+            deployment = {
+                "id": container.get("ID", container.get("Id", "unknown")),
+                "name": name,
+                "template": template_name,
+                "state": state,
+                "status": status,
+                "running": running,
+                "created": container.get(
+                    "CreatedAt", container.get("Created", "unknown")
+                ),
+                "since": (
+                    container.get("RunningFor", state.get("StartedAt", "unknown"))
+                    if isinstance(state, dict)
+                    else "unknown"
+                ),
+                "image": container.get(
+                    "Image", container.get("Config", {}).get("Image", "unknown")
+                ),
+                "ports": ports_display,
+                "endpoint": endpoint,
+                "transport": transport,
+                "health": container.get("Health", {}).get("Status", "unknown"),
+            }
+            if include_logs:
+                try:
+                    log_result = self._run_command(
+                        [
+                            BACKEND_TYPE,
+                            "logs",
+                            "--tail",
+                            str(int(lines)),
+                            container.get("ID", "unknown"),
+                        ],
+                        check=False,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT,  # Because docker logs are sent to stderr by default
+                    )
+                    deployment["logs"] = log_result.stdout
+                except Exception:
+                    deployment["logs"] = "Unable to fetch logs"
+        except:
+            deployment = None
+
+        return deployment
+
     # Container Management Methods
     def list_deployments(self, template: Optional[str] = None) -> List[Dict[str, Any]]:
         """List all MCP deployments managed by this Docker service.
@@ -678,18 +833,20 @@ EOF""",
             List of deployment information dictionaries
         """
         try:
+            cmd = [
+                BACKEND_TYPE,
+                "ps",
+                "-a",
+                "--filter",
+                "label=managed-by=mcp-template",
+                "--format",
+                "json",
+            ]
+            if template:
+                template.extend(["--filter", f"label=template={template}"])
+
             # Get containers with the managed-by label
-            result = self._run_command(
-                [
-                    BACKEND_TYPE,
-                    "ps",
-                    "-a",
-                    "--filter",
-                    "label=managed-by=mcp-template",
-                    "--format",
-                    "json",
-                ]
-            )
+            result = self._run_command(cmd)
 
             deployments = []
             if result.stdout.strip():
@@ -718,89 +875,9 @@ EOF""",
 
                 # Process each container
                 for container in containers:
-                    try:
-                        # Parse template from labels - handle both Docker and Podman formats
-                        labels = container.get("Labels", "")
-                        template_name = "unknown"
-
-                        # Handle different label formats
-                        if isinstance(labels, dict):
-                            # Podman format: Labels is a dictionary
-                            template_name = labels.get("template", "unknown")
-                        elif isinstance(labels, str) and labels:
-                            # Docker format: Labels is a comma-separated string
-                            if "template=" in labels:
-                                for label in labels.split(","):
-                                    if label.strip().startswith("template="):
-                                        template_name = label.split("=", 1)[1]
-                                        break
-
-                        # Handle port parsing safely - Podman has different port format
-                        ports_str = container.get("Ports", "")
-                        ports_display = ""
-                        if isinstance(ports_str, list):
-                            # Podman format: Ports is a list of port objects
-                            if ports_str:
-                                try:
-                                    port_obj = ports_str[0]
-                                    if isinstance(port_obj, dict):
-                                        host_port = port_obj.get("host_port", "")
-                                        ports_display = (
-                                            str(host_port) if host_port else ""
-                                        )
-                                except (IndexError, KeyError):
-                                    ports_display = ""
-                        elif isinstance(ports_str, str) and ports_str:
-                            # Docker format: Ports is a string
-                            try:
-                                port_parts = (
-                                    ports_str.split(", ")[-1].split(":")[-1].split("/")
-                                )
-                                ports_display = port_parts[0] if port_parts else ""
-                            except (IndexError, AttributeError):
-                                ports_display = str(ports_str)
-
-                        # Handle Names field - can be array or string
-                        names = container.get("Names", "unknown")
-                        if isinstance(names, list) and names:
-                            name = names[0]
-                        else:
-                            name = str(names)
-
-                        # Compose endpoint (Docker: always localhost + port if available)
-                        if ports_display:
-                            splitters = ["->", "-", ":", "/"]
-                            for splitter in splitters:
-                                parts = ports_display.split(splitter)
-                                if len(parts) > 1:
-                                    host_port = parts[0].strip()
-                                    break
-                            else:
-                                host_port = ports_display.strip()
-                        else:
-                            host_port = "unknown"
-
-                        endpoint = f"http://localhost:{host_port}"
-                        # Transport: if port is present, assume http, else stdio
-                        transport = "http" if ports_display else "stdio"
-                        deployments.append(
-                            {
-                                "id": container.get("ID", "unknown"),
-                                "name": name,
-                                "template": template_name,
-                                "status": container.get("State", "unknown"),
-                                "since": container.get("RunningFor", "unknown"),
-                                "image": container.get("Image", "unknown"),
-                                "ports": ports_display,
-                                "endpoint": endpoint,
-                                "transport": transport,
-                            }
-                        )
-                    except (KeyError, AttributeError) as e:
-                        logger.debug(
-                            f"Failed to parse container data: {container}, error: {e}"
-                        )
-                        continue
+                    deployment_info = self._prepare_deployment_result(container)
+                    if deployment_info:
+                        deployments.append(deployment_info)
 
             return deployments
 
@@ -835,54 +912,11 @@ EOF""",
                 containers = json.loads(result.stdout)
                 if containers:
                     container = containers[0]
-
-                    # Extract relevant information
-                    labels = container.get("Config", {}).get("Labels", {}) or {}
-                    template_name = labels.get("template", "unknown")
-
-                    # Get port information
-                    ports = container.get("NetworkSettings", {}).get("Ports", {})
-                    port_display = ""
-                    for port, mappings in ports.items():
-                        if mappings:
-                            host_port = mappings[0].get("HostPort", "")
-                            if host_port:
-                                port_display = host_port
-                                break
-
-                    # Build result with unified information
-                    result_info = {
-                        "id": container.get("Id", "unknown"),
-                        "name": container.get("Name", "").lstrip("/"),
-                        "template": template_name,
-                        "status": container.get("State", {}).get("Status", "unknown"),
-                        "running": container.get("State", {}).get("Running", False),
-                        "image": container.get("Config", {}).get("Image", "unknown"),
-                        "ports": port_display,
-                        "created": container.get("Created", ""),
-                        "raw_container": container,  # Include full container data for advanced operations
-                    }
-
-                    # Add logs if requested
-                    if include_logs:
-                        try:
-                            log_result = self._run_command(
-                                [
-                                    BACKEND_TYPE,
-                                    "logs",
-                                    "--tail",
-                                    str(int(lines)),
-                                    deployment_name,
-                                ],
-                                check=False,
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT,  # Because docker logs are sent to stderr by default
-                            )
-                            result_info["logs"] = log_result.stdout
-                        except Exception:
-                            result_info["logs"] = "Unable to fetch logs"
-
-                    return result_info
+                    return self._prepare_deployment_result(
+                        container=container,
+                        include_logs=include_logs,
+                        lines=lines,
+                    )
 
             return None
 
@@ -1016,7 +1050,6 @@ EOF""",
         Returns:
             None - Gives access to deployment shell
         """
-        import os
 
         # Check if container is running
         container_info = self.get_deployment_info(deployment_id)
