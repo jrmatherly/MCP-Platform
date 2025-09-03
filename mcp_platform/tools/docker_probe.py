@@ -4,6 +4,7 @@ Docker probe for discovering MCP server tools from Docker images.
 
 import asyncio
 import logging
+import os
 import socket
 import subprocess
 import time
@@ -226,7 +227,7 @@ class DockerProbe(BaseProbe):
                 "--name",
                 container_name,
                 "--network",
-                network_name,
+                network_name or os.getenv("MCP_PLATFORM_NETWORK_NAME", "mcp-platform"),
                 "-p",
                 f"{port}:8000",
                 image_name,

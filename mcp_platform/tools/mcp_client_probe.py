@@ -5,6 +5,7 @@ MCP Client probe for discovering tools from MCP servers via stdio.
 import asyncio
 import json
 import logging
+import os
 import time
 from typing import Any, Dict, List, Optional
 
@@ -130,7 +131,7 @@ class MCPClientProbe:
                 "--name",
                 container_name,
                 "--network",
-                network_name,
+                network_name or os.getenv("MCP_PLATFORM_NETWORK_NAME", "mcp-platform"),
             ]
 
             # Add environment variables
