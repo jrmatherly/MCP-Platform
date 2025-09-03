@@ -732,28 +732,10 @@ class DockerDeploymentService(BaseDeploymentBackend):
             if pull_image:
                 self._pull_image(image_name)
 
-            # Generate a temporary container name for this execution
-            container_name = f"mcp-{template_id}-stdio-{str(uuid.uuid4())[:8]}"
-
-            # Build the Docker command for interactive stdio execution
-            docker_command = self._build_docker_command(
-                container_name,
-                template_id,
-                image_name,
-                env_vars,
-                volumes,
-                [],  # No port mappings for stdio
-                command_args,
-                is_stdio=True,
-                detached=False,  # Run interactively
-            )
-
-            # Add interactive flags for stdio
-            docker_command.insert(2, "-i")  # Interactive
-            docker_command.insert(3, "--rm")  # Remove container after execution
+            # Ensure network exists before running stdio command
+            self.create_network()
 
             logger.info("Running stdio command for template %s", template_id)
-            logger.debug("Docker command: %s", " ".join(docker_command))
 
             # Parse the original JSON input to extract the tool call
             try:
@@ -802,11 +784,11 @@ class DockerDeploymentService(BaseDeploymentBackend):
             logger.debug("Full MCP input: %s", full_input)
 
             # Execute the command with MCP input sequence using bash heredoc
-            # This avoids creating temporary files
+            # Include network parameter to ensure stdio containers run in the correct network
             bash_command = [
                 "/bin/bash",
                 "-c",
-                f"""{self.backend_name} run -i --rm {" ".join(env_vars)} {" ".join(volumes)} {" ".join(["--label", f"template={template_id}"])} {image_name} {" ".join(command_args)} << 'EOF'
+                f"""{self.backend_name} run -i --rm --network {MCP_PLATFORM_NETWORK_NAME} {" ".join(env_vars)} {" ".join(volumes)} {" ".join(["--label", f"template={template_id}"])} {image_name} {" ".join(command_args)} << 'EOF'
 {full_input}
 EOF""",
             ]

@@ -30,6 +30,18 @@ class DockerProbe(BaseProbe):
         """Initialize Docker probe."""
         super().__init__()
 
+    def _ensure_network_exists(self):
+        """Ensure the mcp-platform network exists before running containers."""
+        try:
+            from mcp_platform.backends.docker import DockerDeploymentService
+
+            docker_service = DockerDeploymentService()
+            docker_service.create_network()
+        except Exception as e:
+            # Network creation failed, but don't fail the whole probe
+            logger.warning("Failed to create/verify mcp-platform network: %s", e)
+            # Continue without network - containers will use default bridge
+
     def _background_cleanup(self, container_name: str, max_retries: int = 3):
         """Background cleanup with retries."""
 
@@ -202,12 +214,17 @@ class DockerProbe(BaseProbe):
     ) -> bool:
         """Start container with HTTP server (fallback method)."""
         try:
+            # Ensure network exists before starting container
+            self._ensure_network_exists()
+
             cmd = [
                 "docker",
                 "run",
                 "-d",
                 "--name",
                 container_name,
+                "--network",
+                "mcp-platform",
                 "-p",
                 f"{port}:8000",
                 image_name,

@@ -138,14 +138,16 @@ mcpp deploy open-elastic-search \
 
 ### Setup Elasticsearch (Optional)
 ```bash
+python -c "from mcp_platform.backends.docker import DockerDeploymentService; DockerDeploymentService().create_network()"
 docker run -d \
   --name elasticsearch \
   -p 9200:9200 \
   -p 9300:9300 \
   -e "discovery.type=single-node" \
   -e "xpack.security.enabled=true" \
-  -e "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+  -e "ES_JAVA_OPTS=-Xms512m -Xmx512m" \
   -e "ELASTIC_PASSWORD=mcp-password-123" \
+  --network mcp-platform \
   elasticsearch:9.1.3
 ```
 
