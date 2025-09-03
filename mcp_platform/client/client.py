@@ -48,6 +48,7 @@ from mcp_platform.core import (
     ToolCaller,
     ToolManager,
 )
+from mcp_platform.core.config_processor import ConfigProcessor
 from mcp_platform.core.deployment_manager import DeploymentOptions
 from mcp_platform.core.multi_backend_manager import MultiBackendManager
 from mcp_platform.template.utils.discovery import TemplateDiscovery
@@ -767,12 +768,11 @@ class MCPClient:
             self._multi_manager = self.multi_manager
 
         try:
-            from mcp_platform.core.config_processor import ConfigProcessor
 
             # Get template info for configuration processing
             template_info = self.get_template_info(template_id)
             if not template_info:
-                logger.error(f"Template {template_id} not found")
+                logger.error("Template %s not found", template_id)
                 return None
 
             # Merge configuration from all sources
@@ -797,7 +797,7 @@ class MCPClient:
             )
             return result
         except Exception as e:
-            logger.error(f"Failed to call tool {tool_name} with config: {e}")
+            logger.error("Failed to call tool %s with config: %s", tool_name, e)
             return None
 
     # Direct Connection Methods
