@@ -2,6 +2,7 @@
 Docker backend for managing deployments using Docker containers.
 """
 
+import ipaddress
 import json
 import logging
 import os
@@ -25,6 +26,7 @@ console = Console()
 
 
 STDIO_TIMEOUT = os.getenv("MCP_STDIO_TIMEOUT", "30")
+MCP_PLATFORM_NETWORK_NAME = os.getenv("MCP_PLATFORM_NETWORK_NAME", "mcp-platform")
 
 if isinstance(STDIO_TIMEOUT, str):
     try:
@@ -62,6 +64,172 @@ class DockerDeploymentService(BaseDeploymentBackend):
             return True
 
         return False
+
+    def create_network(self):
+        """
+        Create a Docker network if it doesn't already exist.
+        """
+        # If the network already exists, nothing to do
+        result = self._run_command(
+            ["docker", "network", "inspect", MCP_PLATFORM_NETWORK_NAME], check=False
+        )
+        if result.returncode == 0:
+            logger.debug(
+                "Docker network '%s' already exists", MCP_PLATFORM_NETWORK_NAME
+            )
+            return
+
+        logger.info(
+            "Creating Docker network '%s' (selecting non-conflicting subnet)",
+            MCP_PLATFORM_NETWORK_NAME,
+        )
+
+        # Gather existing subnets from current docker networks to avoid conflicts
+        existing_subnets = set()
+        try:
+            out = self._run_command(
+                ["docker", "network", "ls", "--format", "{{.Name}}"], check=False
+            )
+            if out and out.stdout:
+                for net_name in out.stdout.splitlines():
+                    try:
+                        inspect_res = self._run_command(
+                            ["docker", "network", "inspect", net_name], check=False
+                        )
+                        if inspect_res and inspect_res.stdout:
+                            try:
+                                data = json.loads(inspect_res.stdout)
+                            except json.JSONDecodeError:
+                                continue
+                            # data can be list (docker) - handle both
+                            entries = data if isinstance(data, list) else [data]
+                            for entry in entries:
+                                ipam = entry.get("IPAM", {})
+                                for cfg in ipam.get("Config", []) or []:
+                                    subnet = cfg.get("Subnet")
+                                    if subnet:
+                                        try:
+                                            existing_subnets.add(
+                                                ipaddress.ip_network(subnet)
+                                            )
+                                        except Exception:
+                                            continue
+                    except Exception:
+                        continue
+        except Exception:
+            # If we can't list networks, fall back to creating a simple network later
+            existing_subnets = set()
+
+        # Candidate /24 ranges to try (private address space, avoids common default 172.17/16)
+        candidates = [
+            ipaddress.ip_network("172.30.0.0/24"),
+            ipaddress.ip_network("172.31.0.0/24"),
+            ipaddress.ip_network("172.28.0.0/24"),
+            ipaddress.ip_network("172.29.0.0/24"),
+            ipaddress.ip_network("172.32.0.0/24"),
+        ]
+
+        chosen = None
+        for cand in candidates:
+            # Check overlap with any existing subnet
+            conflict = False
+            for existing in existing_subnets:
+                if cand.overlaps(existing):
+                    conflict = True
+                    break
+            if not conflict:
+                chosen = cand
+                break
+
+        # Try creating the network with an IPAM config if we found a candidate
+        if chosen:
+            subnet = str(chosen)
+            gateway = (
+                str(list(chosen.hosts())[0])
+                if list(chosen.hosts())
+                else subnet.split("/")[0]
+            )
+            ip_range = (
+                str(ipaddress.ip_network(f"{chosen.network_address + 256}/{24}"))
+                if chosen.prefixlen < 24
+                else subnet
+            )
+            # Ensure ip_range is inside subnet and sane — fallback to subnet if calculation fails
+            try:
+                if not ipaddress.ip_network(ip_range).subnet_of(chosen):
+                    ip_range = subnet
+            except Exception:
+                ip_range = subnet
+
+            try:
+                logger.debug(
+                    "Attempting to create docker network %s with subnet %s",
+                    MCP_PLATFORM_NETWORK_NAME,
+                    subnet,
+                )
+                self._run_command(
+                    [
+                        "docker",
+                        "network",
+                        "create",
+                        "--driver",
+                        "bridge",
+                        "--subnet",
+                        subnet,
+                        "--gateway",
+                        gateway,
+                        "--ip-range",
+                        ip_range,
+                        MCP_PLATFORM_NETWORK_NAME,
+                    ]
+                )
+                logger.info(
+                    "Created Docker network '%s' with subnet %s",
+                    MCP_PLATFORM_NETWORK_NAME,
+                    subnet,
+                )
+                return
+            except subprocess.CalledProcessError as e:
+                logger.warning(
+                    "Failed to create docker network with subnet %s: %s", subnet, e
+                )
+            except Exception as e:
+                logger.warning(
+                    "Unexpected error creating docker network with subnet %s: %s",
+                    subnet,
+                    e,
+                )
+
+        # If we couldn't pick a candidate or creation failed, try basic create without IPAM
+        try:
+            logger.debug(
+                "Falling back to basic docker network create for %s",
+                MCP_PLATFORM_NETWORK_NAME,
+            )
+            self._run_command(
+                [
+                    "docker",
+                    "network",
+                    "create",
+                    "--driver",
+                    "bridge",
+                    MCP_PLATFORM_NETWORK_NAME,
+                ]
+            )
+            logger.info(
+                "Created Docker network '%s' without explicit subnet",
+                MCP_PLATFORM_NETWORK_NAME,
+            )
+        except subprocess.CalledProcessError as e:
+            logger.error(
+                "Failed to create Docker network '%s': %s", MCP_PLATFORM_NETWORK_NAME, e
+            )
+        except Exception as e:
+            logger.error(
+                "Unexpected error creating Docker network '%s': %s",
+                MCP_PLATFORM_NETWORK_NAME,
+                e,
+            )
 
     # Docker Infrastructure Methods
     def _run_command(
@@ -431,6 +599,15 @@ class DockerDeploymentService(BaseDeploymentBackend):
                 f"template={template_id}",
                 "--label",
                 "managed-by=mcp-template",
+            ]
+        )
+
+        # Network setup
+        self.create_network()
+        docker_command.extend(
+            [
+                "--network",
+                MCP_PLATFORM_NETWORK_NAME,
             ]
         )
 

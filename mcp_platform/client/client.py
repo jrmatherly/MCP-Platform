@@ -194,7 +194,7 @@ class MCPClient:
                 template_id, include_deployed_status=include_deployed_status
             )
         except Exception as e:
-            logger.error(f"Failed to get template info for {template_id}: {e}")
+            logger.error("Failed to get template info for %s: %s", template_id, e)
             return None
 
     def validate_template(self, template_id: str) -> bool:
@@ -210,7 +210,7 @@ class MCPClient:
         try:
             return self.template_manager.validate_template(template_id)
         except Exception as e:
-            logger.error(f"Failed to validate template {template_id}: {e}")
+            logger.error("Failed to validate template %s: %s", template_id, e)
             return False
 
     def search_templates(self, query: str) -> Dict[str, Dict[str, Any]]:
@@ -226,7 +226,7 @@ class MCPClient:
         try:
             return self.template_manager.search_templates(query)
         except Exception as e:
-            logger.error(f"Failed to search templates: {e}")
+            logger.error("Failed to search templates: %s", e)
             return {}
 
     # Server Management
@@ -257,7 +257,7 @@ class MCPClient:
             )
             return all_deployments
         except Exception as e:
-            logger.error(f"Failed to list servers: {e}")
+            logger.error("Failed to list servers: %s", e)
             return []
 
     def list_servers_by_template(self, template: str) -> List[Dict[str, Any]]:
@@ -462,7 +462,7 @@ class MCPClient:
             )
 
         except Exception as e:
-            logger.error(f"Failed to deploy template {template_id}: {e}")
+            logger.error("Failed to deploy template %s: %s", template_id, e)
             return None
 
     def stop_server(self, deployment_id: str, timeout: int = 30) -> Dict[str, Any]:
@@ -497,7 +497,7 @@ class MCPClient:
 
             return self.multi_manager.stop_deployment(deployment_id, timeout)
         except Exception as e:
-            logger.error(f"Failed to stop server {deployment_id}: {e}")
+            logger.error("Failed to stop server %s: %s", deployment_id, e)
             return {"success": False, "error": str(e)}
 
     def stop_all_servers(
@@ -552,7 +552,7 @@ class MCPClient:
                 results[deployment_id] = result
 
         except Exception as e:
-            logger.error(f"Failed to stop all servers for template {template}: {e}")
+            logger.error("Failed to stop all servers for template %s: %s", template, e)
 
         return results
 
@@ -572,7 +572,7 @@ class MCPClient:
             )
             return deployments[0] if deployments else None
         except Exception as e:
-            logger.error(f"Failed to get server info for {deployment_id}: {e}")
+            logger.error("Failed to get server info for %s: %s", deployment_id, e)
             return None
 
     def get_server_logs(
@@ -598,7 +598,7 @@ class MCPClient:
             )
             return result.get("logs") if result.get("success") else None
         except Exception as e:
-            logger.error(f"Failed to get server logs for {deployment_id}: {e}")
+            logger.error("Failed to get server logs for %s: %s", deployment_id, e)
             return None
 
     def get_template_logs(
@@ -637,7 +637,7 @@ class MCPClient:
                 logs = self.get_server_logs(deployment_id, lines=lines)
                 result[backend].append({deployment_id: logs})
         except Exception as e:
-            logger.error(f"Failed to get logs for template {template}: {e}")
+            logger.error("Failed to get logs for template %s: %s", template, e)
         return dict(result)
 
     # Tool Discovery and Management
@@ -680,7 +680,7 @@ class MCPClient:
                 # Backward compatible - return just the tools list
                 return result.get("tools", [])
         except Exception as e:
-            logger.error(f"Failed to list tools for {template_name}: {e}")
+            logger.error("Failed to list tools for %s: %s", template_name, e)
             return []
 
     def call_tool(
@@ -727,7 +727,7 @@ class MCPClient:
             )
             return result
         except Exception as e:
-            logger.error(f"Failed to call tool {tool_name}: {e}")
+            logger.error("Failed to call tool %s: %s", tool_name, e)
             return None
 
     def call_tool_with_config(
@@ -950,7 +950,7 @@ class MCPClient:
             self.template_manager.refresh_cache()
             self.tool_manager.clear_cache()
         except Exception as e:
-            logger.error(f"Failed to clear caches: {e}")
+            logger.error("Failed to clear caches: %s", e)
 
     def get_backend_type(self) -> str:
         """Get the backend type being used."""
@@ -970,7 +970,7 @@ class MCPClient:
             self.tool_manager = ToolManager(backend_type)
             self.tool_caller = ToolCaller(backend_type)
         except Exception as e:
-            logger.error(f"Failed to set backend type to {backend_type}: {e}")
+            logger.error("Failed to set backend type to %s: %s", backend_type, e)
             raise
 
     # Cleanup methods
@@ -1021,7 +1021,7 @@ class MCPClient:
                     template_name, tool_name, arguments
                 )
             except Exception as e:
-                logger.warning(f"Gateway call failed, falling back to direct: {e}")
+                logger.warning("Gateway call failed, falling back to direct: %s", e)
 
         # Fallback to direct call
         return await self.call_tool(template_name, tool_name, arguments)
@@ -1041,7 +1041,7 @@ class MCPClient:
                 gateway_client = self._get_gateway_client()
                 return await gateway_client.list_tools(template_name)
             except Exception as e:
-                logger.warning(f"Gateway call failed, falling back to direct: {e}")
+                logger.warning("Gateway call failed, falling back to direct: %s", e)
 
         # Fallback to direct call
         return await self.list_tools(template_name)
@@ -1049,12 +1049,12 @@ class MCPClient:
     async def get_gateway_health(self) -> Dict[str, Any]:
         """Get gateway health status."""
         gateway_client = self._get_gateway_client()
-        return await gateway_client.get_gateway_health()
+        return await gateway_client.health_check()
 
     async def get_gateway_stats(self) -> Dict[str, Any]:
         """Get gateway statistics."""
         gateway_client = self._get_gateway_client()
-        return await gateway_client.get_gateway_stats()
+        return await gateway_client.get_stats()
 
     async def __aenter__(self):
         """Async context manager entry."""
