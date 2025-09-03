@@ -29,11 +29,13 @@ class MCPClientProbe:
             from mcp_platform.backends.docker import DockerDeploymentService
 
             docker_service = DockerDeploymentService()
-            docker_service.create_network()
+            network_name = docker_service.create_network()
         except Exception as e:
             # Network creation failed, but don't fail the whole probe
             logger.warning("Failed to create/verify mcp-platform network: %s", e)
             # Continue without network - containers will use default bridge
+            network_name = None
+        return network_name
 
     async def discover_tools_from_command(
         self, command: List[str], working_dir: Optional[str] = None
@@ -117,7 +119,7 @@ class MCPClientProbe:
         container_name = f"mcp-discovery-{image_name.replace('/', '-').replace(':', '-')}-{int(time.time())}"
         try:
             # Ensure network exists before starting container
-            self._ensure_network_exists()
+            network_name = self._ensure_network_exists()
 
             # Build docker command
             docker_cmd = [
@@ -128,7 +130,7 @@ class MCPClientProbe:
                 "--name",
                 container_name,
                 "--network",
-                "mcp-platform",
+                network_name,
             ]
 
             # Add environment variables

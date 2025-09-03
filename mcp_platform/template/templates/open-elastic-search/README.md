@@ -154,13 +154,13 @@ docker run -d \
 ### List all indices
 ```bash
 mcpp interactive
-mcpp> call open-elastic-search  list_indices --no-pull -C elasticsearch_username=elastic -C elasticsearch_password="mcp-password-123" -C elasticsearch_hosts="http://host.docker.internal:9300" -C elasticsearch_verify_certs=true
+mcpp> call open-elastic-search  list_indices --no-pull -C elasticsearch_username=elastic -C elasticsearch_password="mcp-password-123" -C elasticsearch_hosts="http://mcp-server:9300" -C elasticsearch_verify_certs=true
 ```
 
 ### Search documents
 ```bash
 mcpp interactive
-mcpp> call open-elastic-search search_documents --no-pull -C elasticsearch_username=elastic -C elasticsearch_password="mcp-password-123" -C elasticsearch_hosts="http://host.docker.internal:9300" -C elasticsearch_verify_certs=true '{
+mcpp> call open-elastic-search search_documents --no-pull -C elasticsearch_username=elastic -C elasticsearch_password="mcp-password-123" -C elasticsearch_hosts="http://mcp-server:9300" -C elasticsearch_verify_certs=true '{
   "index": "logs",
   "body": {
     "query": {
@@ -176,7 +176,7 @@ mcpp> call open-elastic-search search_documents --no-pull -C elasticsearch_usern
 ### Create an index
 ```bash
 mcpp interactive
-mcpp> call open-elastic-search --no-pull -C elasticsearch_username=elastic -C elasticsearch_password="mcp-password-123" -C elasticsearch_hosts="http://host.docker.internal:9300" -C elasticsearch_verify_certs=true create_index '{
+mcpp> call open-elastic-search --no-pull -C elasticsearch_username=elastic -C elasticsearch_password="mcp-password-123" -C elasticsearch_hosts="http://mcp-server:9300" -C elasticsearch_verify_certs=true create_index '{
   "index": "my-index",
   "body": {
     "settings": {
@@ -196,7 +196,7 @@ mcpp> call open-elastic-search --no-pull -C elasticsearch_username=elastic -C el
 ### Index a document
 ```bash
 mcpp interactive
-mcpp> call open-elastic-search --no-pull -C elasticsearch_username=elastic -C elasticsearch_password="mcp-password-123" -C elasticsearch_hosts="http://host.docker.internal:9300" -C elasticsearch_verify_certs=true index_document '{
+mcpp> call open-elastic-search --no-pull -C elasticsearch_username=elastic -C elasticsearch_password="mcp-password-123" -C elasticsearch_hosts="http://mcp-server:9300" -C elasticsearch_verify_certs=true index_document '{
   "index": "my-index",
   "document": {
     "title": "Sample Document",
@@ -209,7 +209,7 @@ mcpp> call open-elastic-search --no-pull -C elasticsearch_username=elastic -C el
 ### Get cluster health
 ```bash
 mcpp interactive
-mcpp> call open-elastic-search --no-pull -C elasticsearch_username=elastic -C elasticsearch_password="mcp-password-123" -C elasticsearch_hosts="http://host.docker.internal:9300" -C elasticsearch_verify_certs=true get_cluster_health
+mcpp> call open-elastic-search --no-pull -C elasticsearch_username=elastic -C elasticsearch_password="mcp-password-123" -C elasticsearch_hosts="http://mcp-server:9300" -C elasticsearch_verify_certs=true get_cluster_health
 ```
 
 ## Security Considerations

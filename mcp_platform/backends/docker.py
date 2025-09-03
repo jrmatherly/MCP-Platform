@@ -77,7 +77,7 @@ class DockerDeploymentService(BaseDeploymentBackend):
             logger.debug(
                 "Docker network '%s' already exists", MCP_PLATFORM_NETWORK_NAME
             )
-            return
+            return MCP_PLATFORM_NETWORK_NAME
 
         logger.info(
             "Creating Docker network '%s' (selecting non-conflicting subnet)",
@@ -188,11 +188,12 @@ class DockerDeploymentService(BaseDeploymentBackend):
                     MCP_PLATFORM_NETWORK_NAME,
                     subnet,
                 )
-                return
+                return MCP_PLATFORM_NETWORK_NAME
             except subprocess.CalledProcessError as e:
                 logger.warning(
                     "Failed to create docker network with subnet %s: %s", subnet, e
                 )
+
             except Exception as e:
                 logger.warning(
                     "Unexpected error creating docker network with subnet %s: %s",
@@ -220,6 +221,7 @@ class DockerDeploymentService(BaseDeploymentBackend):
                 "Created Docker network '%s' without explicit subnet",
                 MCP_PLATFORM_NETWORK_NAME,
             )
+            return MCP_PLATFORM_NETWORK_NAME
         except subprocess.CalledProcessError as e:
             logger.error(
                 "Failed to create Docker network '%s': %s", MCP_PLATFORM_NETWORK_NAME, e
@@ -230,6 +232,8 @@ class DockerDeploymentService(BaseDeploymentBackend):
                 MCP_PLATFORM_NETWORK_NAME,
                 e,
             )
+
+        return None
 
     # Docker Infrastructure Methods
     def _run_command(
