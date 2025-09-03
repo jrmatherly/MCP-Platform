@@ -119,24 +119,6 @@ class TestOpenElasticSearchMCPIntegration:
         }
         assert "opensearch_username" in cfg and "opensearch_password" in cfg
 
-    def test_ssl_configuration(self):
-        es = {
-            "engine_type": "elasticsearch",
-            "elasticsearch_hosts": "https://localhost:9200",
-            "elasticsearch_api_key": "test_key",
-            "elasticsearch_verify_certs": False,
-        }
-        os = {
-            "engine_type": "opensearch",
-            "opensearch_hosts": "https://localhost:9200",
-            "opensearch_username": "admin",
-            "opensearch_password": "admin",
-            "opensearch_verify_certs": False,
-        }
-
-        assert "elasticsearch_verify_certs" in es
-        assert "opensearch_verify_certs" in os
-
     def test_http_transport_configuration(self):
         cfg = {
             "engine_type": "elasticsearch",
@@ -247,6 +229,10 @@ class TestOpenElasticSearchMCPIntegration:
         assert any("EXPERIMENTAL" in w for w in warnings)
 
     def test_ssl_configuration(self):
+        """
+        Test ssl configuration extraction.
+        """
+
         cfg = {"elasticsearch_verify_certs": False}
         env = self._extract_env_vars(cfg)
         assert (
@@ -319,7 +305,6 @@ class TestOpenElasticSearchMCPIntegration:
             raise ValueError(
                 "ELASTICSEARCH_HOSTS is required when engine_type is elasticsearch"
             )
-
         # basic URL check
         url = config.get("elasticsearch_hosts") or config.get("opensearch_hosts")
         if url and not (url.startswith("http://") or url.startswith("https://")):

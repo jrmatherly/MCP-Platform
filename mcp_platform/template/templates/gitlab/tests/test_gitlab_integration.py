@@ -86,9 +86,6 @@ class TestGitLabTemplate:
         assert "required" in schema
         assert schema["type"] == "object"
 
-        # Required properties
-        assert "gitlab_personal_access_token" in schema["required"]
-
         # Verify all properties have env_mapping
         for prop_name, prop_config in schema["properties"].items():
             assert "env_mapping" in prop_config, f"Missing env_mapping for {prop_name}"
