@@ -486,7 +486,7 @@ def call_tool(
             if raw:
                 console.print(json.dumps(result, indent=2))
             else:
-                session.formatter.beautify_tool_response(result)
+                session.formatter.beautify_tool_response(result, template, tool_name)
                 # _display_tool_result(result.get("result"), tool_name, raw=False)
 
                 # Show additional info if available

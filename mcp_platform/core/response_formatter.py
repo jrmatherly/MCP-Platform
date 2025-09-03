@@ -10,7 +10,7 @@ import datetime
 import json
 import logging
 import traceback
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 
 from rich.columns import Columns
 from rich.console import Console
@@ -20,6 +20,7 @@ from rich.table import Table
 from rich.tree import Tree
 
 from mcp_platform.backends import VALID_BACKENDS
+from mcp_platform.utils import TEMPLATES_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +43,9 @@ STATUS_COLORS = {
     "pending": "blue",
     "terminating": "orange1",
 }
+
+# Constants for tool response formatting
+TOOL_RESULT_TITLE = "Tool Result"
 
 console = Console()
 
@@ -717,7 +721,7 @@ class ResponseFormatter:
             # Special case: handle tools lists (MCP-specific but common pattern)
             tools = data["tools"]
             if tools and isinstance(tools[0], dict) and "name" in tools[0]:
-                self.beautify_toollist(tools, "MCP Server Tools")
+                self.beautify_tools_list(tools, "MCP Server Tools")
                 return
             # Tools is just names or other simple data - fall through to generic display
 
@@ -910,8 +914,196 @@ class ResponseFormatter:
 
         self.console.print(panel)
 
-    def beautify_tool_response(self, response: Dict[str, Any]) -> None:
+    def _get_template_formatter(self, template_name: str):
+        """Get template-specific formatter if available."""
+        try:
+            import importlib.util
+            from pathlib import Path
+
+            # Look for response_formatter.py in the template directory
+            template_dir = (
+                Path(__file__).parent.parent / "template" / "templates" / template_name
+            )
+            formatter_path = template_dir / "response_formatter.py"
+
+            if formatter_path.exists():
+                spec = importlib.util.spec_from_file_location(
+                    f"{template_name}_formatter", formatter_path
+                )
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
+
+                # Look for the formatter class (convention: <Template>ResponseFormatter)
+                formatter_class_name = f"{template_name.replace('-', '').replace('_', '').title()}ResponseFormatter"
+
+                # Fallback to common names
+                possible_names = [
+                    formatter_class_name,
+                    "ElasticsearchResponseFormatter",
+                    "ResponseFormatter",
+                    "Formatter",
+                ]
+
+                for class_name in possible_names:
+                    if hasattr(module, class_name):
+                        formatter_class = getattr(module, class_name)
+                        return formatter_class(console=self.console)
+
+        except Exception as e:
+            if self.verbose:
+                self.console.print(f"[dim]Could not load template formatter: {e}[/dim]")
+
+        return None
+
+    def _get_template_formatter(self, template_name: str):
+        """Get template-specific formatter if available."""
+        try:
+            import importlib
+            import sys
+
+            template_path = TEMPLATES_DIR / template_name
+
+            if not template_path.exists():
+                return None
+
+            # Check for template.json configuration first
+            template_json_path = template_path / "template.json"
+            formatter_config = None
+
+            if template_json_path.exists():
+                try:
+                    with open(template_json_path, "r") as f:
+                        template_data = json.load(f)
+                        formatter_config = template_data.get("response_formatter", {})
+
+                        # Skip if explicitly disabled
+                        if formatter_config.get("enabled", True) is False:
+                            return None
+                except (json.JSONDecodeError, FileNotFoundError):
+                    pass
+
+            # Determine module and class names
+            if formatter_config:
+                module_name = formatter_config.get("module", "response_formatter")
+                class_name = formatter_config.get("class")
+            else:
+                module_name = "response_formatter"
+                class_name = None
+
+            # Check if formatter module exists
+            formatter_file = template_path / f"{module_name}.py"
+            if not formatter_file.exists():
+                return None
+
+            # Import the formatter module
+            sys.path.insert(0, str(template_path))
+            try:
+                formatter_module = importlib.import_module(module_name)
+
+                # Find the formatter class
+                if class_name:
+                    # Use explicitly configured class name
+                    if hasattr(formatter_module, class_name):
+                        formatter_class = getattr(formatter_module, class_name)
+                    else:
+                        if self.verbose:
+                            self.console.print(
+                                f"[yellow]Configured formatter class '{class_name}' not found[/yellow]"
+                            )
+                        return None
+                else:
+                    # Auto-detect formatter class
+                    formatter_class = self._find_formatter_class(
+                        formatter_module, template_name
+                    )
+
+                if formatter_class:
+                    return formatter_class(console=self.console)
+
+            finally:
+                if str(template_path) in sys.path:
+                    sys.path.remove(str(template_path))
+
+            return None
+
+        except Exception as e:
+            if self.verbose:
+                self.console.print(
+                    f"[yellow]Failed to load template formatter: {e}[/yellow]"
+                )
+            return None
+
+    def _find_formatter_class(self, module, template_name: str):
+        """Find formatter class in module using naming conventions."""
+        # Try multiple naming conventions
+        possible_names = [
+            "ElasticsearchResponseFormatter",  # Special case for elasticsearch
+            f"{template_name.replace('-', '_').title().replace('_', '')}ResponseFormatter",
+            f"{''.join(word.title() for word in template_name.replace('-', '_').split('_'))}ResponseFormatter",
+        ]
+
+        for class_name in possible_names:
+            if hasattr(module, class_name):
+                return getattr(module, class_name)
+
+        # Look for any class ending with ResponseFormatter
+        for attr_name in dir(module):
+            if attr_name.endswith("ResponseFormatter") and not attr_name.startswith(
+                "_"
+            ):
+                attr = getattr(module, attr_name)
+                if isinstance(attr, type):  # Check if it's a class
+                    return attr
+
+        return None
+
+    def _extract_response_text(self, response: Dict[str, Any]) -> Optional[str]:
+        """Extract the actual response text from MCP response structure."""
+        try:
+            if "result" in response and response["result"]:
+                result_data = response["result"]
+
+                # Handle MCP content format
+                if isinstance(result_data, dict) and "content" in result_data:
+                    content_items = result_data["content"]
+                    if isinstance(content_items, list) and content_items:
+                        for content in content_items:
+                            if isinstance(content, dict) and "text" in content:
+                                return content["text"]
+
+                # Handle direct string result
+                elif isinstance(result_data, str):
+                    return result_data
+
+        except Exception:
+            pass
+
+        return None
+
+    def beautify_tool_response(
+        self, response: Dict[str, Any], template_name: str = None, tool_name: str = None
+    ) -> None:
         """Beautify tool execution response with enhanced formatting."""
+        # First try template-specific formatter if available
+        if template_name and tool_name:
+            try:
+                template_formatter = self._get_template_formatter(template_name)
+                if template_formatter:
+                    # Extract the actual response text
+                    response_text = self._extract_response_text(response)
+                    if response_text:
+                        template_formatter.format_tool_response(
+                            tool_name, response_text
+                        )
+                        return
+            except Exception as e:
+                if self.verbose:
+                    self.console.print(
+                        f"[yellow]⚠️  Template formatter failed: {e}[/yellow]"
+                    )
+                # Continue with default formatting
+
+        # Fallback to default formatting
         if response.get("used_stdio"):
             self.console.print(
                 Panel(
@@ -936,20 +1128,21 @@ class ResponseFormatter:
                         # Check if this looks like a BigQuery or database response
                         if self._is_data_service_response(structured_data):
                             self._display_data_service_response(
-                                structured_data, "Tool Result"
+                                structured_data, TOOL_RESULT_TITLE
                             )
                         else:
-                            self.beautify_json(structured_data, "Tool Result")
+                            self.beautify_json(structured_data, TOOL_RESULT_TITLE)
 
                     elif isinstance(result_data, dict) and "content" in result_data:
                         content_items = result_data["content"]
                         if isinstance(content_items, list) and content_items:
                             for i, content in enumerate(content_items):
                                 if isinstance(content, dict) and "text" in content:
-                                    # Try to beautify the text content if it's structured data
+                                    # Display text content as-is
                                     text_content = content["text"]
+
+                                    # Try to parse as JSON for better formatting
                                     try:
-                                        # Try to parse as JSON for better formatting
                                         parsed_content = json.loads(text_content)
 
                                         # Check if parsed content is a data service response
@@ -957,27 +1150,29 @@ class ResponseFormatter:
                                             parsed_content
                                         ):
                                             self._display_data_service_response(
-                                                parsed_content, f"Tool Result {i + 1}"
+                                                parsed_content,
+                                                f"{TOOL_RESULT_TITLE} {i + 1}",
                                             )
                                         else:
                                             self.beautify_json(
-                                                parsed_content, f"Tool Result {i + 1}"
+                                                parsed_content,
+                                                f"{TOOL_RESULT_TITLE} {i + 1}",
                                             )
                                     except json.JSONDecodeError:
                                         # Display as text if not JSON
                                         self.console.print(
                                             Panel(
                                                 text_content,
-                                                title=f"Tool Result {i + 1}",
+                                                title=f"{TOOL_RESULT_TITLE} {i + 1}",
                                                 border_style="green",
                                             )
                                         )
                                 else:
                                     self.beautify_json(content, f"Content {i + 1}")
                         else:
-                            self.beautify_json(result_data, "Tool Result")
+                            self.beautify_json(result_data, TOOL_RESULT_TITLE)
                     else:
-                        self.beautify_json(result_data, "Tool Result")
+                        self.beautify_json(result_data, TOOL_RESULT_TITLE)
 
                 elif "error" in response and response.get("error"):
                     error_info = response["error"]

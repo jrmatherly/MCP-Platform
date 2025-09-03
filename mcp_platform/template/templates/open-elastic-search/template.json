@@ -134,6 +134,10 @@
     ]
   },
   "tool_discovery": "static",
+  "response_formatter": {
+    "enabled": true,
+    "tools": ["list_indices", "get_index", "search", "general_api_request"]
+  },
   "has_image": true,
   "origin": "custom",
   "experimental": true,

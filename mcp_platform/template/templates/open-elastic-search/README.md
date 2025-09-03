@@ -154,13 +154,13 @@ docker run -d \
 ### List all indices
 ```bash
 mcpp interactive
-mcpp> call open-elastic-search  list_indices --no-pull -C elasticsearch_username=elastic -C elasticsearch_password="mcp-password-123" -C elasticsearch_hosts="http://mcp-server:9300" -C elasticsearch_verify_certs=true
+mcpp> call open-elastic-search  list_indices --no-pull -C elasticsearch_username=elastic -C elasticsearch_password="mcp-password-123" -C elasticsearch_hosts="http://elasticsearch:9200" -C elasticsearch_verify_certs=true
 ```
 
 ### Search documents
 ```bash
 mcpp interactive
-mcpp> call open-elastic-search search_documents --no-pull -C elasticsearch_username=elastic -C elasticsearch_password="mcp-password-123" -C elasticsearch_hosts="http://mcp-server:9300" -C elasticsearch_verify_certs=true '{
+mcpp> call open-elastic-search search_documents --no-pull -C elasticsearch_username=elastic -C elasticsearch_password="mcp-password-123" -C elasticsearch_hosts="http://elasticsearch:9200" -C elasticsearch_verify_certs=true '{
   "index": "logs",
   "body": {
     "query": {
