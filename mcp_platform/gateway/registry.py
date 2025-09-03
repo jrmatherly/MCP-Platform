@@ -12,15 +12,9 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 from .database import DatabaseManager, ServerInstanceCRUD, ServerTemplateCRUD
-from .models import (
-    LoadBalancerConfig,
-    LoadBalancerConfigCreate,
-    ServerInstance,
-    ServerInstanceCreate,
-    ServerStatus,
-    ServerTemplate,
-    ServerTemplateCreate,
-)
+from .models import (LoadBalancerConfig, LoadBalancerConfigCreate,
+                     ServerInstance, ServerInstanceCreate, ServerStatus,
+                     ServerTemplate, ServerTemplateCreate)
 
 logger = logging.getLogger(__name__)
 

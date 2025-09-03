@@ -4,7 +4,8 @@ Load balancer integration tests.
 
 import pytest
 
-from mcp_platform.gateway.load_balancer import LoadBalancer, LoadBalancingStrategy
+from mcp_platform.gateway.load_balancer import (LoadBalancer,
+                                                LoadBalancingStrategy)
 from mcp_platform.gateway.models import ServerInstance, ServerStatus
 
 pytestmark = pytest.mark.integration

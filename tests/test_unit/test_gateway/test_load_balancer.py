@@ -9,17 +9,16 @@ import time
 
 import pytest
 
-from mcp_platform.gateway.load_balancer import (
-    BaseBalancingStrategy,
-    HealthBasedStrategy,
-    LeastConnectionsStrategy,
-    LoadBalancer,
-    LoadBalancingStrategy,
-    RandomStrategy,
-    RoundRobinStrategy,
-    WeightedRoundRobinStrategy,
-)
-from mcp_platform.gateway.models import LoadBalancerConfig, ServerInstance, ServerStatus
+from mcp_platform.gateway.load_balancer import (BaseBalancingStrategy,
+                                                HealthBasedStrategy,
+                                                LeastConnectionsStrategy,
+                                                LoadBalancer,
+                                                LoadBalancingStrategy,
+                                                RandomStrategy,
+                                                RoundRobinStrategy,
+                                                WeightedRoundRobinStrategy)
+from mcp_platform.gateway.models import (LoadBalancerConfig, ServerInstance,
+                                         ServerStatus)
 
 pytestmark = pytest.mark.unit
 

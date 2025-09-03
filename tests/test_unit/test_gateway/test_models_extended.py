@@ -8,19 +8,11 @@ from datetime import datetime
 
 import pytest
 
-from mcp_platform.gateway.models import (
-    APIKey,
-    AuthConfig,
-    DatabaseConfig,
-    GatewayConfig,
-    LoadBalancerConfig,
-    LoadBalancingStrategy,
-    ServerInstance,
-    ServerStatus,
-    ServerTemplate,
-    TransportType,
-    User,
-)
+from mcp_platform.gateway.models import (APIKey, AuthConfig, DatabaseConfig,
+                                         GatewayConfig, LoadBalancerConfig,
+                                         LoadBalancingStrategy, ServerInstance,
+                                         ServerStatus, ServerTemplate,
+                                         TransportType, User)
 
 pytestmark = pytest.mark.unit
 

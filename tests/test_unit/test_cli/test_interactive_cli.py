@@ -9,29 +9,18 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from mcp_platform.cli.interactive_cli import (
-    COMMANDS,
-    InteractiveSession,
-    _check_missing_config,
-    _prompt_for_config,
-    _show_template_help,
-    call_tool,
-    clear_config,
-    configure_template,
-    deploy_template,
-    get_logs,
-    get_session,
-    list_servers,
-    list_templates,
-    list_tools,
-    select_template,
-    setup_completion,
-    show_config,
-    show_help,
-    show_status,
-    stop_server,
-    unselect_template,
-)
+from mcp_platform.cli.interactive_cli import (COMMANDS, InteractiveSession,
+                                              _check_missing_config,
+                                              _prompt_for_config,
+                                              _show_template_help, call_tool,
+                                              clear_config, configure_template,
+                                              deploy_template, get_logs,
+                                              get_session, list_servers,
+                                              list_templates, list_tools,
+                                              select_template,
+                                              setup_completion, show_config,
+                                              show_help, show_status,
+                                              stop_server, unselect_template)
 
 pytestmark = pytest.mark.unit
 

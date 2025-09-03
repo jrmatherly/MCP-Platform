@@ -13,12 +13,8 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from mcp_platform.gateway.models import (
-    ServerInstance,
-    ServerStatus,
-    ServerTemplate,
-    TransportType,
-)
+from mcp_platform.gateway.models import (ServerInstance, ServerStatus,
+                                         ServerTemplate, TransportType)
 from mcp_platform.gateway.registry import RegistryError, ServerRegistry
 
 pytestmark = pytest.mark.unit

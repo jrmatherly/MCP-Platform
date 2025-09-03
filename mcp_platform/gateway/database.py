@@ -5,26 +5,14 @@ from contextlib import asynccontextmanager
 from typing import AsyncGenerator, List, Optional
 
 from sqlalchemy import select, text
-from sqlalchemy.ext.asyncio import (
-    AsyncEngine,
-    AsyncSession,
-    async_sessionmaker,
-    create_async_engine,
-)
+from sqlalchemy.ext.asyncio import (AsyncEngine, AsyncSession,
+                                    async_sessionmaker, create_async_engine)
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import SQLModel
 
-from .models import (
-    APIKey,
-    APIKeyCreate,
-    GatewayConfig,
-    LoadBalancerConfig,
-    ServerInstance,
-    ServerInstanceCreate,
-    ServerTemplate,
-    User,
-    UserCreate,
-)
+from .models import (APIKey, APIKeyCreate, GatewayConfig, LoadBalancerConfig,
+                     ServerInstance, ServerInstanceCreate, ServerTemplate,
+                     User, UserCreate)
 
 logger = logging.getLogger(__name__)
 

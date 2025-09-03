@@ -9,21 +9,13 @@ from datetime import datetime, timezone
 
 import pytest
 
-from mcp_platform.gateway.models import (
-    APIKey,
-    APIKeyCreate,
-    AuthConfig,
-    BackendType,
-    DatabaseConfig,
-    GatewayConfig,
-    LoadBalancerConfig,
-    LoadBalancingStrategy,
-    ServerInstanceCreate,
-    ServerStatus,
-    ServerTemplate,
-    TransportType,
-    UserCreate,
-)
+from mcp_platform.gateway.models import (APIKey, APIKeyCreate, AuthConfig,
+                                         BackendType, DatabaseConfig,
+                                         GatewayConfig, LoadBalancerConfig,
+                                         LoadBalancingStrategy,
+                                         ServerInstanceCreate, ServerStatus,
+                                         ServerTemplate, TransportType,
+                                         UserCreate)
 
 pytestmark = pytest.mark.unit
 

@@ -1,0 +1,338 @@
+{
+  "id": "trino",
+  "name": "Trino MCP Server",
+  "description": "Production-ready Trino MCP server for secure querying of distributed data sources with configurable access controls and authentication",
+  "version": "1.0.0",
+  "author": "Data Everything",
+  "category": "Database",
+  "tags": [
+    "trino",
+    "sql",
+    "distributed",
+    "database",
+    "analytics",
+    "presto",
+    "fastmcp"
+  ],
+  "docker_image": "ghcr.io/tuannvm/mcp-trino",
+  "docker_tag": "latest",
+  "ports": {
+    "8080": 8080
+  },
+  "command": [],
+  "transport": {
+    "default": "stdio",
+    "supported": ["stdio"]
+  },
+  "config_schema": {
+    "type": "object",
+    "properties": {
+      "trino_host": {
+        "type": "string",
+        "title": "Trino Host",
+        "description": "Trino server hostname or IP address",
+        "default": "localhost",
+        "env_mapping": "TRINO_HOST"
+      },
+      "trino_port": {
+        "type": "integer",
+        "title": "Trino Port",
+        "description": "Trino server port number",
+        "default": 8080,
+        "minimum": 1,
+        "maximum": 65535,
+        "env_mapping": "TRINO_PORT"
+      },
+      "trino_user": {
+        "type": "string",
+        "title": "Trino User",
+        "description": "Username for Trino authentication",
+        "default": "admin",
+        "env_mapping": "TRINO_USER"
+      },
+      "auth_method": {
+        "type": "string",
+        "title": "Authentication Method",
+        "description": "Method for authenticating with Trino",
+        "enum": [
+          "basic",
+          "jwt",
+          "oauth2"
+        ],
+        "default": "basic",
+        "env_mapping": "TRINO_AUTH_METHOD"
+      },
+      "jwt_token": {
+        "type": "string",
+        "title": "JWT Token",
+        "description": "JWT token for authentication (required if auth_method is jwt)",
+        "env_mapping": "TRINO_JWT_TOKEN"
+      },
+      "oauth2_client_id": {
+        "type": "string", 
+        "title": "OAuth2 Client ID",
+        "description": "OAuth2 client ID for authentication (required if auth_method is oauth2)",
+        "env_mapping": "TRINO_OAUTH2_CLIENT_ID"
+      },
+      "oauth2_client_secret": {
+        "type": "string",
+        "title": "OAuth2 Client Secret", 
+        "description": "OAuth2 client secret for authentication (required if auth_method is oauth2)",
+        "env_mapping": "TRINO_OAUTH2_CLIENT_SECRET"
+      },
+      "oauth2_token_url": {
+        "type": "string",
+        "title": "OAuth2 Token URL",
+        "description": "OAuth2 token endpoint URL (required if auth_method is oauth2)",
+        "env_mapping": "TRINO_OAUTH2_TOKEN_URL"
+      },
+      "read_only": {
+        "type": "boolean",
+        "title": "Read-Only Mode",
+        "description": "Enable read-only mode to prevent data modifications (recommended for security)",
+        "default": true,
+        "env_mapping": "TRINO_READ_ONLY"
+      },
+      "allowed_catalogs": {
+        "type": "string",
+        "title": "Allowed Catalogs",
+        "description": "Comma-separated list of catalog patterns. Use * for all catalogs, or specify patterns like 'hive,iceberg'",
+        "default": "*",
+        "env_mapping": "TRINO_ALLOWED_CATALOGS"
+      },
+      "catalog_regex": {
+        "type": "string",
+        "title": "Catalog Regex Filter",
+        "description": "Optional regex pattern for advanced catalog filtering. Takes precedence over allowed_catalogs if provided",
+        "env_mapping": "TRINO_CATALOG_REGEX"
+      },
+      "allowed_schemas": {
+        "type": "string",
+        "title": "Allowed Schemas",
+        "description": "Comma-separated list of schema patterns. Use * for all schemas, or specify patterns like 'public,analytics_*'",
+        "default": "*",
+        "env_mapping": "TRINO_ALLOWED_SCHEMAS"
+      },
+      "schema_regex": {
+        "type": "string",
+        "title": "Schema Regex Filter",
+        "description": "Optional regex pattern for advanced schema filtering. Takes precedence over allowed_schemas if provided",
+        "env_mapping": "TRINO_SCHEMA_REGEX"
+      },
+      "query_timeout": {
+        "type": "integer",
+        "title": "Query Timeout (seconds)",
+        "description": "Maximum time to wait for query execution",
+        "default": 300,
+        "minimum": 10,
+        "maximum": 3600,
+        "env_mapping": "TRINO_QUERY_TIMEOUT"
+      },
+      "max_results": {
+        "type": "integer",
+        "title": "Maximum Query Results",
+        "description": "Maximum number of rows to return from queries",
+        "default": 1000,
+        "minimum": 1,
+        "maximum": 10000,
+        "env_mapping": "TRINO_MAX_RESULTS"
+      },
+      "log_level": {
+        "type": "string",
+        "title": "Log Level",
+        "description": "Logging level for the server",
+        "enum": [
+          "debug",
+          "info",
+          "warning",
+          "error"
+        ],
+        "default": "info",
+        "env_mapping": "MCP_LOG_LEVEL"
+      }
+    },
+    "required": ["trino_host", "trino_user"],
+    "anyOf": [
+      {
+        "title": "Basic Authentication",
+        "description": "Use basic authentication with username only",
+        "properties": {
+          "auth_method": {"const": "basic"}
+        }
+      },
+      {
+        "title": "JWT Authentication",
+        "description": "Use JWT token for authentication",
+        "properties": {
+          "auth_method": {"const": "jwt"}
+        },
+        "required": ["jwt_token"]
+      },
+      {
+        "title": "OAuth2 Authentication",
+        "description": "Use OAuth2 flow for authentication",
+        "properties": {
+          "auth_method": {"const": "oauth2"}
+        },
+        "required": ["oauth2_client_id", "oauth2_client_secret", "oauth2_token_url"]
+      }
+    ]
+  },
+  "capabilities": [
+    {
+      "name": "Catalog Discovery",
+      "description": "List and explore Trino catalogs and schemas",
+      "example": "List all accessible catalogs, browse schema information, get catalog metadata"
+    },
+    {
+      "name": "Schema Inspection",
+      "description": "Inspect table schemas and column information",
+      "example": "Get detailed schema for tables, view column types and descriptions"
+    },
+    {
+      "name": "Query Execution",
+      "description": "Execute SQL queries against Trino data sources",
+      "example": "Run SELECT queries, analyze distributed data, generate reports (read-only by default)"
+    },
+    {
+      "name": "Access Control",
+      "description": "Configurable catalog and schema access controls with filter support",
+      "example": "Filter accessible catalogs/schemas, enforce read-only mode, pattern-based access"
+    },
+    {
+      "name": "Multi-Source Support",
+      "description": "Query across multiple data sources and connectors",
+      "example": "Join data from different catalogs, query Hive, Iceberg, PostgreSQL, and more"
+    }
+  ],
+  "tools": [
+    {
+      "name": "list_catalogs",
+      "description": "List all accessible Trino catalogs",
+      "parameters": []
+    },
+    {
+      "name": "list_schemas",
+      "description": "List schemas in a specific catalog",
+      "parameters": [
+        {
+          "name": "catalog",
+          "description": "Catalog name to list schemas from",
+          "type": "string",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "list_tables",
+      "description": "List tables in a specific schema",
+      "parameters": [
+        {
+          "name": "catalog",
+          "description": "Catalog name containing the schema",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "schema",
+          "description": "Schema name to list tables from",
+          "type": "string",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "describe_table",
+      "description": "Get detailed schema information for a table",
+      "parameters": [
+        {
+          "name": "catalog",
+          "description": "Catalog name containing the table",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "schema",
+          "description": "Schema name containing the table",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "table",
+          "description": "Table name to describe",
+          "type": "string",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "execute_query",
+      "description": "Execute a SQL query against Trino (subject to read-only restrictions)",
+      "parameters": [
+        {
+          "name": "query",
+          "description": "SQL query to execute",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "catalog",
+          "description": "Default catalog for the query (optional)",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "schema",
+          "description": "Default schema for the query (optional)",
+          "type": "string",
+          "required": false
+        }
+      ]
+    },
+    {
+      "name": "get_query_status",
+      "description": "Get status of a running query",
+      "parameters": [
+        {
+          "name": "query_id",
+          "description": "Trino query ID to check",
+          "type": "string",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "cancel_query",
+      "description": "Cancel a running query",
+      "parameters": [
+        {
+          "name": "query_id",
+          "description": "Trino query ID to cancel",
+          "type": "string",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "get_cluster_info",
+      "description": "Get information about the Trino cluster",
+      "parameters": []
+    }
+  ],
+  "tool_discovery": "static",
+  "tool_endpoint": "/tools",
+  "has_image": true,
+  "origin": "external",
+  "examples": {
+    "cli_usage": [
+      "python -m mcp_platform deploy trino --config trino_host='trino.example.com' --config trino_user='analyst'",
+      "python -m mcp_platform deploy trino --config trino_host='localhost' --config auth_method='jwt' --config jwt_token='your-jwt-token'",
+      "python -m mcp_platform deploy trino --config trino_host='trino.company.com' --config auth_method='oauth2' --config oauth2_client_id='client123' --config oauth2_client_secret='secret456' --config oauth2_token_url='https://auth.company.com/token'",
+      "python -m mcp_platform deploy trino --config trino_host='localhost' --config allowed_catalogs='hive,iceberg' --config allowed_schemas='public,analytics_*' --config read_only=false"
+    ],
+    "client_integration": {
+      "fastmcp": "# Trino MCP uses stdio transport only\n# Connect via MCP client configuration",
+      "docker": "docker run -i --rm -e TRINO_HOST=localhost -e TRINO_USER=admin ghcr.io/tuannvm/mcp-trino:latest"
+    }
+  }
+}
