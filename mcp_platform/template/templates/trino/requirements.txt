@@ -1,0 +1,20 @@
+# Core MCP dependencies
+fastmcp>=0.1.0
+starlette
+
+# Database connectivity
+sqlalchemy>=2.0.0
+trino>=0.328.0
+
+# Authentication and security
+PyJWT
+cryptography
+oauthlib
+requests-oauthlib
+
+# SQL parsing and validation
+sqlparse
+
+# Utilities
+pydantic>=2.0.0
+python-dotenv

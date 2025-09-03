@@ -1,44 +1,69 @@
 """
-Unit tests for Trino template configuration and validation.
+Unit tests for Trino MCP server configuration and validation.
 
-Tests the Trino template's configuration schema and validation
-without requiring complex template management infrastructure.
+Tests the Trino template's configuration handling, validation, and
+authentication setup using the new Python FastMCP implementation.
 """
 
 import json
 import os
+import pytest
+import tempfile
+from unittest.mock import patch, MagicMock
+
+# Import the configuration module
+import sys
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
+try:
+    from config import TrinoServerConfig, create_trino_config
+except ImportError:
+    # Handle import in different environments
+    import importlib.util
+    config_path = os.path.join(os.path.dirname(__file__), "..", "config.py")
+    spec = importlib.util.spec_from_file_location("config", config_path)
+    config_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(config_module)
+    TrinoServerConfig = config_module.TrinoServerConfig
+    create_trino_config = config_module.create_trino_config
 
 
 class TestTrinoTemplateConfiguration:
     """Test Trino template configuration validation and processing."""
 
     def test_template_json_structure(self):
-        """Test Trino template.json has required structure."""
+        """Test Trino template.json has required structure for Python implementation."""
         template_path = os.path.join(os.path.dirname(__file__), "..", "template.json")
 
         with open(template_path, "r") as f:
             template_config = json.load(f)
 
-        # Verify required template fields
+        # Verify required template fields for new implementation
         assert template_config["name"] == "Trino MCP Server"
         assert template_config["description"]
         assert template_config["version"] == "1.0.0"
-        assert template_config["docker_image"] == "ghcr.io/tuannvm/mcp-trino"
+        assert template_config["docker_image"] == "dataeverything/mcp-trino"
         assert template_config["docker_tag"] == "latest"
         assert template_config["has_image"] is True
-        assert template_config["origin"] == "external"
+        assert template_config["origin"] == "internal"  # Changed from external
         assert template_config["category"] == "Database"
 
-        # Verify supported transports (Trino MCP uses stdio only)
-        assert template_config["transport"]["default"] == "stdio"
-        assert template_config["transport"]["supported"] == ["stdio"]
+        # Verify supported transports (now supports HTTP and stdio)
+        assert template_config["transport"]["default"] == "http"
+        assert "http" in template_config["transport"]["supported"]
+        assert "stdio" in template_config["transport"]["supported"]
+        assert template_config["transport"]["port"] == 7091
+
+        # Verify tags include new ones
+        assert "fastmcp" in template_config["tags"]
+        assert "sqlalchemy" in template_config["tags"]
 
         # Verify configuration schema exists
         assert "config_schema" in template_config
         assert "properties" in template_config["config_schema"]
 
-    def test_authentication_configuration_schema(self):
-        """Test authentication configuration options."""
+    def test_basic_configuration_schema(self):
+        """Test basic connection configuration options."""
         template_path = os.path.join(os.path.dirname(__file__), "..", "template.json")
 
         with open(template_path, "r") as f:
@@ -53,25 +78,51 @@ class TestTrinoTemplateConfiguration:
         assert properties["trino_host"]["env_mapping"] == "TRINO_HOST"
         assert properties["trino_user"]["env_mapping"] == "TRINO_USER"
 
-        # Authentication methods
-        assert "auth_method" in properties
-        auth_method = properties["auth_method"]
-        assert auth_method["enum"] == ["basic", "jwt", "oauth2"]
-        assert auth_method["default"] == "basic"
-        assert auth_method["env_mapping"] == "TRINO_AUTH_METHOD"
+        # Basic connection settings
+        assert "trino_port" in properties
+        assert properties["trino_port"]["default"] == 8080
+        assert properties["trino_port"]["env_mapping"] == "TRINO_PORT"
 
-        # JWT authentication
-        assert "jwt_token" in properties
-        assert properties["jwt_token"]["env_mapping"] == "TRINO_JWT_TOKEN"
+        assert "trino_password" in properties
+        assert properties["trino_password"]["env_mapping"] == "TRINO_PASSWORD"
 
-        # OAuth2 authentication
-        oauth2_fields = ["oauth2_client_id", "oauth2_client_secret", "oauth2_token_url"]
-        for field in oauth2_fields:
+        assert "trino_scheme" in properties
+        assert properties["trino_scheme"]["enum"] == ["http", "https"]
+        assert properties["trino_scheme"]["default"] == "https"
+
+    def test_authentication_configuration_schema(self):
+        """Test authentication configuration options."""
+        template_path = os.path.join(os.path.dirname(__file__), "..", "template.json")
+
+        with open(template_path, "r") as f:
+            template_config = json.load(f)
+
+        properties = template_config["config_schema"]["properties"]
+
+        # OAuth configuration
+        assert "oauth_enabled" in properties
+        assert properties["oauth_enabled"]["default"] is False
+        assert properties["oauth_enabled"]["env_mapping"] == "TRINO_OAUTH_ENABLED"
+
+        assert "oauth_provider" in properties
+        oauth_providers = properties["oauth_provider"]["enum"]
+        assert "hmac" in oauth_providers
+        assert "okta" in oauth_providers
+        assert "google" in oauth_providers
+        assert "azure" in oauth_providers
+
+        # JWT/OIDC fields
+        assert "jwt_secret" in properties
+        assert properties["jwt_secret"]["env_mapping"] == "TRINO_JWT_SECRET"
+
+        oidc_fields = ["oidc_issuer", "oidc_audience", "oidc_client_id", "oidc_client_secret"]
+        for field in oidc_fields:
             assert field in properties
-            assert properties[field]["env_mapping"] == f"TRINO_{field.upper()}"
+            expected_env = f"TRINO_{field.upper()}"
+            assert properties[field]["env_mapping"] == expected_env
 
-    def test_access_control_configuration(self):
-        """Test access control configuration options."""
+    def test_security_and_performance_configuration(self):
+        """Test security and performance configuration options."""
         template_path = os.path.join(os.path.dirname(__file__), "..", "template.json")
 
         with open(template_path, "r") as f:
@@ -79,97 +130,232 @@ class TestTrinoTemplateConfiguration:
 
         properties = template_config["config_schema"]["properties"]
 
-        # Read-only mode
-        assert "read_only" in properties
-        assert properties["read_only"]["default"] is True
-        assert properties["read_only"]["env_mapping"] == "TRINO_READ_ONLY"
+        # Read-only mode (now called trino_allow_write_queries with reversed logic)
+        assert "trino_allow_write_queries" in properties
+        write_queries = properties["trino_allow_write_queries"]
+        assert write_queries["default"] is False  # Read-only by default
+        assert write_queries["env_mapping"] == "TRINO_ALLOW_WRITE_QUERIES"
+        assert "WARNING" in write_queries["description"]
 
-        # Catalog filtering
-        assert "allowed_catalogs" in properties
-        assert properties["allowed_catalogs"]["default"] == "*"
-        assert properties["allowed_catalogs"]["env_mapping"] == "TRINO_ALLOWED_CATALOGS"
-
-        assert "catalog_regex" in properties
-        assert properties["catalog_regex"]["env_mapping"] == "TRINO_CATALOG_REGEX"
-
-        # Schema filtering
-        assert "allowed_schemas" in properties
-        assert properties["allowed_schemas"]["default"] == "*"
-        assert properties["allowed_schemas"]["env_mapping"] == "TRINO_ALLOWED_SCHEMAS"
-
-        assert "schema_regex" in properties
-        assert properties["schema_regex"]["env_mapping"] == "TRINO_SCHEMA_REGEX"
-
-    def test_performance_configuration(self):
-        """Test performance-related configuration options."""
-        template_path = os.path.join(os.path.dirname(__file__), "..", "template.json")
-
-        with open(template_path, "r") as f:
-            template_config = json.load(f)
-
-        properties = template_config["config_schema"]["properties"]
+        # Query limits
+        assert "trino_max_results" in properties
+        max_results = properties["trino_max_results"]
+        assert max_results["default"] == 1000
+        assert max_results["minimum"] == 1
+        assert max_results["maximum"] == 10000
+        assert max_results["env_mapping"] == "TRINO_MAX_RESULTS"
 
         # Query timeout
-        assert "query_timeout" in properties
-        timeout_config = properties["query_timeout"]
-        assert timeout_config["default"] == 300
-        assert timeout_config["minimum"] == 10
-        assert timeout_config["maximum"] == 3600
-        assert timeout_config["env_mapping"] == "TRINO_QUERY_TIMEOUT"
+        assert "trino_query_timeout" in properties
+        timeout = properties["trino_query_timeout"]
+        assert timeout["default"] == "300"
+        assert timeout["env_mapping"] == "TRINO_QUERY_TIMEOUT"
 
-        # Max results
-        assert "max_results" in properties
-        results_config = properties["max_results"]
-        assert results_config["default"] == 1000
-        assert results_config["minimum"] == 1
-        assert results_config["maximum"] == 10000
-        assert results_config["env_mapping"] == "TRINO_MAX_RESULTS"
+        # SSL settings
+        assert "trino_ssl" in properties
+        assert "trino_ssl_insecure" in properties
 
-        # Connection settings
-        assert "trino_port" in properties
-        port_config = properties["trino_port"]
-        assert port_config["default"] == 8080
-        assert port_config["minimum"] == 1
-        assert port_config["maximum"] == 65535
-        assert port_config["env_mapping"] == "TRINO_PORT"
+    def test_config_object_initialization(self):
+        """Test TrinoServerConfig object initialization."""
+        # Test with minimal config
+        config = TrinoServerConfig({
+            "trino_host": "localhost",
+            "trino_user": "admin"
+        }, skip_validation=True)
+        
+        assert config is not None
+        template_config = config.get_template_config()
+        assert template_config["trino_host"] == "localhost"
+        assert template_config["trino_user"] == "admin"
 
-    def test_conditional_authentication_requirements(self):
-        """Test conditional requirements for different authentication methods."""
-        template_path = os.path.join(os.path.dirname(__file__), "..", "template.json")
+    def test_config_validation_required_fields(self):
+        """Test configuration validation for required fields."""
+        # Missing trino_host should fail
+        with pytest.raises(ValueError, match="trino_host is required"):
+            TrinoServerConfig({"trino_user": "admin"})
 
-        with open(template_path, "r") as f:
-            template_config = json.load(f)
+        # Missing trino_user should fail
+        with pytest.raises(ValueError, match="trino_user is required"):
+            TrinoServerConfig({"trino_host": "localhost"})
 
-        config_schema = template_config["config_schema"]
+        # Valid minimal config should pass
+        config = TrinoServerConfig({
+            "trino_host": "localhost",
+            "trino_user": "admin"
+        })
+        assert config is not None
 
-        # Check anyOf conditions for authentication
-        assert "anyOf" in config_schema
-        any_of_conditions = config_schema["anyOf"]
+    def test_oauth_validation(self):
+        """Test OAuth configuration validation."""
+        base_config = {
+            "trino_host": "localhost",
+            "trino_user": "admin",
+            "oauth_enabled": True
+        }
 
-        # Should have conditions for basic, jwt, and oauth2
-        assert len(any_of_conditions) == 3
+        # Missing oauth_provider should fail
+        with pytest.raises(ValueError, match="oauth_provider is required"):
+            TrinoServerConfig(base_config)
 
-        # Find JWT condition
-        jwt_condition = next(
-            c
-            for c in any_of_conditions
-            if c["properties"]["auth_method"]["const"] == "jwt"
-        )
-        assert "jwt_token" in jwt_condition["required"]
+        # Invalid oauth_provider should fail
+        with pytest.raises(ValueError, match="oauth_provider must be one of"):
+            TrinoServerConfig({
+                **base_config,
+                "oauth_provider": "invalid"
+            })
 
-        # Find OAuth2 condition
-        oauth2_condition = next(
-            c
-            for c in any_of_conditions
-            if c["properties"]["auth_method"]["const"] == "oauth2"
-        )
-        oauth2_required = oauth2_condition["required"]
-        assert "oauth2_client_id" in oauth2_required
-        assert "oauth2_client_secret" in oauth2_required
-        assert "oauth2_token_url" in oauth2_required
+        # HMAC provider without jwt_secret should fail
+        with pytest.raises(ValueError, match="jwt_secret is required"):
+            TrinoServerConfig({
+                **base_config,
+                "oauth_provider": "hmac"
+            })
 
-    def test_tools_and_capabilities(self):
-        """Test that tools and capabilities are properly defined."""
+        # OIDC provider without required fields should fail
+        with pytest.raises(ValueError, match="oidc_issuer is required"):
+            TrinoServerConfig({
+                **base_config,
+                "oauth_provider": "google"
+            })
+
+        # Valid OAuth config should pass
+        config = TrinoServerConfig({
+            **base_config,
+            "oauth_provider": "google",
+            "oidc_issuer": "https://accounts.google.com",
+            "oidc_client_id": "client123"
+        })
+        assert config is not None
+
+    @patch.dict(os.environ, {
+        "TRINO_HOST": "env-host",
+        "TRINO_USER": "env-user",
+        "TRINO_MAX_RESULTS": "2000"
+    })
+    def test_environment_variable_precedence(self):
+        """Test that config dict takes precedence over environment variables."""
+        config = TrinoServerConfig({
+            "trino_host": "config-host",
+            "trino_user": "config-user"
+        })
+        
+        template_config = config.get_template_config()
+        
+        # Config dict should take precedence
+        assert template_config["trino_host"] == "config-host"
+        assert template_config["trino_user"] == "config-user"
+        
+        # Environment variable should be used when not in config dict
+        assert template_config["trino_max_results"] == 2000
+
+    def test_duration_parsing(self):
+        """Test duration string parsing for timeouts."""
+        config = TrinoServerConfig({
+            "trino_host": "localhost",
+            "trino_user": "admin"
+        }, skip_validation=True)
+        
+        # Test various duration formats
+        assert config._parse_duration("300") == 300
+        assert config._parse_duration("300s") == 300
+        assert config._parse_duration("5m") == 300
+        assert config._parse_duration("1h") == 3600
+        
+        # Test invalid format
+        with pytest.raises(ValueError):
+            config._parse_duration("invalid")
+
+    def test_connection_config_generation(self):
+        """Test connection configuration generation."""
+        config = TrinoServerConfig({
+            "trino_host": "localhost",
+            "trino_user": "admin",
+            "trino_port": 8080,
+            "trino_password": "secret",
+            "trino_catalog": "hive",
+            "trino_schema": "default"
+        })
+        
+        conn_config = config.get_connection_config()
+        
+        assert conn_config["host"] == "localhost"
+        assert conn_config["port"] == 8080
+        assert conn_config["user"] == "admin"
+        assert conn_config["catalog"] == "hive"
+        assert conn_config["schema"] == "default"
+        assert conn_config["http_scheme"] == "https"  # default
+        assert conn_config["verify"] is False  # ssl_insecure default
+
+    def test_security_config(self):
+        """Test security configuration."""
+        # Default read-only mode
+        config = TrinoServerConfig({
+            "trino_host": "localhost",
+            "trino_user": "admin"
+        })
+        
+        security = config.get_security_config()
+        assert security["read_only"] is True
+        assert config.is_read_only() is True
+        
+        # Write mode enabled
+        config_write = TrinoServerConfig({
+            "trino_host": "localhost",
+            "trino_user": "admin",
+            "trino_allow_write_queries": True
+        })
+        
+        security_write = config_write.get_security_config()
+        assert security_write["read_only"] is False
+        assert config_write.is_read_only() is False
+
+    def test_query_limits(self):
+        """Test query limits configuration."""
+        config = TrinoServerConfig({
+            "trino_host": "localhost",
+            "trino_user": "admin",
+            "trino_query_timeout": "10m",
+            "trino_max_results": 5000
+        })
+        
+        limits = config.get_query_limits()
+        assert limits["timeout"] == 600  # 10 minutes in seconds
+        assert limits["max_results"] == 5000
+
+    def test_config_summary_logging(self):
+        """Test configuration summary logging without sensitive data."""
+        config = TrinoServerConfig({
+            "trino_host": "localhost",
+            "trino_user": "admin",
+            "trino_password": "secret123",
+            "jwt_secret": "supersecret"
+        })
+        
+        # Should not raise exception and not log sensitive data
+        with patch.object(config.logger, 'info') as mock_log:
+            config.log_config_summary()
+            
+            # Check that logging was called
+            assert mock_log.called
+            
+            # Check that sensitive data is not in log calls
+            log_calls = [str(call) for call in mock_log.call_args_list]
+            log_content = " ".join(log_calls)
+            assert "secret123" not in log_content
+            assert "supersecret" not in log_content
+
+    def test_convenience_function(self):
+        """Test convenience function for creating config."""
+        config = create_trino_config({
+            "trino_host": "localhost",
+            "trino_user": "admin"
+        })
+        
+        assert isinstance(config, TrinoServerConfig)
+        assert config.get_template_config()["trino_host"] == "localhost"
+
+    def test_tools_and_capabilities_updated(self):
+        """Test that tools and capabilities are properly defined for new implementation."""
         template_path = os.path.join(os.path.dirname(__file__), "..", "template.json")
 
         with open(template_path, "r") as f:
@@ -177,12 +363,12 @@ class TestTrinoTemplateConfiguration:
 
         # Check capabilities
         capabilities = template_config["capabilities"]
-        assert len(capabilities) >= 4
+        assert len(capabilities) >= 5
 
         capability_names = [cap["name"] for cap in capabilities]
         expected_capabilities = [
             "Catalog Discovery",
-            "Schema Inspection",
+            "Schema Inspection", 
             "Query Execution",
             "Access Control",
             "Multi-Source Support",
@@ -193,12 +379,12 @@ class TestTrinoTemplateConfiguration:
 
         # Check tools
         tools = template_config["tools"]
-        assert len(tools) >= 7
+        assert len(tools) >= 8
 
         tool_names = [tool["name"] for tool in tools]
         expected_tools = [
             "list_catalogs",
-            "list_schemas",
+            "list_schemas", 
             "list_tables",
             "describe_table",
             "execute_query",
@@ -217,3 +403,30 @@ class TestTrinoTemplateConfiguration:
         )
         assert query_param["required"] is True
         assert query_param["type"] == "string"
+
+        # Check that catalog and schema parameters are optional for execute_query
+        optional_params = [p["name"] for p in execute_query_tool["parameters"] if not p.get("required", False)]
+        assert "catalog" in optional_params
+        assert "schema" in optional_params
+
+    def test_examples_and_integration(self):
+        """Test that examples are updated for new HTTP transport."""
+        template_path = os.path.join(os.path.dirname(__file__), "..", "template.json")
+
+        with open(template_path, "r") as f:
+            template_config = json.load(f)
+
+        examples = template_config["examples"]
+        
+        # Check HTTP endpoint
+        assert "http_endpoint" in examples
+        assert "7091" in examples["http_endpoint"]
+        
+        # Check client integration examples
+        client_integration = examples["client_integration"]
+        assert "fastmcp" in client_integration
+        assert "curl" in client_integration
+        
+        # Verify examples use correct port and endpoints
+        assert "7091" in client_integration["curl"]
+        assert "list_catalogs" in client_integration["fastmcp"]

@@ -1,21 +1,25 @@
 # Trino MCP Server
 
-A production-ready Trino MCP server template for secure querying of distributed data sources with configurable access controls and multiple authentication methods.
+A production-ready Trino MCP server template for secure querying of distributed data sources with configurable access controls and multiple authentication methods. Built with FastMCP and SQLAlchemy for robust performance and reliability.
 
 ## Overview
 
-This template provides a secure interface to Trino (formerly Presto SQL) clusters, enabling SQL queries across multiple data sources including Hive, Iceberg, PostgreSQL, MySQL, and many others. The server supports multiple authentication methods and provides fine-grained access controls for enterprise environments.
+This template provides a secure interface to Trino (formerly Presto SQL) clusters, enabling SQL queries across multiple data sources including Hive, Iceberg, PostgreSQL, MySQL, and many others. The server is implemented in Python using FastMCP and SQLAlchemy, providing excellent performance and compatibility with the broader Python ecosystem.
 
-**⚠️ Security Notice**: This template operates in read-only mode by default. Enable write operations with caution and ensure proper access controls are in place.
+**⚠️ Security Notice**: This template operates in read-only mode by default with a 1000-row limit. Enable write operations with caution and ensure proper access controls are in place.
 
 ## Features
 
+- **Python FastMCP Implementation**: Built with FastMCP for high performance and reliability
+- **SQLAlchemy Integration**: Uses SQLAlchemy with Trino dialect for robust database connectivity
 - **Multi-Source Queries**: Query across different data sources in a single SQL statement
-- **Authentication Support**: JWT, OAuth2, and basic authentication methods
-- **Access Controls**: Configurable catalog and schema filtering with regex support
-- **Read-Only Mode**: Safe mode by default, prevents accidental data modifications
+- **Authentication Support**: Username/password, OAuth 2.1, and JWT authentication methods
+- **Read-Only by Default**: Safe mode with configurable override and warning system
+- **Query Limits**: Configurable row limits (1000 by default) for performance and safety
+- **HTTP and stdio Transport**: Supports both HTTP (default) and stdio transports
+- **Access Controls**: Comprehensive security with timeout controls
 - **Enterprise Ready**: Production-grade configuration with proper error handling
-- **Docker Integration**: Uses upstream `ghcr.io/tuannvm/mcp-trino:latest` image
+- **Docker Ready**: Containerized deployment with `dataeverything/mcp-trino` image
 
 ## Quick Start
 
@@ -28,26 +32,40 @@ python -m mcp_platform deploy trino \
   --config trino_user=analyst
 ```
 
-### JWT Authentication
+### With Password Authentication
 
 ```bash
-# Deploy with JWT authentication
+# Deploy with username/password authentication
 python -m mcp_platform deploy trino \
   --config trino_host=your-trino-server.com \
   --config trino_user=analyst \
-  --config auth_method=jwt \
-  --config jwt_token=your-jwt-token
+  --config trino_password=your-password \
+  --config trino_catalog=hive
 ```
 
 ### OAuth2 Authentication
 
 ```bash
-# Deploy with OAuth2 authentication
+# Deploy with Google OAuth2
 python -m mcp_platform deploy trino \
   --config trino_host=your-trino-server.com \
   --config trino_user=analyst \
-  --config auth_method=oauth2 \
-  --config oauth2_client_id=your-client-id \
+  --config oauth_enabled=true \
+  --config oauth_provider=google \
+  --config oidc_issuer=https://accounts.google.com \
+  --config oidc_client_id=your-client-id
+```
+
+### Enable Write Mode (Use with Caution)
+
+```bash
+# Deploy with write operations enabled
+python -m mcp_platform deploy trino \
+  --config trino_host=your-trino-server.com \
+  --config trino_user=analyst \
+  --config trino_allow_write_queries=true \
+  --config trino_max_results=5000
+```
   --config oauth2_client_secret=your-client-secret \
   --config oauth2_token_url=https://auth.company.com/token
 ```
@@ -59,77 +77,117 @@ python -m mcp_platform deploy trino \
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | `trino_host` | Trino server hostname or IP address | `localhost` |
-| `trino_user` | Username for Trino authentication | `admin` |
+## Configuration
+
+### Connection Parameters
+
+| Parameter | Description | Default | Environment Variable |
+|-----------|-------------|---------|---------------------|
+| `trino_host` | Trino server hostname | - | `TRINO_HOST` |
+| `trino_port` | Trino server port | `8080` | `TRINO_PORT` |
+| `trino_user` | Username for Trino authentication | - | `TRINO_USER` |
+| `trino_password` | Password for basic authentication | - | `TRINO_PASSWORD` |
+| `trino_catalog` | Default catalog for queries | - | `TRINO_CATALOG` |
+| `trino_schema` | Default schema for queries | - | `TRINO_SCHEMA` |
+| `trino_scheme` | Connection scheme (`http` or `https`) | `https` | `TRINO_SCHEME` |
+| `trino_ssl` | Enable SSL/TLS | `true` | `TRINO_SSL` |
+| `trino_ssl_insecure` | Allow insecure SSL connections | `true` | `TRINO_SSL_INSECURE` |
 
 ### Authentication Parameters
 
 | Parameter | Description | Environment Variable |
 |-----------|-------------|---------------------|
-| `auth_method` | Authentication method (`basic`, `jwt`, `oauth2`) | `TRINO_AUTH_METHOD` |
-| `jwt_token` | JWT token (required for JWT auth) | `TRINO_JWT_TOKEN` |
-| `oauth2_client_id` | OAuth2 client ID | `TRINO_OAUTH2_CLIENT_ID` |
-| `oauth2_client_secret` | OAuth2 client secret | `TRINO_OAUTH2_CLIENT_SECRET` |
-| `oauth2_token_url` | OAuth2 token endpoint URL | `TRINO_OAUTH2_TOKEN_URL` |
+| `oauth_enabled` | Enable OAuth 2.1 authentication | `TRINO_OAUTH_ENABLED` |
+| `oauth_provider` | OAuth provider (`hmac`, `okta`, `google`, `azure`) | `TRINO_OAUTH_PROVIDER` |
+| `jwt_secret` | JWT signing secret for HMAC provider | `TRINO_JWT_SECRET` |
+| `oidc_issuer` | OIDC issuer URL | `TRINO_OIDC_ISSUER` |
+| `oidc_audience` | OIDC audience | `TRINO_OIDC_AUDIENCE` |
+| `oidc_client_id` | OIDC client ID | `TRINO_OIDC_CLIENT_ID` |
+| `oidc_client_secret` | OIDC client secret | `TRINO_OIDC_CLIENT_SECRET` |
+| `oauth_redirect_uri` | Fixed OAuth redirect URI | `TRINO_OAUTH_REDIRECT_URI` |
 
-### Access Control Parameters
-
-| Parameter | Description | Default | Environment Variable |
-|-----------|-------------|---------|---------------------|
-| `read_only` | Enable read-only mode | `true` | `TRINO_READ_ONLY` |
-| `allowed_catalogs` | Comma-separated catalog patterns | `*` | `TRINO_ALLOWED_CATALOGS` |
-| `catalog_regex` | Advanced catalog filtering regex | - | `TRINO_CATALOG_REGEX` |
-| `allowed_schemas` | Comma-separated schema patterns | `*` | `TRINO_ALLOWED_SCHEMAS` |
-| `schema_regex` | Advanced schema filtering regex | - | `TRINO_SCHEMA_REGEX` |
-
-### Performance Parameters
+### Security Parameters
 
 | Parameter | Description | Default | Environment Variable |
 |-----------|-------------|---------|---------------------|
-| `query_timeout` | Query timeout in seconds | `300` | `TRINO_QUERY_TIMEOUT` |
-| `max_results` | Maximum rows to return | `1000` | `TRINO_MAX_RESULTS` |
-| `trino_port` | Trino server port | `8080` | `TRINO_PORT` |
+| `trino_allow_write_queries` | Allow write operations (⚠️ WARNING: Use with caution) | `false` | `TRINO_ALLOW_WRITE_QUERIES` |
+| `trino_query_timeout` | Query timeout (seconds or duration format) | `300` | `TRINO_QUERY_TIMEOUT` |
+| `trino_max_results` | Maximum rows to return per query | `1000` | `TRINO_MAX_RESULTS` |
+| `log_level` | Logging level (`debug`, `info`, `warning`, `error`) | `info` | `MCP_LOG_LEVEL` |
 
 ## Authentication Methods
 
-### Basic Authentication
-Simple username-based authentication (no password required):
+### Basic Authentication (Username/Password)
+Simple username and password authentication:
 ```bash
 export TRINO_HOST=your-trino-server.com
 export TRINO_USER=analyst
-export TRINO_AUTH_METHOD=basic
+export TRINO_PASSWORD=your-password
 ```
 
-### JWT Authentication
-Token-based authentication for secure environments:
+### OAuth 2.1 with Google
+Google OAuth2 integration:
 ```bash
 export TRINO_HOST=your-trino-server.com
 export TRINO_USER=analyst
-export TRINO_AUTH_METHOD=jwt
-export TRINO_JWT_TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+export TRINO_OAUTH_ENABLED=true
+export TRINO_OAUTH_PROVIDER=google
+export TRINO_OIDC_ISSUER=https://accounts.google.com
+export TRINO_OIDC_CLIENT_ID=your-client-id
+export TRINO_OIDC_CLIENT_SECRET=your-client-secret
 ```
 
-**Note**: For JWT authentication setup and token generation, refer to the [upstream JWT documentation](https://docs.tuannvm.com/mcp-trino/docs/jwt).
-
-### OAuth2 Authentication
-Enterprise OAuth2 integration:
+### OAuth 2.1 with Okta
+Okta OAuth2 integration:
 ```bash
 export TRINO_HOST=your-trino-server.com
 export TRINO_USER=analyst
-export TRINO_AUTH_METHOD=oauth2
-export TRINO_OAUTH2_CLIENT_ID=your-client-id
-export TRINO_OAUTH2_CLIENT_SECRET=your-client-secret
-export TRINO_OAUTH2_TOKEN_URL=https://auth.company.com/oauth/token
+export TRINO_OAUTH_ENABLED=true
+export TRINO_OAUTH_PROVIDER=okta
+export TRINO_OIDC_ISSUER=https://company.okta.com
+export TRINO_OIDC_CLIENT_ID=your-client-id
+export TRINO_OIDC_CLIENT_SECRET=your-client-secret
 ```
 
-**Note**: For detailed OAuth2 setup instructions, refer to the [upstream OAuth2 documentation](https://docs.tuannvm.com/mcp-trino/docs/oauth).
-
-## Access Control Examples
-
-### Catalog Filtering
+### JWT with HMAC Provider
+JWT authentication with HMAC signing:
 ```bash
-# Allow only specific catalogs
+export TRINO_HOST=your-trino-server.com
+export TRINO_USER=analyst
+export TRINO_OAUTH_ENABLED=true
+export TRINO_OAUTH_PROVIDER=hmac
+export TRINO_JWT_SECRET=your-jwt-signing-secret
+```
+
+## Security and Access Control
+
+### Read-Only Mode (Default)
+The server operates in read-only mode by default for safety:
+```bash
+# Read-only mode (default)
 python -m mcp_platform deploy trino \
-  --config allowed_catalogs="hive,iceberg,postgresql"
+  --config trino_host=localhost \
+  --config trino_user=analyst
+```
+
+### Enable Write Mode (⚠️ Use with Caution)
+```bash
+# Enable write operations with warning
+python -m mcp_platform deploy trino \
+  --config trino_host=localhost \
+  --config trino_user=analyst \
+  --config trino_allow_write_queries=true
+```
+
+### Query Limits and Timeouts
+```bash
+# Configure query limits
+python -m mcp_platform deploy trino \
+  --config trino_host=localhost \
+  --config trino_user=analyst \
+  --config trino_max_results=5000 \
+  --config trino_query_timeout=600
+```
 
 # Use regex for advanced filtering
 python -m mcp_platform deploy trino \

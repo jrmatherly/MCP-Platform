@@ -1,14 +1,43 @@
-# Stage 1: Extract binary from upstream Trino MCP image
-FROM ghcr.io/tuannvm/mcp-trino:latest AS trino-mcp
+# Trino MCP Server - Python FastMCP implementation
+FROM python:3.11-slim
 
-# Stage 2: Final image with shell support
-FROM alpine
+# Set working directory
+WORKDIR /app
 
-# Copy binary from Trino MCP image to Alpine
-COPY --from=trino-mcp /server/mcp-trino /server/mcp-trino
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy and set up the script
-COPY script.sh /server/script.sh
-RUN chmod +x /server/script.sh
+# Copy requirements first for better caching
+COPY requirements.txt .
 
-ENTRYPOINT ["/server/script.sh"]
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy source code
+COPY . .
+
+# Create non-root user
+RUN useradd -m -u 1000 mcpuser && chown -R mcpuser:mcpuser /app
+USER mcpuser
+
+# Default environment variables
+ENV TRINO_HOST="trino" \
+    TRINO_PORT="8080" \
+    TRINO_USER="admin" \
+    TRINO_SCHEME="https" \
+    TRINO_SSL="true" \
+    TRINO_SSL_INSECURE="true" \
+    TRINO_ALLOW_WRITE_QUERIES="false" \
+    TRINO_QUERY_TIMEOUT="300" \
+    TRINO_MAX_RESULTS="1000" \
+    MCP_TRANSPORT="http" \
+    MCP_HOST="0.0.0.0" \
+    MCP_PORT="7091"
+
+# Expose the port
+EXPOSE 7091
+
+# Run the server
+CMD ["python", "-m", "server"]
