@@ -138,12 +138,14 @@ mcpp deploy open-elastic-search \
 
 ### List all indices
 ```bash
-mcpp call open-elastic-search list_indices
+mcpp interactive
+mcpp> call open-elastic-search  list_indices --no-pull -C elasticsearch_username=elastic -C elasticsearch_password="jezTfCghVFjmYh2Y3N4k" -C elasticsearch_hosts="http://host.docker.internal:9300" -C elasticsearch_verify_certs=true
 ```
 
 ### Search documents
 ```bash
-mcpp call open-elastic-search search_documents '{
+mcpp interactive
+mcpp> call open-elastic-search search_documents --no-pull -C elasticsearch_username=elastic -C elasticsearch_password="jezTfCghVFjmYh2Y3N4k" -C elasticsearch_hosts="http://host.docker.internal:9300" -C elasticsearch_verify_certs=true '{
   "index": "logs",
   "body": {
     "query": {
@@ -158,7 +160,8 @@ mcpp call open-elastic-search search_documents '{
 
 ### Create an index
 ```bash
-mcpp call open-elastic-search create_index '{
+mcpp interactive
+mcpp> call open-elastic-search --no-pull -C elasticsearch_username=elastic -C elasticsearch_password="jezTfCghVFjmYh2Y3N4k" -C elasticsearch_hosts="http://host.docker.internal:9300" -C elasticsearch_verify_certs=true create_index '{
   "index": "my-index",
   "body": {
     "settings": {
@@ -177,7 +180,8 @@ mcpp call open-elastic-search create_index '{
 
 ### Index a document
 ```bash
-mcpp call open-elastic-search index_document '{
+mcpp interactive
+mcpp> call open-elastic-search --no-pull -C elasticsearch_username=elastic -C elasticsearch_password="jezTfCghVFjmYh2Y3N4k" -C elasticsearch_hosts="http://host.docker.internal:9300" -C elasticsearch_verify_certs=true index_document '{
   "index": "my-index",
   "document": {
     "title": "Sample Document",
@@ -189,7 +193,8 @@ mcpp call open-elastic-search index_document '{
 
 ### Get cluster health
 ```bash
-mcpp call open-elastic-search get_cluster_health
+mcpp interactive
+mcpp> call open-elastic-search --no-pull -C elasticsearch_username=elastic -C elasticsearch_password="jezTfCghVFjmYh2Y3N4k" -C elasticsearch_hosts="http://host.docker.internal:9300" -C elasticsearch_verify_certs=true get_cluster_health
 ```
 
 ## Security Considerations
@@ -210,7 +215,7 @@ git clone https://github.com/cr7258/elasticsearch-mcp-server.git
 cd elasticsearch-mcp-server
 docker-compose -f docker-compose-elasticsearch.yml up -d
 
-# Start OpenSearch cluster  
+# Start OpenSearch cluster
 docker-compose -f docker-compose-opensearch.yml up -d
 ```
 

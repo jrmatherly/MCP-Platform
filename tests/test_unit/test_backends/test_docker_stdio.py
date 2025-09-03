@@ -60,11 +60,11 @@ def test_run_stdio_command_success(mock_run, docker_service):
     # Verify Docker commands were called
     assert mock_run.call_count == 2
 
-    # Verify Docker pull was called
-    pull_call = mock_run.call_args_list[0]
-    assert "docker" in pull_call[0][0]
-    assert "pull" in pull_call[0][0]
-    assert "test/github:latest" in pull_call[0][0]
+    # Verify Docker inspect or pull was called
+    pull_inspect_call = mock_run.call_args_list[0]
+    assert "docker" in pull_inspect_call[0][0]
+    assert "pull" in pull_inspect_call[0][0] or "inspect" in pull_inspect_call[0][0]
+    assert "test/github:latest" in pull_inspect_call[0][0]
 
     # Verify Docker run was called with proper MCP sequence
     run_call = mock_run.call_args_list[1]

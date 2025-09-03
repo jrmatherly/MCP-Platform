@@ -300,50 +300,6 @@ class ConfigProcessor:
 
         return config
 
-    def merge_k8s_config_sources(
-        self,
-        k8s_config_file: Optional[str] = None,
-        k8s_config_values: Optional[Dict[str, str]] = None,
-    ) -> Dict[str, Any]:
-        """
-        Merge Kubernetes-specific configuration sources.
-
-        TEMORARILY ADDED THIS METHOD FROM CONFIG_MANAGER TO GET RID OF IT
-
-        Args:
-            k8s_config_file: Path to Kubernetes configuration file
-            k8s_config_values: Kubernetes configuration values from CLI
-
-        Returns:
-            Merged Kubernetes configuration dictionary
-        """
-        merged_config = {}
-
-        # Start with file-based configuration if provided
-        if k8s_config_file:
-            try:
-                file_config = self._load_config_file(k8s_config_file)
-                merged_config.update(file_config)
-                logger.debug(f"Loaded Kubernetes config from file: {k8s_config_file}")
-            except Exception as e:
-                logger.warning(
-                    f"Failed to load Kubernetes config file {k8s_config_file}: {e}"
-                )
-
-        # Override with CLI values
-        if k8s_config_values:
-            # Process special values that need type conversion
-            processed_values = {}
-            for key, value in k8s_config_values.items():
-                processed_values[key] = self._convert_config_value(value)
-
-            merged_config.update(processed_values)
-            logger.debug(
-                f"Applied Kubernetes config values: {list(k8s_config_values.keys())}"
-            )
-
-        return merged_config
-
     def validate_config(
         self, config: Dict[str, Any], schema: Dict[str, Any]
     ) -> ValidationResult:
@@ -1051,31 +1007,6 @@ class ConditionalConfigValidator:
             )
 
         return suggestions
-
-    def is_conditionally_required(
-        self,
-        prop_name: str,
-        config_schema: Dict[str, Any],
-        current_config: Dict[str, Any],
-    ) -> bool:
-        """Check if a property is conditionally required based on current config."""
-        # Check anyOf conditions
-        if "anyOf" in config_schema:
-            for condition in config_schema["anyOf"]:
-                if self._prop_required_in_condition(
-                    prop_name, condition, current_config
-                ):
-                    return True
-
-        # Check oneOf conditions
-        if "oneOf" in config_schema:
-            for condition in config_schema["oneOf"]:
-                if self._prop_required_in_condition(
-                    prop_name, condition, current_config
-                ):
-                    return True
-
-        return False
 
     @staticmethod
     def is_conditionally_required(

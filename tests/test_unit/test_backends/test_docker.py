@@ -67,8 +67,9 @@ class TestDockerDeploymentService:
 
         # Verify pull command was called
         assert mock_run_command.call_count == 2
-        pull_call = mock_run_command.call_args_list[0]
-        assert "pull" in pull_call[0][0]
+        # It checks if image exists, if not it pulls
+        pull_inspect_call = mock_run_command.call_args_list[0]
+        assert "pull" in pull_inspect_call[0][0] or "inspect" in pull_inspect_call[0][0]
 
     @patch(
         "mcp_platform.backends.docker.DockerDeploymentService._ensure_docker_available"
