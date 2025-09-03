@@ -45,6 +45,32 @@
         "default": "info",
         "env_mapping": "MCP_LOG_LEVEL"
       },
+      "auth_mode": {
+        "type": "string",
+        "title": "Authentication Mode",
+        "description": "Choose authentication method (demo purposes only)",
+        "enum": ["none", "token", "basic"],
+        "default": "none",
+        "env_mapping": "MCP_AUTH_MODE"
+      },
+      "auth_token": {
+        "type": "string",
+        "title": "Authentication Token",
+        "description": "API token for authentication (required when auth_mode is 'token')",
+        "env_mapping": "MCP_AUTH_TOKEN"
+      },
+      "auth_username": {
+        "type": "string",
+        "title": "Username",
+        "description": "Username for basic authentication",
+        "env_mapping": "MCP_AUTH_USERNAME"
+      },
+      "auth_password": {
+        "type": "string",
+        "title": "Password",
+        "description": "Password for basic authentication",
+        "env_mapping": "MCP_AUTH_PASSWORD"
+      },
       "allowed_dirs": {
         "type": "string",
         "title": "Allowed Directories",
@@ -54,7 +80,26 @@
         "volume_mount": true,
         "command_arg": true
       }
-    }
+    },
+    "anyOf": [
+      {
+        "properties": {
+          "auth_mode": {"const": "none"}
+        }
+      },
+      {
+        "properties": {
+          "auth_mode": {"const": "token"}
+        },
+        "required": ["auth_token"]
+      },
+      {
+        "properties": {
+          "auth_mode": {"const": "basic"}
+        },
+        "required": ["auth_username", "auth_password"]
+      }
+    ]
   },
   "capabilities": [
     {

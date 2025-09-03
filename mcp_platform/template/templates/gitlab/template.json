@@ -149,7 +149,19 @@
         "env_mapping": "HTTPS_PROXY"
       }
     },
-    "required": ["gitlab_personal_access_token"]
+    "required": [],
+    "oneOf": [
+      {
+        "title": "Personal Access Token Authentication",
+        "description": "Use GitLab personal access token for API authentication",
+        "required": ["gitlab_personal_access_token"]
+      },
+      {
+        "title": "Cookie-based Authentication",
+        "description": "Use authentication cookie file for GitLab instances requiring cookie-based auth",
+        "required": ["gitlab_auth_cookie_path"]
+      }
+    ]
   },
   "tool_discovery": "dynamic",
   "tool_endpoint": "/tools",

@@ -44,16 +44,23 @@ class DockerProbe(BaseProbe):
                     check=False,
                 )
                 logger.info(
-                    f"Background cleanup successful for {container_name} on attempt {attempt + 1}"
+                    "Background cleanup successful for %s on attempt %d",
+                    container_name,
+                    attempt + 1,
                 )
                 return
             except (subprocess.TimeoutExpired, subprocess.CalledProcessError) as e:
                 logger.debug(
-                    f"Background cleanup attempt {attempt + 1} failed for {container_name}: {e}"
+                    "Background cleanup attempt %d failed for %s: %s",
+                    attempt + 1,
+                    container_name,
+                    e,
                 )
                 if attempt == max_retries - 1:
                     logger.error(
-                        f"Background cleanup failed after {max_retries} attempts for {container_name}"
+                        "Background cleanup failed after %d attempts for %s",
+                        max_retries,
+                        container_name,
                     )
 
     def discover_tools_from_image(

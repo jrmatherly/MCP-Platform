@@ -103,7 +103,6 @@ class MCPClientProbe:
         """
 
         container_name = f"mcp-discovery-{image_name.replace('/', '-').replace(':', '-')}-{int(time.time())}"
-
         try:
             # Build docker command
             docker_cmd = [

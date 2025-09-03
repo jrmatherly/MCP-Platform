@@ -364,8 +364,14 @@ class ToolManager:
         for prop in properties:
             if prop not in discovery_config:
                 prop_config = properties.get(prop, {})
+                enums = prop_config.get("enum", [])
                 discovery_config[prop] = prop_config.get(
-                    "default", self._generate_dummy_value(prop, prop_config)
+                    "default",
+                    (
+                        self._generate_dummy_value(prop, prop_config)
+                        if not enums
+                        else enums[0]
+                    ),
                 )
 
         # Use the same configuration processor as deployment to generate env vars

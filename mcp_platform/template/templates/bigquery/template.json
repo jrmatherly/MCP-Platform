@@ -104,7 +104,31 @@
         "env_mapping": "MCP_LOG_LEVEL"
       }
     },
-    "required": ["project_id"]
+    "required": ["project_id"],
+    "anyOf": [
+      {
+        "title": "Service Account Authentication",
+        "description": "Use service account JSON key file for authentication",
+        "properties": {
+          "auth_method": {"const": "service_account"}
+        },
+        "required": ["service_account_path"]
+      },
+      {
+        "title": "OAuth2 Authentication",
+        "description": "Use OAuth2 flow for authentication (interactive)",
+        "properties": {
+          "auth_method": {"const": "oauth2"}
+        }
+      },
+      {
+        "title": "Application Default Credentials",
+        "description": "Use Google Cloud Application Default Credentials",
+        "properties": {
+          "auth_method": {"const": "application_default"}
+        }
+      }
+    ]
   },
   "capabilities": [
     {

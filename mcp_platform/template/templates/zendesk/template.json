@@ -120,7 +120,19 @@
         "env_mapping": "ZENDESK_CACHE_TTL"
       }
     },
-    "required": ["zendesk_subdomain", "zendesk_email"]
+    "required": ["zendesk_subdomain", "zendesk_email"],
+    "oneOf": [
+      {
+        "title": "API Token Authentication",
+        "description": "Use Zendesk API token for authentication (email + API token)",
+        "required": ["zendesk_api_token"]
+      },
+      {
+        "title": "OAuth Token Authentication",
+        "description": "Use Zendesk OAuth token for authentication",
+        "required": ["zendesk_oauth_token"]
+      }
+    ]
   },
   "capabilities": [
     {

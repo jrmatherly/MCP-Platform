@@ -11,7 +11,10 @@ from unittest.mock import mock_open, patch
 import pytest
 import yaml
 
-from mcp_platform.core.config_processor import ConfigProcessor
+from mcp_platform.core.config_processor import (
+    ConditionalConfigValidator,
+    ConfigProcessor,
+)
 
 
 @pytest.mark.unit
@@ -890,3 +893,447 @@ class TestConfigProcessorTemplateOverrides:
         assert result["existing"] == "value"  # unchanged
         assert result["new"]["section"]["subsection"]["value"] == "new_value"
         assert result["new"]["array"][0]["item"] == "first_item"
+
+
+@pytest.mark.unit
+class TestConditionalConfigValidator:
+    """Test suite for ConditionalConfigValidator class."""
+
+    def setup_method(self):
+        """Set up test fixtures."""
+        self.validator = ConditionalConfigValidator()
+
+    def test_basic_validation_no_conditionals(self):
+        """Test basic validation without conditional requirements."""
+        config_schema = {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+                "port": {"type": "integer", "default": 8080},
+            },
+            "required": ["name"],
+        }
+
+        # Valid config
+        config = {"name": "test-server", "port": 9000}
+        result = self.validator.validate_config_schema(config_schema, config)
+
+        assert result["valid"] is True
+        assert result["missing_required"] == []
+        assert result["conditional_issues"] == []
+        assert result["suggestions"] == []
+
+    def test_basic_validation_missing_required(self):
+        """Test validation with missing required fields."""
+        config_schema = {
+            "type": "object",
+            "properties": {"name": {"type": "string"}, "host": {"type": "string"}},
+            "required": ["name", "host"],
+        }
+
+        config = {"name": "test-server"}  # Missing host
+        result = self.validator.validate_config_schema(config_schema, config)
+
+        assert result["valid"] is False
+        assert "host" in result["missing_required"]
+        assert result["conditional_issues"] == []
+
+    def test_anyof_validation_success(self):
+        """Test anyOf validation with satisfied condition."""
+        config_schema = {
+            "type": "object",
+            "properties": {
+                "auth_mode": {"type": "string", "enum": ["none", "token", "basic"]},
+                "auth_token": {"type": "string"},
+                "auth_username": {"type": "string"},
+                "auth_password": {"type": "string"},
+            },
+            "anyOf": [
+                {"properties": {"auth_mode": {"const": "none"}}},
+                {
+                    "properties": {"auth_mode": {"const": "token"}},
+                    "required": ["auth_token"],
+                },
+                {
+                    "properties": {"auth_mode": {"const": "basic"}},
+                    "required": ["auth_username", "auth_password"],
+                },
+            ],
+        }
+
+        # Test token auth (should succeed)
+        config = {"auth_mode": "token", "auth_token": "secret123"}
+        result = self.validator.validate_config_schema(config_schema, config)
+
+        assert result["valid"] is True
+        assert result["conditional_issues"] == []
+
+    def test_anyof_validation_failure(self):
+        """Test anyOf validation with no satisfied conditions."""
+        config_schema = {
+            "type": "object",
+            "properties": {
+                "auth_mode": {"type": "string", "enum": ["none", "token", "basic"]},
+                "auth_token": {"type": "string"},
+                "auth_username": {"type": "string"},
+                "auth_password": {"type": "string"},
+            },
+            "anyOf": [
+                {"properties": {"auth_mode": {"const": "none"}}},
+                {
+                    "properties": {"auth_mode": {"const": "token"}},
+                    "required": ["auth_token"],
+                },
+                {
+                    "properties": {"auth_mode": {"const": "basic"}},
+                    "required": ["auth_username", "auth_password"],
+                },
+            ],
+        }
+
+        # Test token auth missing token (should fail)
+        config = {"auth_mode": "token"}  # Missing auth_token
+        result = self.validator.validate_config_schema(config_schema, config)
+
+        assert result["valid"] is False
+        assert len(result["conditional_issues"]) > 0
+        assert len(result["suggestions"]) > 0
+
+    def test_oneof_validation_success(self):
+        """Test oneOf validation with exactly one satisfied condition."""
+        config_schema = {
+            "type": "object",
+            "properties": {
+                "storage_type": {"type": "string", "enum": ["local", "s3", "gcs"]},
+                "local_path": {"type": "string"},
+                "s3_bucket": {"type": "string"},
+                "s3_key": {"type": "string"},
+                "gcs_bucket": {"type": "string"},
+                "gcs_key": {"type": "string"},
+            },
+            "oneOf": [
+                {
+                    "properties": {"storage_type": {"const": "local"}},
+                    "required": ["local_path"],
+                },
+                {
+                    "properties": {"storage_type": {"const": "s3"}},
+                    "required": ["s3_bucket", "s3_key"],
+                },
+                {
+                    "properties": {"storage_type": {"const": "gcs"}},
+                    "required": ["gcs_bucket", "gcs_key"],
+                },
+            ],
+        }
+
+        # Test S3 storage (should succeed)
+        config = {"storage_type": "s3", "s3_bucket": "my-bucket", "s3_key": "my-key"}
+        result = self.validator.validate_config_schema(config_schema, config)
+
+        assert result["valid"] is True
+        assert result["conditional_issues"] == []
+
+    def test_nested_oneof_in_anyof(self):
+        """Test complex nested oneOf within anyOf structure."""
+        config_schema = {
+            "type": "object",
+            "properties": {
+                "engine_type": {
+                    "type": "string",
+                    "enum": ["elasticsearch", "opensearch"],
+                },
+                "elasticsearch_hosts": {"type": "string"},
+                "elasticsearch_api_key": {"type": "string"},
+                "elasticsearch_username": {"type": "string"},
+                "elasticsearch_password": {"type": "string"},
+                "opensearch_hosts": {"type": "string"},
+                "opensearch_username": {"type": "string"},
+                "opensearch_password": {"type": "string"},
+            },
+            "anyOf": [
+                {
+                    "properties": {"engine_type": {"const": "elasticsearch"}},
+                    "required": ["elasticsearch_hosts"],
+                    "oneOf": [
+                        {"required": ["elasticsearch_api_key"]},
+                        {
+                            "required": [
+                                "elasticsearch_username",
+                                "elasticsearch_password",
+                            ]
+                        },
+                    ],
+                },
+                {
+                    "properties": {"engine_type": {"const": "opensearch"}},
+                    "required": [
+                        "opensearch_hosts",
+                        "opensearch_username",
+                        "opensearch_password",
+                    ],
+                },
+            ],
+        }
+
+        # Test Elasticsearch with API key (should succeed)
+        config = {
+            "engine_type": "elasticsearch",
+            "elasticsearch_hosts": "localhost:9200",
+            "elasticsearch_api_key": "secret-key",
+        }
+        result = self.validator.validate_config_schema(config_schema, config)
+
+        assert result["valid"] is True
+        assert result["conditional_issues"] == []
+
+    def test_nested_oneof_failure(self):
+        """Test nested oneOf failure scenarios."""
+        config_schema = {
+            "type": "object",
+            "properties": {
+                "engine_type": {"type": "string"},
+                "elasticsearch_hosts": {"type": "string"},
+                "elasticsearch_api_key": {"type": "string"},
+                "elasticsearch_username": {"type": "string"},
+                "elasticsearch_password": {"type": "string"},
+            },
+            "anyOf": [
+                {
+                    "properties": {"engine_type": {"const": "elasticsearch"}},
+                    "required": ["elasticsearch_hosts"],
+                    "oneOf": [
+                        {"required": ["elasticsearch_api_key"]},
+                        {
+                            "required": [
+                                "elasticsearch_username",
+                                "elasticsearch_password",
+                            ]
+                        },
+                    ],
+                }
+            ],
+        }
+
+        # Test Elasticsearch with both API key and basic auth (should fail oneOf)
+        config = {
+            "engine_type": "elasticsearch",
+            "elasticsearch_hosts": "localhost:9200",
+            "elasticsearch_api_key": "secret-key",
+            "elasticsearch_username": "user",
+            "elasticsearch_password": "pass",
+        }
+        result = self.validator.validate_config_schema(config_schema, config)
+
+        assert result["valid"] is False
+        assert len(result["conditional_issues"]) > 0
+
+    def test_suggestions_generation(self):
+        """Test that helpful suggestions are generated for failures."""
+        config_schema = {
+            "type": "object",
+            "properties": {
+                "auth_mode": {
+                    "type": "string",
+                    "title": "Authentication Mode",
+                    "enum": ["none", "token", "basic"],
+                },
+                "auth_token": {"type": "string", "title": "Authentication Token"},
+                "auth_username": {"type": "string", "title": "Username"},
+                "auth_password": {"type": "string", "title": "Password"},
+            },
+            "anyOf": [
+                {"properties": {"auth_mode": {"const": "none"}}},
+                {
+                    "properties": {"auth_mode": {"const": "token"}},
+                    "required": ["auth_token"],
+                },
+                {
+                    "properties": {"auth_mode": {"const": "basic"}},
+                    "required": ["auth_username", "auth_password"],
+                },
+            ],
+        }
+
+        config = {"auth_mode": "token"}  # Missing auth_token
+        result = self.validator.validate_config_schema(config_schema, config)
+
+        assert result["valid"] is False
+        assert len(result["suggestions"]) > 0
+
+        # Check that suggestions mention the options
+        suggestions_text = " ".join(result["suggestions"])
+        assert "Authentication Mode" in suggestions_text
+
+    def test_is_conditionally_required(self):
+        """Test the is_conditionally_required method."""
+        config_schema = {
+            "type": "object",
+            "properties": {
+                "auth_mode": {"type": "string"},
+                "auth_token": {"type": "string"},
+                "auth_username": {"type": "string"},
+                "auth_password": {"type": "string"},
+            },
+            "anyOf": [
+                {"properties": {"auth_mode": {"const": "none"}}},
+                {
+                    "properties": {"auth_mode": {"const": "token"}},
+                    "required": ["auth_token"],
+                },
+                {
+                    "properties": {"auth_mode": {"const": "basic"}},
+                    "required": ["auth_username", "auth_password"],
+                },
+            ],
+        }
+
+        # Test with token mode - auth_token should be conditionally required
+        config = {"auth_mode": "token"}
+        assert (
+            self.validator.is_conditionally_required(
+                "auth_token", config_schema, config
+            )
+            is True
+        )
+        assert (
+            self.validator.is_conditionally_required(
+                "auth_username", config_schema, config
+            )
+            is False
+        )
+
+        # Test with basic mode - username and password should be conditionally required
+        config = {"auth_mode": "basic"}
+        assert (
+            self.validator.is_conditionally_required(
+                "auth_username", config_schema, config
+            )
+            is True
+        )
+        assert (
+            self.validator.is_conditionally_required(
+                "auth_password", config_schema, config
+            )
+            is True
+        )
+        assert (
+            self.validator.is_conditionally_required(
+                "auth_token", config_schema, config
+            )
+            is False
+        )
+
+        # Test with none mode - nothing should be conditionally required
+        config = {"auth_mode": "none"}
+        assert (
+            self.validator.is_conditionally_required(
+                "auth_token", config_schema, config
+            )
+            is False
+        )
+        assert (
+            self.validator.is_conditionally_required(
+                "auth_username", config_schema, config
+            )
+            is False
+        )
+
+    def test_complex_real_world_schema(self):
+        """Test with a complex real-world schema similar to open-elastic-search template."""
+        config_schema = {
+            "type": "object",
+            "properties": {
+                "engine_type": {
+                    "type": "string",
+                    "enum": ["elasticsearch", "opensearch"],
+                    "default": "elasticsearch",
+                },
+                "elasticsearch_hosts": {"type": "string"},
+                "elasticsearch_api_key": {"type": "string"},
+                "elasticsearch_username": {"type": "string"},
+                "elasticsearch_password": {"type": "string"},
+                "opensearch_hosts": {"type": "string"},
+                "opensearch_username": {"type": "string"},
+                "opensearch_password": {"type": "string"},
+            },
+            "anyOf": [
+                {
+                    "properties": {"engine_type": {"const": "elasticsearch"}},
+                    "required": ["elasticsearch_hosts"],
+                    "oneOf": [
+                        {"required": ["elasticsearch_api_key"]},
+                        {
+                            "required": [
+                                "elasticsearch_username",
+                                "elasticsearch_password",
+                            ]
+                        },
+                    ],
+                },
+                {
+                    "properties": {"engine_type": {"const": "opensearch"}},
+                    "required": [
+                        "opensearch_hosts",
+                        "opensearch_username",
+                        "opensearch_password",
+                    ],
+                },
+            ],
+        }
+
+        # Test valid Elasticsearch config with basic auth
+        config = {
+            "engine_type": "elasticsearch",
+            "elasticsearch_hosts": "localhost:9200",
+            "elasticsearch_username": "elastic",
+            "elasticsearch_password": "password",
+        }
+        result = self.validator.validate_config_schema(config_schema, config)
+        assert result["valid"] is True
+
+        # Test valid OpenSearch config
+        config = {
+            "engine_type": "opensearch",
+            "opensearch_hosts": "localhost:9200",
+            "opensearch_username": "admin",
+            "opensearch_password": "admin",
+        }
+        result = self.validator.validate_config_schema(config_schema, config)
+        assert result["valid"] is True
+
+        # Test invalid - Elasticsearch without auth
+        config = {
+            "engine_type": "elasticsearch",
+            "elasticsearch_hosts": "localhost:9200",
+        }
+        result = self.validator.validate_config_schema(config_schema, config)
+        assert result["valid"] is False
+
+    def test_empty_config_schema(self):
+        """Test validation with empty config schema."""
+        config_schema = {}
+        config = {"some_field": "some_value"}
+
+        result = self.validator.validate_config_schema(config_schema, config)
+
+        assert result["valid"] is True
+        assert result["missing_required"] == []
+        assert result["conditional_issues"] == []
+        assert result["suggestions"] == []
+
+    def test_empty_config(self):
+        """Test validation with empty config against schema with defaults."""
+        config_schema = {
+            "type": "object",
+            "properties": {
+                "auth_mode": {"type": "string", "default": "none"},
+                "port": {"type": "integer", "default": 8080},
+            },
+        }
+
+        config = {}
+        result = self.validator.validate_config_schema(config_schema, config)
+
+        # Should be valid because there are no required fields or conditional constraints
+        assert result["valid"] is True
