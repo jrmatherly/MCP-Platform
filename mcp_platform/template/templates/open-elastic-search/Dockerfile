@@ -21,7 +21,7 @@ RUN pip install uv
 WORKDIR /app
 
 # Clone the elasticsearch-mcp-server repository
-RUN git clone https://github.com/cr7258/elasticsearch-mcp-server.git .
+RUN git clone https://github.com/Data-Everything/elasticsearch-mcp-server.git .
 
 # Install dependencies using uv
 RUN uv pip install --system -e .

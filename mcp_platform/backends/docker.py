@@ -22,10 +22,10 @@ from mcp_platform.utils import SubProcessRunDummyResult
 
 logger = logging.getLogger(__name__)
 console = Console()
-BACKEND_TYPE = "docker"
 
 
-STDIO_TIMEOUT = os.getenv("MCP_STDIO_TIMEOUT", 30)
+STDIO_TIMEOUT = os.getenv("MCP_STDIO_TIMEOUT", "30")
+
 if isinstance(STDIO_TIMEOUT, str):
     try:
         STDIO_TIMEOUT = int(STDIO_TIMEOUT)
@@ -44,10 +44,12 @@ class DockerDeploymentService(BaseDeploymentBackend):
     It handles image pulling, container lifecycle, and provides status monitoring.
     """
 
-    def __init__(self):
+    def __init__(self, skip_check: bool = False):
         """Initialize Docker service and verify Docker is available."""
         super().__init__()
-        self._ensure_docker_available()
+        self.backend_name = "docker"
+        if not skip_check:
+            self._ensure_docker_available()
 
     @property
     def is_available(self):
@@ -106,13 +108,15 @@ class DockerDeploymentService(BaseDeploymentBackend):
             RuntimeError: If Docker daemon is not available or not running
         """
         try:
-            result = self._run_command([BACKEND_TYPE, "version", "--format", "json"])
+            result = self._run_command(
+                [self.backend_name, "version", "--format", "json"]
+            )
             version_info = json.loads(result.stdout)
-            logger.info(
+            logger.debug(
                 "Docker client version: %s",
                 version_info.get("Client", {}).get("Version", "unknown"),
             )
-            logger.info(
+            logger.debug(
                 "Docker server version: %s",
                 version_info.get("Server", {}).get("Version", "unknown"),
             )
@@ -164,7 +168,7 @@ class DockerDeploymentService(BaseDeploymentBackend):
             # Import here to avoid circular import
             from mcp_platform.core.tool_manager import ToolManager
 
-            tool_manager = ToolManager(backend_type=BACKEND_TYPE)
+            tool_manager = ToolManager(backend_type=self.backend_name)
             tool_names = []
             if not dry_run:
                 # Get available tools for this template
@@ -198,7 +202,7 @@ class DockerDeploymentService(BaseDeploymentBackend):
                     f"  mcpp> tools {template_id}                    # List available tools\n"
                     f"  mcpp> call {template_id} <tool_name>     # Run a specific tool\n"
                     f"  echo '{json.dumps({'jsonrpc': '2.0', 'id': 1, 'method': 'tools/list'})}' | \\\n"
-                    f"    docker run -i --rm {template_data.get('image', template_data.get('docker_image', f'mcp-{template_id}:latest'))}",
+                    f"    {self.backend_name} run -i --rm {template_data.get('image', template_data.get('docker_image', f'mcp-{template_id}:latest'))}",
                     title="Stdio Transport Detected",
                     border_style="yellow",
                 )
@@ -404,7 +408,7 @@ class DockerDeploymentService(BaseDeploymentBackend):
     ) -> List[str]:
         """Build the Docker command with all configuration."""
         docker_command = [
-            BACKEND_TYPE,
+            self.backend_name,
             "run",
         ]
 
@@ -490,7 +494,7 @@ class DockerDeploymentService(BaseDeploymentBackend):
         """Check if a Docker image exists."""
 
         try:
-            self._run_command([BACKEND_TYPE, "image", "inspect", image_name])
+            self._run_command([self.backend_name, "image", "inspect", image_name])
             return True
         except Exception:
             return False
@@ -498,7 +502,7 @@ class DockerDeploymentService(BaseDeploymentBackend):
     def _pull_image(self, image_name: str, force: bool = False) -> None:
         """Pull a Docker image if it does not exist."""
         if not self._check_image_exists(image_name) or force:
-            self._run_command([BACKEND_TYPE, "pull", image_name])
+            self._run_command([self.backend_name, "pull", image_name])
 
     def run_stdio_command(
         self,
@@ -625,7 +629,7 @@ class DockerDeploymentService(BaseDeploymentBackend):
             bash_command = [
                 "/bin/bash",
                 "-c",
-                f"""docker run -i --rm {" ".join(env_vars)} {" ".join(volumes)} {" ".join(["--label", f"template={template_id}"])} {image_name} {" ".join(command_args)} << 'EOF'
+                f"""{self.backend_name} run -i --rm {" ".join(env_vars)} {" ".join(volumes)} {" ".join(["--label", f"template={template_id}"])} {image_name} {" ".join(command_args)} << 'EOF'
 {full_input}
 EOF""",
             ]
@@ -680,7 +684,9 @@ EOF""",
     def _cleanup_failed_deployment(self, container_name: str):
         """Clean up a failed deployment by removing the container."""
         try:
-            self._run_command([BACKEND_TYPE, "rm", "-f", container_name], check=False)
+            self._run_command(
+                [self.backend_name, "rm", "-f", container_name], check=False
+            )
         except Exception:
             pass  # Ignore cleanup failures
 
@@ -781,11 +787,13 @@ EOF""",
             # Transport: if port is present, assume http, else stdio
             transport = "http" if ports_display else "stdio"
             state = container.get("State", "unknown")
+            status = "unknown"
 
             if isinstance(state, dict):
                 status = state.get("Status", "unknown")
             elif isinstance(state, str):
                 status = container.get("Status", None) or state
+
             running = (
                 status == "running" or (state.get("Running", False))
                 if isinstance(state, dict)
@@ -818,7 +826,7 @@ EOF""",
                 try:
                     log_result = self._run_command(
                         [
-                            BACKEND_TYPE,
+                            self.backend_name,
                             "logs",
                             "--tail",
                             str(int(lines)),
@@ -845,7 +853,7 @@ EOF""",
         """
         try:
             cmd = [
-                BACKEND_TYPE,
+                self.backend_name,
                 "ps",
                 "-a",
                 "--filter",
@@ -913,7 +921,7 @@ EOF""",
             # Get detailed container information
             result = self._run_command(
                 [
-                    BACKEND_TYPE,
+                    self.backend_name,
                     "inspect",
                     deployment_name,
                 ]
@@ -956,7 +964,7 @@ EOF""",
             Dictionary with success status and logs or error message
         """
         try:
-            cmd = [BACKEND_TYPE, "logs"]
+            cmd = [self.backend_name, "logs"]
 
             if lines:
                 cmd.extend(["--tail", str(lines)])
@@ -998,10 +1006,10 @@ EOF""",
         try:
             # Stop and remove the container
             self._run_command(
-                [BACKEND_TYPE, "stop", deployment_name], check=raise_on_failure
+                [self.backend_name, "stop", deployment_name], check=raise_on_failure
             )
             self._run_command(
-                [BACKEND_TYPE, "rm", deployment_name], check=raise_on_failure
+                [self.backend_name, "rm", deployment_name], check=raise_on_failure
             )
             logger.info("Deleted deployment %s", deployment_name)
             return True
@@ -1021,9 +1029,9 @@ EOF""",
         """
         try:
             if force:
-                self._run_command([BACKEND_TYPE, "kill", deployment_name])
+                self._run_command([self.backend_name, "kill", deployment_name])
             else:
-                self._run_command([BACKEND_TYPE, "stop", deployment_name])
+                self._run_command([self.backend_name, "stop", deployment_name])
             return True
         except subprocess.CalledProcessError:
             return False
@@ -1049,7 +1057,13 @@ EOF""",
         )
 
         # Build the Docker image
-        build_command = [BACKEND_TYPE, "build", "-t", image_name, str(template_dir)]
+        build_command = [
+            self.backend_name,
+            "build",
+            "-t",
+            image_name,
+            str(template_dir),
+        ]
         self._run_command(build_command)
 
     def connect_to_deployment(self, deployment_id: str):
@@ -1083,7 +1097,7 @@ EOF""",
         for shell in shells_to_try:
             try:
                 # Check if shell exists in container
-                check_cmd = [BACKEND_TYPE, "exec", deployment_id, "which", shell]
+                check_cmd = [self.backend_name, "exec", deployment_id, "which", shell]
                 result = subprocess.run(
                     check_cmd, capture_output=True, text=True, timeout=5
                 )
@@ -1101,11 +1115,11 @@ EOF""",
         # Try to connect using available shells
         for shell in available_shells:
             try:
-                cmd = [BACKEND_TYPE, "exec", "-it", deployment_id, shell]
+                cmd = [self.backend_name, "exec", "-it", deployment_id, shell]
                 logger.info(f"Connecting with {shell}...")
 
                 # Use os.execvp to replace current process for proper terminal handling
-                os.execvp(BACKEND_TYPE, cmd)
+                os.execvp(self.backend_name, cmd)
 
                 # Note: execvp only returns if it fails, so this line should never be reached
                 # in normal operation. However, in testing scenarios where execvp is mocked,
@@ -1138,7 +1152,7 @@ EOF""",
             if template_name:
                 # Get all containers for this template
                 cmd = [
-                    BACKEND_TYPE,
+                    self.backend_name,
                     "ps",
                     "-a",
                     "--filter",
@@ -1151,7 +1165,7 @@ EOF""",
             else:
                 # Get all stopped MCP containers
                 cmd = [
-                    BACKEND_TYPE,
+                    self.backend_name,
                     "ps",
                     "-a",
                     "--filter",
@@ -1188,7 +1202,7 @@ EOF""",
             for container in containers_to_clean:
                 try:
                     subprocess.run(
-                        [BACKEND_TYPE, "rm", container["id"]],
+                        [self.backend_name, "rm", container["id"]],
                         check=True,
                         capture_output=True,
                     )
@@ -1227,7 +1241,7 @@ EOF""",
         """
         try:
             # Find dangling images
-            cmd = [BACKEND_TYPE, "images", "--filter", "dangling=true", "-q"]
+            cmd = [self.backend_name, "images", "--filter", "dangling=true", "-q"]
             result = subprocess.run(cmd, capture_output=True, text=True, check=True)
 
             if not result.stdout.strip():
@@ -1242,7 +1256,9 @@ EOF""",
             # Remove dangling images
             try:
                 subprocess.run(
-                    [BACKEND_TYPE, "rmi"] + image_ids, check=True, capture_output=True
+                    [self.backend_name, "rmi"] + image_ids,
+                    check=True,
+                    capture_output=True,
                 )
 
                 return {
