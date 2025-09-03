@@ -5,7 +5,6 @@ These fixtures support integration testing with real components
 and end-to-end scenarios.
 """
 
-import shutil
 import tempfile
 from pathlib import Path
 from unittest.mock import Mock

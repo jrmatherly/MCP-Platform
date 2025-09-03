@@ -6,8 +6,7 @@ formatting and beautification of various data structures in CLI output.
 """
 
 import datetime
-import json
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 from rich.console import Console

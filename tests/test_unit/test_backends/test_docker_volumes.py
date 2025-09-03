@@ -5,7 +5,7 @@ Tests the volume mounting features in the Docker backend,
 focusing on current volume preparation functionality.
 """
 
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 

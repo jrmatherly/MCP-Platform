@@ -4,7 +4,6 @@ Unit tests for the base probe module (mcp_platform.tools.base_probe).
 Tests the abstract base class and shared functionality for MCP server tool discovery.
 """
 
-import asyncio
 import os
 from unittest.mock import AsyncMock, Mock, patch
 

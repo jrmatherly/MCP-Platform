@@ -5,13 +5,11 @@ Tests the end-to-end volume mounting features across client, deployment manager,
 backends, and template processing components.
 """
 
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 
 from mcp_platform.client import MCPClient
-from mcp_platform.core.deployment_manager import DeploymentManager
-from mcp_platform.template.utils.discovery import TemplateDiscovery
 
 pytestmark = pytest.mark.integration
 

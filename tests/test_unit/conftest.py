@@ -5,7 +5,7 @@ These fixtures are tailored for unit testing individual components
 in isolation with minimal dependencies.
 """
 
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 

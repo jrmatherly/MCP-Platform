@@ -2,8 +2,6 @@
 Test mock deployment service functionality.
 """
 
-from unittest.mock import Mock
-
 import pytest
 
 from mcp_platform.backends.mock import MockDeploymentService
