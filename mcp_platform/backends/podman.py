@@ -439,8 +439,10 @@ class PodmanDeploymentService(DockerDeploymentService):
             ports = self._prepare_port_mappings(template_data)
             command_args = template_data.get("command", [])
             image_name = template_data.get("image", f"mcp-{template_id}:latest")
+
             if pull_image:
-                self._run_command(["podman", "pull", image_name])
+                self._pull_image(image_name)
+
             container_id = self._deploy_container(
                 container_name,
                 template_id,

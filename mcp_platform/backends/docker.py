@@ -218,7 +218,7 @@ class DockerDeploymentService(BaseDeploymentBackend):
             image_name = template_data.get("image", f"mcp-{template_id}:latest")
             # Pull image if requested
             if pull_image and not dry_run:
-                self._run_command([BACKEND_TYPE, "pull", image_name])
+                self._pull_image(image_name)
 
             # Deploy the container
             container_id = self._deploy_container(
@@ -486,6 +486,20 @@ class DockerDeploymentService(BaseDeploymentBackend):
         logger.info("Started container %s with ID %s", container_name, container_id)
         return container_id
 
+    def _check_image_exists(self, image_name: str) -> bool:
+        """Check if a Docker image exists."""
+
+        try:
+            self._run_command([BACKEND_TYPE, "image", "inspect", image_name])
+            return True
+        except Exception:
+            return False
+
+    def _pull_image(self, image_name: str, force: bool = False) -> None:
+        """Pull a Docker image if it does not exist."""
+        if not self._check_image_exists(image_name) or force:
+            self._run_command([BACKEND_TYPE, "pull", image_name])
+
     def run_stdio_command(
         self,
         template_id: str,
@@ -534,8 +548,8 @@ class DockerDeploymentService(BaseDeploymentBackend):
             image_name = template_data.get("image", f"mcp-{template_id}:latest")
 
             # Pull image if requested
-            # if pull_image:
-            #    self._run_command([BACKEND_TYPE, "pull", image_name])
+            if pull_image:
+                self._pull_image(image_name)
 
             # Generate a temporary container name for this execution
             container_name = f"mcp-{template_id}-stdio-{str(uuid.uuid4())[:8]}"

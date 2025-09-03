@@ -334,3 +334,11 @@ class TemplateDiscovery:
                 return False
 
         return True
+
+    def is_template(self, name: str) -> bool:
+        """
+        Check if a given name corresponds to a valid template.
+        """
+
+        templates = self.discover_templates()
+        return name in templates

@@ -72,7 +72,9 @@ class ToolManager:
             Dictionary containing tools and metadata
         """
         # Check if this looks like a deployment ID vs template name
-        is_template = not re.match(r".*-\d+(-\d+)?$", template_or_id)
+        is_template = self.template_manager.template_discovery.is_template(
+            template_or_id
+        )
         tools = []
         discovery_method_used = None
 
