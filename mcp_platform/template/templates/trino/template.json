@@ -14,7 +14,7 @@
     "presto",
     "fastmcp"
   ],
-  "docker_image": "ghcr.io/tuannvm/mcp-trino",
+  "docker_image": "dataeverything/mcp-trino",
   "docker_tag": "latest",
   "ports": {
     "8080": 8080
@@ -50,92 +50,109 @@
         "default": "admin",
         "env_mapping": "TRINO_USER"
       },
-      "auth_method": {
+      "trino_password": {
         "type": "string",
-        "title": "Authentication Method",
-        "description": "Method for authenticating with Trino",
-        "enum": [
-          "basic",
-          "jwt",
-          "oauth2"
-        ],
-        "default": "basic",
-        "env_mapping": "TRINO_AUTH_METHOD"
+        "title": "Trino Password",
+        "description": "Password for Trino authentication (optional for basic auth)",
+        "env_mapping": "TRINO_PASSWORD"
       },
-      "jwt_token": {
+      "trino_catalog": {
         "type": "string",
-        "title": "JWT Token",
-        "description": "JWT token for authentication (required if auth_method is jwt)",
-        "env_mapping": "TRINO_JWT_TOKEN"
+        "title": "Default Catalog",
+        "description": "Default catalog to use for queries",
+        "env_mapping": "TRINO_CATALOG"
       },
-      "oauth2_client_id": {
-        "type": "string", 
-        "title": "OAuth2 Client ID",
-        "description": "OAuth2 client ID for authentication (required if auth_method is oauth2)",
-        "env_mapping": "TRINO_OAUTH2_CLIENT_ID"
-      },
-      "oauth2_client_secret": {
+      "trino_schema": {
         "type": "string",
-        "title": "OAuth2 Client Secret", 
-        "description": "OAuth2 client secret for authentication (required if auth_method is oauth2)",
-        "env_mapping": "TRINO_OAUTH2_CLIENT_SECRET"
+        "title": "Default Schema",
+        "description": "Default schema to use for queries",
+        "env_mapping": "TRINO_SCHEMA"
       },
-      "oauth2_token_url": {
+      "trino_scheme": {
         "type": "string",
-        "title": "OAuth2 Token URL",
-        "description": "OAuth2 token endpoint URL (required if auth_method is oauth2)",
-        "env_mapping": "TRINO_OAUTH2_TOKEN_URL"
+        "title": "Connection Scheme",
+        "description": "Connection scheme (http or https)",
+        "enum": ["http", "https"],
+        "default": "https",
+        "env_mapping": "TRINO_SCHEME"
       },
-      "read_only": {
+      "trino_ssl": {
         "type": "boolean",
-        "title": "Read-Only Mode",
-        "description": "Enable read-only mode to prevent data modifications (recommended for security)",
+        "title": "Enable SSL",
+        "description": "Enable SSL/TLS connection",
         "default": true,
-        "env_mapping": "TRINO_READ_ONLY"
+        "env_mapping": "TRINO_SSL"
       },
-      "allowed_catalogs": {
+      "trino_ssl_insecure": {
+        "type": "boolean",
+        "title": "Allow Insecure SSL",
+        "description": "Allow insecure SSL connections (skip certificate verification)",
+        "default": true,
+        "env_mapping": "TRINO_SSL_INSECURE"
+      },
+      "trino_allow_write_queries": {
+        "type": "boolean",
+        "title": "Allow Write Queries",
+        "description": "Allow write operations (INSERT, UPDATE, DELETE, CREATE, DROP)",
+        "default": false,
+        "env_mapping": "TRINO_ALLOW_WRITE_QUERIES"
+      },
+      "trino_query_timeout": {
         "type": "string",
-        "title": "Allowed Catalogs",
-        "description": "Comma-separated list of catalog patterns. Use * for all catalogs, or specify patterns like 'hive,iceberg'",
-        "default": "*",
-        "env_mapping": "TRINO_ALLOWED_CATALOGS"
-      },
-      "catalog_regex": {
-        "type": "string",
-        "title": "Catalog Regex Filter",
-        "description": "Optional regex pattern for advanced catalog filtering. Takes precedence over allowed_catalogs if provided",
-        "env_mapping": "TRINO_CATALOG_REGEX"
-      },
-      "allowed_schemas": {
-        "type": "string",
-        "title": "Allowed Schemas",
-        "description": "Comma-separated list of schema patterns. Use * for all schemas, or specify patterns like 'public,analytics_*'",
-        "default": "*",
-        "env_mapping": "TRINO_ALLOWED_SCHEMAS"
-      },
-      "schema_regex": {
-        "type": "string",
-        "title": "Schema Regex Filter",
-        "description": "Optional regex pattern for advanced schema filtering. Takes precedence over allowed_schemas if provided",
-        "env_mapping": "TRINO_SCHEMA_REGEX"
-      },
-      "query_timeout": {
-        "type": "integer",
-        "title": "Query Timeout (seconds)",
-        "description": "Maximum time to wait for query execution",
-        "default": 300,
-        "minimum": 10,
-        "maximum": 3600,
+        "title": "Query Timeout",
+        "description": "Query execution timeout (e.g., '5m', '300s')",
+        "default": "5m",
         "env_mapping": "TRINO_QUERY_TIMEOUT"
       },
-      "max_results": {
-        "type": "integer",
-        "title": "Maximum Query Results",
-        "description": "Maximum number of rows to return from queries",
-        "default": 1000,
-        "minimum": 1,
-        "maximum": 10000,
-        "env_mapping": "TRINO_MAX_RESULTS"
+      "oauth_enabled": {
+        "type": "boolean",
+        "title": "Enable OAuth",
+        "description": "Enable OAuth 2.1 authentication",
+        "default": false,
+        "env_mapping": "TRINO_OAUTH_ENABLED"
+      },
+      "oauth_provider": {
+        "type": "string",
+        "title": "OAuth Provider",
+        "description": "OAuth provider type",
+        "enum": ["hmac", "okta", "google", "azure"],
+        "env_mapping": "TRINO_OAUTH_PROVIDER"
+      },
+      "jwt_secret": {
+        "type": "string",
+        "title": "JWT Secret",
+        "description": "JWT signing secret for HMAC provider",
+        "env_mapping": "TRINO_JWT_SECRET"
+      },
+      "oidc_issuer": {
+        "type": "string",
+        "title": "OIDC Issuer",
+        "description": "OIDC issuer URL",
+        "env_mapping": "TRINO_OIDC_ISSUER"
+      },
+      "oidc_audience": {
+        "type": "string",
+        "title": "OIDC Audience",
+        "description": "OIDC audience",
+        "env_mapping": "TRINO_OIDC_AUDIENCE"
+      },
+      "oidc_client_id": {
+        "type": "string",
+        "title": "OIDC Client ID",
+        "description": "OIDC client ID",
+        "env_mapping": "TRINO_OIDC_CLIENT_ID"
+      },
+      "oidc_client_secret": {
+        "type": "string",
+        "title": "OIDC Client Secret",
+        "description": "OIDC client secret",
+        "env_mapping": "TRINO_OIDC_CLIENT_SECRET"
+      },
+      "oauth_redirect_uri": {
+        "type": "string",
+        "title": "OAuth Redirect URI",
+        "description": "Fixed OAuth redirect URI (overrides dynamic callback)",
+        "env_mapping": "TRINO_OAUTH_REDIRECT_URI"
       },
       "log_level": {
         "type": "string",
@@ -155,26 +172,18 @@
     "anyOf": [
       {
         "title": "Basic Authentication",
-        "description": "Use basic authentication with username only",
+        "description": "Use basic authentication with username and optional password",
         "properties": {
-          "auth_method": {"const": "basic"}
+          "oauth_enabled": {"const": false}
         }
       },
       {
-        "title": "JWT Authentication",
-        "description": "Use JWT token for authentication",
+        "title": "OAuth Authentication",
+        "description": "Use OAuth 2.1 authentication with specified provider",
         "properties": {
-          "auth_method": {"const": "jwt"}
+          "oauth_enabled": {"const": true}
         },
-        "required": ["jwt_token"]
-      },
-      {
-        "title": "OAuth2 Authentication",
-        "description": "Use OAuth2 flow for authentication",
-        "properties": {
-          "auth_method": {"const": "oauth2"}
-        },
-        "required": ["oauth2_client_id", "oauth2_client_secret", "oauth2_token_url"]
+        "required": ["oauth_provider"]
       }
     ]
   },
@@ -326,13 +335,13 @@
   "examples": {
     "cli_usage": [
       "python -m mcp_platform deploy trino --config trino_host='trino.example.com' --config trino_user='analyst'",
-      "python -m mcp_platform deploy trino --config trino_host='localhost' --config auth_method='jwt' --config jwt_token='your-jwt-token'",
-      "python -m mcp_platform deploy trino --config trino_host='trino.company.com' --config auth_method='oauth2' --config oauth2_client_id='client123' --config oauth2_client_secret='secret456' --config oauth2_token_url='https://auth.company.com/token'",
-      "python -m mcp_platform deploy trino --config trino_host='localhost' --config allowed_catalogs='hive,iceberg' --config allowed_schemas='public,analytics_*' --config read_only=false"
+      "python -m mcp_platform deploy trino --config trino_host='localhost' --config oauth_enabled=true --config oauth_provider='google' --config oidc_client_id='client123'",
+      "python -m mcp_platform deploy trino --config trino_host='trino.company.com' --config oauth_enabled=true --config oauth_provider='okta' --config oidc_issuer='https://company.okta.com' --config oidc_client_id='client123' --config oidc_client_secret='secret456'",
+      "python -m mcp_platform deploy trino --config trino_host='localhost' --config trino_allow_write_queries=true --config trino_catalog='hive' --config trino_schema='default'"
     ],
     "client_integration": {
       "fastmcp": "# Trino MCP uses stdio transport only\n# Connect via MCP client configuration",
-      "docker": "docker run -i --rm -e TRINO_HOST=localhost -e TRINO_USER=admin ghcr.io/tuannvm/mcp-trino:latest"
+      "docker": "docker run -i --rm -e TRINO_HOST=localhost -e TRINO_USER=admin dataeverything/mcp-trino:latest"
     }
   }
 }
