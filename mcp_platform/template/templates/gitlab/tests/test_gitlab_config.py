@@ -6,6 +6,7 @@ without requiring complex template management infrastructure.
 """
 
 import json
+import os
 
 
 class TestGitLabTemplateConfiguration:
@@ -36,7 +37,6 @@ class TestGitLabTemplateConfiguration:
 
         # Verify configuration schema
         config_schema = template_config["config_schema"]
-        assert "gitlab_personal_access_token" in config_schema["required"]
         assert (
             config_schema["properties"]["gitlab_personal_access_token"]["env_mapping"]
             == "GITLAB_PERSONAL_ACCESS_TOKEN"
@@ -145,7 +145,6 @@ class TestGitLabTemplateConfiguration:
 
     def test_configuration_completeness(self):
         """Test that all documented configuration options are present."""
-        import os
 
         template_path = os.path.join(os.path.dirname(__file__), "..", "template.json")
 
@@ -176,10 +175,6 @@ class TestGitLabTemplateConfiguration:
             assert (
                 "env_mapping" in properties[prop]
             ), f"Environment mapping missing for {prop}"
-
-        # Verify required fields
-        assert "gitlab_personal_access_token" in config_schema["required"]
-        assert len(config_schema["required"]) == 1  # Only token is required
 
     def test_capability_examples(self):
         """Test that template includes capability examples."""

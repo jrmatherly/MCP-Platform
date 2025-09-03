@@ -140,6 +140,95 @@ The `template.json` file is the core configuration that defines how an MCP serve
 }
 ```
 
+## Response Formatting
+
+Templates can provide custom response formatting to improve the display of tool outputs. This allows templates to transform raw tool responses into beautiful, structured presentations.
+
+### Response Formatter Configuration
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `response_formatter` | object | ❌ | Configuration for custom response formatting |
+| `response_formatter.enabled` | boolean | ❌ | Enable custom formatting (default: true if formatter exists) |
+| `response_formatter.module` | string | ❌ | Python module name (default: "response_formatter") |
+| `response_formatter.class` | string | ❌ | Formatter class name (auto-detected if not specified) |
+| `response_formatter.tools` | array | ❌ | List of tools to format (default: all tools) |
+
+**Basic Example:**
+```json
+{
+  "response_formatter": {
+    "enabled": true,
+    "tools": ["list_indices", "search", "get_index"]
+  }
+}
+```
+
+**Advanced Example:**
+```json
+{
+  "response_formatter": {
+    "enabled": true,
+    "module": "custom_formatter",
+    "class": "MyCustomResponseFormatter",
+    "tools": ["list_data", "query_results"]
+  }
+}
+```
+
+### Convention-Based Discovery
+
+If no `response_formatter` configuration is provided, the platform will automatically look for:
+
+1. **Module**: `response_formatter.py` in the template directory
+2. **Class**: Auto-detected based on template name (e.g., `ElasticsearchResponseFormatter`)
+
+### Creating a Response Formatter
+
+Create a `response_formatter.py` file in your template directory:
+
+```python
+from typing import Optional
+from rich.console import Console
+
+class YourTemplateResponseFormatter:
+    """Custom response formatter for your template."""
+
+    def __init__(self, console: Optional[Console] = None):
+        """Initialize the formatter."""
+        self.console = console or Console()
+
+    def format_tool_response(self, tool_name: str, raw_response: str) -> None:
+        """
+        Format tool response for display.
+
+        Args:
+            tool_name: Name of the tool that was called
+            raw_response: Raw response string from the tool
+        """
+        if tool_name == "your_tool":
+            self._format_your_tool(raw_response)
+        else:
+            self._format_default(raw_response)
+
+    def _format_your_tool(self, response: str) -> None:
+        """Format specific tool output."""
+        # Custom formatting logic here
+        self.console.print(f"Formatted: {response}")
+
+    def _format_default(self, response: str) -> None:
+        """Default formatting fallback."""
+        self.console.print(response)
+```
+
+### Best Practices
+
+- **Clean JSON responses**: Parse JSON and display as structured tables
+- **Handle errors gracefully**: Always provide fallback formatting
+- **Use Rich library**: Leverage Rich tables, panels, and syntax highlighting
+- **Tool-specific logic**: Different tools may need different formatting approaches
+- **Performance**: Keep formatting fast, avoid heavy processing
+
 ## Configuration Schema
 
 The `config_schema` defines how users configure your template. It follows JSON Schema specification with additional MCP-specific properties.

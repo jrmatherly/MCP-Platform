@@ -300,50 +300,6 @@ class ConfigProcessor:
 
         return config
 
-    def merge_k8s_config_sources(
-        self,
-        k8s_config_file: Optional[str] = None,
-        k8s_config_values: Optional[Dict[str, str]] = None,
-    ) -> Dict[str, Any]:
-        """
-        Merge Kubernetes-specific configuration sources.
-
-        TEMORARILY ADDED THIS METHOD FROM CONFIG_MANAGER TO GET RID OF IT
-
-        Args:
-            k8s_config_file: Path to Kubernetes configuration file
-            k8s_config_values: Kubernetes configuration values from CLI
-
-        Returns:
-            Merged Kubernetes configuration dictionary
-        """
-        merged_config = {}
-
-        # Start with file-based configuration if provided
-        if k8s_config_file:
-            try:
-                file_config = self._load_config_file(k8s_config_file)
-                merged_config.update(file_config)
-                logger.debug(f"Loaded Kubernetes config from file: {k8s_config_file}")
-            except Exception as e:
-                logger.warning(
-                    f"Failed to load Kubernetes config file {k8s_config_file}: {e}"
-                )
-
-        # Override with CLI values
-        if k8s_config_values:
-            # Process special values that need type conversion
-            processed_values = {}
-            for key, value in k8s_config_values.items():
-                processed_values[key] = self._convert_config_value(value)
-
-            merged_config.update(processed_values)
-            logger.debug(
-                f"Applied Kubernetes config values: {list(k8s_config_values.keys())}"
-            )
-
-        return merged_config
-
     def validate_config(
         self, config: Dict[str, Any], schema: Dict[str, Any]
     ) -> ValidationResult:
@@ -572,7 +528,7 @@ class ConfigProcessor:
                     file_config = json.load(f)
 
         except Exception as e:
-            logger.error(f"Failed to load config file {config_file}: {e}")
+            logger.error("Failed to load config file %s: %s", config_file, e)
             raise
 
         return file_config
@@ -786,7 +742,11 @@ class ConfigProcessor:
                         converted_config[env_mapping] = str(value)
                 except (ValueError, TypeError) as e:
                     logger.warning(
-                        f"Failed to convert {key}={value} to {prop_type}: {e}"
+                        "Failed to convert %s=%s to %s: %s",
+                        key,
+                        value,
+                        prop_type,
+                        e,
                     )
                     converted_config[env_mapping] = str(value)
             else:
@@ -825,3 +785,298 @@ class ConfigProcessor:
                     return pattern
 
         return None
+
+
+class ConditionalConfigValidator:
+    """Handles validation of templates with conditional requirements (anyOf/oneOf)."""
+
+    @staticmethod
+    def validate_config_schema(
+        config_schema: Dict[str, Any], config: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Validate config against JSON Schema with support for conditional requirements.
+        Returns validation result with missing_required, conditional_issues, and suggestions.
+        """
+        result = {
+            "valid": True,
+            "missing_required": [],
+            "conditional_issues": [],
+            "suggestions": [],
+        }
+
+        properties = config_schema.get("properties", {})
+
+        # Check basic required fields first
+        basic_required = config_schema.get("required", [])
+        for prop in basic_required:
+            if prop not in config or config[prop] is None:
+                result["missing_required"].append(prop)
+                result["valid"] = False
+
+        # Check conditional requirements using anyOf/oneOf
+        if "anyOf" in config_schema:
+            any_of_satisfied = False
+            conditional_errors = []
+
+            for i, condition in enumerate(config_schema["anyOf"]):
+                condition_result = ConditionalConfigValidator._check_condition(
+                    condition, config, properties
+                )
+                if condition_result["satisfied"]:
+                    any_of_satisfied = True
+                    break
+                else:
+                    conditional_errors.append(
+                        {
+                            "condition_index": i,
+                            "condition": condition,
+                            "errors": condition_result["errors"],
+                            "missing": condition_result["missing"],
+                        }
+                    )
+
+            if not any_of_satisfied:
+                result["valid"] = False
+                result["conditional_issues"] = conditional_errors
+
+                # Generate suggestions based on current config
+                suggestions = ConditionalConfigValidator._generate_config_suggestions(
+                    config_schema, config
+                )
+                result["suggestions"] = suggestions
+
+        if "oneOf" in config_schema:
+            satisfied_conditions = 0
+            one_of_errors = []
+
+            for i, condition in enumerate(config_schema["oneOf"]):
+                condition_result = ConditionalConfigValidator._check_condition(
+                    condition, config, properties
+                )
+                if condition_result["satisfied"]:
+                    satisfied_conditions += 1
+                else:
+                    one_of_errors.append(
+                        {
+                            "condition_index": i,
+                            "condition": condition,
+                            "errors": condition_result["errors"],
+                            "missing": condition_result["missing"],
+                        }
+                    )
+
+            if satisfied_conditions != 1:
+                result["valid"] = False
+                if satisfied_conditions == 0:
+                    result["conditional_issues"].extend(one_of_errors)
+                else:
+                    result["conditional_issues"].append(
+                        {
+                            "error": f"Multiple conditions satisfied in oneOf (found {satisfied_conditions})"
+                        }
+                    )
+
+        return result
+
+    @staticmethod
+    def _check_condition(
+        condition: Dict[str, Any], config: Dict[str, Any], properties: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Check if a single condition (from anyOf/oneOf) is satisfied."""
+        result = {"satisfied": True, "errors": [], "missing": []}
+
+        # Check property constraints
+        if "properties" in condition:
+            for prop, constraint in condition["properties"].items():
+                if "const" in constraint:
+                    if config.get(prop) != constraint["const"]:
+                        result["satisfied"] = False
+                        result["errors"].append(
+                            f"{prop} must be '{constraint['const']}'"
+                        )
+                elif "enum" in constraint:
+                    if config.get(prop) not in constraint["enum"]:
+                        result["satisfied"] = False
+                        result["errors"].append(
+                            f"{prop} must be one of {constraint['enum']}"
+                        )
+
+        # Check required fields for this condition
+        if "required" in condition:
+            for prop in condition["required"]:
+                if prop not in config or config[prop] is None:
+                    result["satisfied"] = False
+                    result["missing"].append(prop)
+
+        # Handle nested oneOf within conditions
+        if "oneOf" in condition:
+            nested_satisfied = 0
+            for nested_condition in condition["oneOf"]:
+                nested_result = ConditionalConfigValidator._check_condition(
+                    nested_condition, config, properties
+                )
+                if nested_result["satisfied"]:
+                    nested_satisfied += 1
+
+            if nested_satisfied != 1:
+                result["satisfied"] = False
+                if nested_satisfied == 0:
+                    result["errors"].append(
+                        "None of the authentication methods are satisfied"
+                    )
+                else:
+                    result["errors"].append(
+                        "Multiple authentication methods provided (only one allowed)"
+                    )
+
+        return result
+
+    @staticmethod
+    def _generate_config_suggestions(
+        config_schema: Dict[str, Any], config: Dict[str, Any]
+    ) -> List[str]:
+        """Generate helpful suggestions based on conditional validation failures."""
+        suggestions = []
+        properties = config_schema.get("properties", {})
+
+        # Generic suggestions based on anyOf/oneOf structure
+        if "anyOf" in config_schema:
+            for i, condition in enumerate(config_schema["anyOf"]):
+                if "properties" in condition:
+                    for prop, constraint in condition["properties"].items():
+                        if "const" in constraint:
+                            prop_info = properties.get(prop, {})
+                            prop_title = prop_info.get("title", prop)
+                            current_value = config.get(prop)
+                            if current_value != constraint["const"]:
+                                suggestions.append(
+                                    f"Option {i+1}: Set '{prop_title}' to '{constraint['const']}'"
+                                )
+                                if "required" in condition:
+                                    required_props = [
+                                        properties.get(p, {}).get("title", p)
+                                        for p in condition["required"]
+                                    ]
+                                    suggestions.append(
+                                        f"  Then configure: {', '.join(required_props)}"
+                                    )
+
+        # Elasticsearch/OpenSearch specific suggestions (backwards compatibility)
+        current_engine = config.get(
+            "engine_type", properties.get("engine_type", {}).get("default")
+        )
+
+        if current_engine == "elasticsearch":
+            # Check if elasticsearch_hosts is missing
+            if "elasticsearch_hosts" not in config:
+                suggestions.append(
+                    "For Elasticsearch: set 'elasticsearch_hosts' to your cluster URL"
+                )
+
+            # Check authentication
+            has_api_key = "elasticsearch_api_key" in config
+            has_basic_auth = (
+                "elasticsearch_username" in config
+                and "elasticsearch_password" in config
+            )
+
+            if not has_api_key and not has_basic_auth:
+                suggestions.append(
+                    "For Elasticsearch: choose either API key authentication (elasticsearch_api_key) OR basic authentication (elasticsearch_username + elasticsearch_password)"
+                )
+
+        elif current_engine == "opensearch":
+            missing_opensearch = []
+            if "opensearch_hosts" not in config:
+                missing_opensearch.append("opensearch_hosts")
+            if "opensearch_username" not in config:
+                missing_opensearch.append("opensearch_username")
+            if "opensearch_password" not in config:
+                missing_opensearch.append("opensearch_password")
+
+            if missing_opensearch:
+                suggestions.append(
+                    f"For OpenSearch: set {', '.join(missing_opensearch)}"
+                )
+
+        elif "engine_type" in properties:
+            # Only suggest engine_type if it's actually a property in this template
+            suggestions.append(
+                "Set 'engine_type' to either 'elasticsearch' or 'opensearch'"
+            )
+
+        return suggestions
+
+    @staticmethod
+    def is_conditionally_required(
+        prop_name: str, config_schema: Dict[str, Any], current_config: Dict[str, Any]
+    ) -> bool:
+        """Check if a property is conditionally required based on current config."""
+        # Check anyOf conditions
+        if "anyOf" in config_schema:
+            for condition in config_schema["anyOf"]:
+                if ConditionalConfigValidator._prop_required_in_condition(
+                    prop_name, condition, current_config
+                ):
+                    return True
+
+        # Check oneOf conditions
+        if "oneOf" in config_schema:
+            for condition in config_schema["oneOf"]:
+                if ConditionalConfigValidator._prop_required_in_condition(
+                    prop_name, condition, current_config
+                ):
+                    return True
+
+        return False
+
+    @staticmethod
+    def _prop_required_in_condition(
+        prop_name: str, condition: Dict[str, Any], current_config: Dict[str, Any]
+    ) -> bool:
+        """Check if a property is required in a specific condition."""
+        # First check if the condition applies to current config
+        if "properties" in condition:
+            for constraint_prop, constraint in condition["properties"].items():
+                if "const" in constraint:
+                    if current_config.get(constraint_prop) != constraint["const"]:
+                        return False  # This condition doesn't apply
+
+        # If condition applies, check if prop is required
+        if "required" in condition and prop_name in condition["required"]:
+            return True
+
+        # Check nested oneOf conditions
+        if "oneOf" in condition:
+            for nested_condition in condition["oneOf"]:
+                if ConditionalConfigValidator._prop_required_in_condition(
+                    prop_name, nested_condition, current_config
+                ):
+                    return True
+
+        return False
+
+    @staticmethod
+    def check_missing_config(
+        template_info: Dict[str, Any], config: Dict[str, Any], env_vars: Dict[str, str]
+    ) -> List[str]:
+        """Check for missing required configuration with conditional requirements support."""
+        config_schema = template_info.get("config_schema", {})
+
+        # Combine config and env_vars for validation
+        effective_config = dict(config)
+        properties = config_schema.get("properties", {})
+
+        # Add env vars using their property mappings
+        for prop_name, prop_info in properties.items():
+            env_mapping = prop_info.get("env_mapping", prop_name.upper())
+            if env_mapping in env_vars and prop_name not in effective_config:
+                effective_config[prop_name] = env_vars[env_mapping]
+
+        # Check for validation errors using enhanced validation
+        validation_result = ConditionalConfigValidator.validate_config_schema(
+            config_schema, effective_config
+        )
+
+        return validation_result.get("missing_required", [])

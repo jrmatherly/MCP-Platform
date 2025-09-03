@@ -5,7 +5,6 @@ Tests MCP server communication and tool discovery via stdio and HTTP protocols.
 """
 
 import asyncio
-import json
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest

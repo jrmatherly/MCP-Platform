@@ -2,6 +2,7 @@
 Docker backend for managing deployments using Docker containers.
 """
 
+import ipaddress
 import json
 import logging
 import os
@@ -22,10 +23,11 @@ from mcp_platform.utils import SubProcessRunDummyResult
 
 logger = logging.getLogger(__name__)
 console = Console()
-BACKEND_TYPE = "docker"
 
 
-STDIO_TIMEOUT = os.getenv("MCP_STDIO_TIMEOUT", 30)
+STDIO_TIMEOUT = os.getenv("MCP_STDIO_TIMEOUT", "30")
+MCP_PLATFORM_NETWORK_NAME = os.getenv("MCP_PLATFORM_NETWORK_NAME", "mcp-platform")
+
 if isinstance(STDIO_TIMEOUT, str):
     try:
         STDIO_TIMEOUT = int(STDIO_TIMEOUT)
@@ -44,10 +46,12 @@ class DockerDeploymentService(BaseDeploymentBackend):
     It handles image pulling, container lifecycle, and provides status monitoring.
     """
 
-    def __init__(self):
+    def __init__(self, skip_check: bool = False):
         """Initialize Docker service and verify Docker is available."""
         super().__init__()
-        self._ensure_docker_available()
+        self.backend_name = "docker"
+        if not skip_check:
+            self._ensure_docker_available()
 
     @property
     def is_available(self):
@@ -60,6 +64,176 @@ class DockerDeploymentService(BaseDeploymentBackend):
             return True
 
         return False
+
+    def create_network(self):
+        """
+        Create a Docker network if it doesn't already exist.
+        """
+        # If the network already exists, nothing to do
+        result = self._run_command(
+            ["docker", "network", "inspect", MCP_PLATFORM_NETWORK_NAME], check=False
+        )
+        if result.returncode == 0:
+            logger.debug(
+                "Docker network '%s' already exists", MCP_PLATFORM_NETWORK_NAME
+            )
+            return MCP_PLATFORM_NETWORK_NAME
+
+        logger.info(
+            "Creating Docker network '%s' (selecting non-conflicting subnet)",
+            MCP_PLATFORM_NETWORK_NAME,
+        )
+
+        # Gather existing subnets from current docker networks to avoid conflicts
+        existing_subnets = set()
+        try:
+            out = self._run_command(
+                ["docker", "network", "ls", "--format", "{{.Name}}"], check=False
+            )
+            if out and out.stdout:
+                for net_name in out.stdout.splitlines():
+                    try:
+                        inspect_res = self._run_command(
+                            ["docker", "network", "inspect", net_name], check=False
+                        )
+                        if inspect_res and inspect_res.stdout:
+                            try:
+                                data = json.loads(inspect_res.stdout)
+                            except json.JSONDecodeError:
+                                continue
+                            # data can be list (docker) - handle both
+                            entries = data if isinstance(data, list) else [data]
+                            for entry in entries:
+                                ipam = entry.get("IPAM", {})
+                                for cfg in ipam.get("Config", []) or []:
+                                    subnet = cfg.get("Subnet")
+                                    if subnet:
+                                        try:
+                                            existing_subnets.add(
+                                                ipaddress.ip_network(subnet)
+                                            )
+                                        except Exception:
+                                            continue
+                    except Exception:
+                        continue
+        except Exception:
+            # If we can't list networks, fall back to creating a simple network later
+            existing_subnets = set()
+
+        # Candidate /24 ranges to try (private address space, avoids common default 172.17/16)
+        candidates = [
+            ipaddress.ip_network("172.30.0.0/24"),
+            ipaddress.ip_network("172.31.0.0/24"),
+            ipaddress.ip_network("172.28.0.0/24"),
+            ipaddress.ip_network("172.29.0.0/24"),
+            ipaddress.ip_network("172.32.0.0/24"),
+        ]
+
+        chosen = None
+        for cand in candidates:
+            # Check overlap with any existing subnet
+            conflict = False
+            for existing in existing_subnets:
+                if cand.overlaps(existing):
+                    conflict = True
+                    break
+            if not conflict:
+                chosen = cand
+                break
+
+        # Try creating the network with an IPAM config if we found a candidate
+        if chosen:
+            subnet = str(chosen)
+            gateway = (
+                str(list(chosen.hosts())[0])
+                if list(chosen.hosts())
+                else subnet.split("/")[0]
+            )
+            ip_range = (
+                str(ipaddress.ip_network(f"{chosen.network_address + 256}/{24}"))
+                if chosen.prefixlen < 24
+                else subnet
+            )
+            # Ensure ip_range is inside subnet and sane — fallback to subnet if calculation fails
+            try:
+                if not ipaddress.ip_network(ip_range).subnet_of(chosen):
+                    ip_range = subnet
+            except Exception:
+                ip_range = subnet
+
+            try:
+                logger.debug(
+                    "Attempting to create docker network %s with subnet %s",
+                    MCP_PLATFORM_NETWORK_NAME,
+                    subnet,
+                )
+                self._run_command(
+                    [
+                        "docker",
+                        "network",
+                        "create",
+                        "--driver",
+                        "bridge",
+                        "--subnet",
+                        subnet,
+                        "--gateway",
+                        gateway,
+                        "--ip-range",
+                        ip_range,
+                        MCP_PLATFORM_NETWORK_NAME,
+                    ]
+                )
+                logger.info(
+                    "Created Docker network '%s' with subnet %s",
+                    MCP_PLATFORM_NETWORK_NAME,
+                    subnet,
+                )
+                return MCP_PLATFORM_NETWORK_NAME
+            except subprocess.CalledProcessError as e:
+                logger.warning(
+                    "Failed to create docker network with subnet %s: %s", subnet, e
+                )
+
+            except Exception as e:
+                logger.warning(
+                    "Unexpected error creating docker network with subnet %s: %s",
+                    subnet,
+                    e,
+                )
+
+        # If we couldn't pick a candidate or creation failed, try basic create without IPAM
+        try:
+            logger.debug(
+                "Falling back to basic docker network create for %s",
+                MCP_PLATFORM_NETWORK_NAME,
+            )
+            self._run_command(
+                [
+                    "docker",
+                    "network",
+                    "create",
+                    "--driver",
+                    "bridge",
+                    MCP_PLATFORM_NETWORK_NAME,
+                ]
+            )
+            logger.info(
+                "Created Docker network '%s' without explicit subnet",
+                MCP_PLATFORM_NETWORK_NAME,
+            )
+            return MCP_PLATFORM_NETWORK_NAME
+        except subprocess.CalledProcessError as e:
+            logger.error(
+                "Failed to create Docker network '%s': %s", MCP_PLATFORM_NETWORK_NAME, e
+            )
+        except Exception as e:
+            logger.error(
+                "Unexpected error creating Docker network '%s': %s",
+                MCP_PLATFORM_NETWORK_NAME,
+                e,
+            )
+
+        return None
 
     # Docker Infrastructure Methods
     def _run_command(
@@ -106,13 +280,15 @@ class DockerDeploymentService(BaseDeploymentBackend):
             RuntimeError: If Docker daemon is not available or not running
         """
         try:
-            result = self._run_command([BACKEND_TYPE, "version", "--format", "json"])
+            result = self._run_command(
+                [self.backend_name, "version", "--format", "json"]
+            )
             version_info = json.loads(result.stdout)
-            logger.info(
+            logger.debug(
                 "Docker client version: %s",
                 version_info.get("Client", {}).get("Version", "unknown"),
             )
-            logger.info(
+            logger.debug(
                 "Docker server version: %s",
                 version_info.get("Server", {}).get("Version", "unknown"),
             )
@@ -164,16 +340,13 @@ class DockerDeploymentService(BaseDeploymentBackend):
             # Import here to avoid circular import
             from mcp_platform.core.tool_manager import ToolManager
 
-            tool_manager = ToolManager(backend_type=BACKEND_TYPE)
+            tool_manager = ToolManager(backend_type=self.backend_name)
             tool_names = []
             if not dry_run:
                 # Get available tools for this template
                 try:
                     discovery_result = tool_manager.list_tools(
                         template_id,
-                        discovery_method="static",
-                        use_cache=True,
-                        force_refresh=False,
                     )
                     tools = discovery_result.get("tools", [])
                     tool_names = [tool.get("name", "unknown") for tool in tools]
@@ -201,7 +374,7 @@ class DockerDeploymentService(BaseDeploymentBackend):
                     f"  mcpp> tools {template_id}                    # List available tools\n"
                     f"  mcpp> call {template_id} <tool_name>     # Run a specific tool\n"
                     f"  echo '{json.dumps({'jsonrpc': '2.0', 'id': 1, 'method': 'tools/list'})}' | \\\n"
-                    f"    docker run -i --rm {template_data.get('image', template_data.get('docker_image', f'mcp-{template_id}:latest'))}",
+                    f"    {self.backend_name} run -i --rm {template_data.get('image', template_data.get('docker_image', f'mcp-{template_id}:latest'))}",
                     title="Stdio Transport Detected",
                     border_style="yellow",
                 )
@@ -221,7 +394,7 @@ class DockerDeploymentService(BaseDeploymentBackend):
             image_name = template_data.get("image", f"mcp-{template_id}:latest")
             # Pull image if requested
             if pull_image and not dry_run:
-                self._run_command([BACKEND_TYPE, "pull", image_name])
+                self._pull_image(image_name)
 
             # Deploy the container
             container_id = self._deploy_container(
@@ -407,7 +580,7 @@ class DockerDeploymentService(BaseDeploymentBackend):
     ) -> List[str]:
         """Build the Docker command with all configuration."""
         docker_command = [
-            BACKEND_TYPE,
+            self.backend_name,
             "run",
         ]
 
@@ -430,6 +603,15 @@ class DockerDeploymentService(BaseDeploymentBackend):
                 f"template={template_id}",
                 "--label",
                 "managed-by=mcp-template",
+            ]
+        )
+
+        # Network setup
+        self.create_network()
+        docker_command.extend(
+            [
+                "--network",
+                MCP_PLATFORM_NETWORK_NAME,
             ]
         )
 
@@ -489,6 +671,20 @@ class DockerDeploymentService(BaseDeploymentBackend):
         logger.info("Started container %s with ID %s", container_name, container_id)
         return container_id
 
+    def _check_image_exists(self, image_name: str) -> bool:
+        """Check if a Docker image exists."""
+
+        try:
+            self._run_command([self.backend_name, "image", "inspect", image_name])
+            return True
+        except Exception:
+            return False
+
+    def _pull_image(self, image_name: str, force: bool = False) -> None:
+        """Pull a Docker image if it does not exist."""
+        if not self._check_image_exists(image_name) or force:
+            self._run_command([self.backend_name, "pull", image_name])
+
     def run_stdio_command(
         self,
         template_id: str,
@@ -538,30 +734,12 @@ class DockerDeploymentService(BaseDeploymentBackend):
 
             # Pull image if requested
             if pull_image:
-                self._run_command([BACKEND_TYPE, "pull", image_name])
+                self._pull_image(image_name)
 
-            # Generate a temporary container name for this execution
-            container_name = f"mcp-{template_id}-stdio-{str(uuid.uuid4())[:8]}"
-
-            # Build the Docker command for interactive stdio execution
-            docker_command = self._build_docker_command(
-                container_name,
-                template_id,
-                image_name,
-                env_vars,
-                volumes,
-                [],  # No port mappings for stdio
-                command_args,
-                is_stdio=True,
-                detached=False,  # Run interactively
-            )
-
-            # Add interactive flags for stdio
-            docker_command.insert(2, "-i")  # Interactive
-            docker_command.insert(3, "--rm")  # Remove container after execution
+            # Ensure network exists before running stdio command
+            self.create_network()
 
             logger.info("Running stdio command for template %s", template_id)
-            logger.debug("Docker command: %s", " ".join(docker_command))
 
             # Parse the original JSON input to extract the tool call
             try:
@@ -610,11 +788,11 @@ class DockerDeploymentService(BaseDeploymentBackend):
             logger.debug("Full MCP input: %s", full_input)
 
             # Execute the command with MCP input sequence using bash heredoc
-            # This avoids creating temporary files
+            # Include network parameter to ensure stdio containers run in the correct network
             bash_command = [
                 "/bin/bash",
                 "-c",
-                f"""docker run -i --rm {" ".join(env_vars)} {" ".join(volumes)} {" ".join(["--label", f"template={template_id}"])} {image_name} {" ".join(command_args)} << 'EOF'
+                f"""{self.backend_name} run -i --rm --network {MCP_PLATFORM_NETWORK_NAME} {" ".join(env_vars)} {" ".join(volumes)} {" ".join(["--label", f"template={template_id}"])} {image_name} {" ".join(command_args)} << 'EOF'
 {full_input}
 EOF""",
             ]
@@ -669,7 +847,9 @@ EOF""",
     def _cleanup_failed_deployment(self, container_name: str):
         """Clean up a failed deployment by removing the container."""
         try:
-            self._run_command([BACKEND_TYPE, "rm", "-f", container_name], check=False)
+            self._run_command(
+                [self.backend_name, "rm", "-f", container_name], check=False
+            )
         except Exception:
             pass  # Ignore cleanup failures
 
@@ -770,11 +950,13 @@ EOF""",
             # Transport: if port is present, assume http, else stdio
             transport = "http" if ports_display else "stdio"
             state = container.get("State", "unknown")
+            status = "unknown"
 
             if isinstance(state, dict):
                 status = state.get("Status", "unknown")
             elif isinstance(state, str):
                 status = container.get("Status", None) or state
+
             running = (
                 status == "running" or (state.get("Running", False))
                 if isinstance(state, dict)
@@ -807,7 +989,7 @@ EOF""",
                 try:
                     log_result = self._run_command(
                         [
-                            BACKEND_TYPE,
+                            self.backend_name,
                             "logs",
                             "--tail",
                             str(int(lines)),
@@ -834,7 +1016,7 @@ EOF""",
         """
         try:
             cmd = [
-                BACKEND_TYPE,
+                self.backend_name,
                 "ps",
                 "-a",
                 "--filter",
@@ -902,7 +1084,7 @@ EOF""",
             # Get detailed container information
             result = self._run_command(
                 [
-                    BACKEND_TYPE,
+                    self.backend_name,
                     "inspect",
                     deployment_name,
                 ]
@@ -945,7 +1127,7 @@ EOF""",
             Dictionary with success status and logs or error message
         """
         try:
-            cmd = [BACKEND_TYPE, "logs"]
+            cmd = [self.backend_name, "logs"]
 
             if lines:
                 cmd.extend(["--tail", str(lines)])
@@ -987,10 +1169,10 @@ EOF""",
         try:
             # Stop and remove the container
             self._run_command(
-                [BACKEND_TYPE, "stop", deployment_name], check=raise_on_failure
+                [self.backend_name, "stop", deployment_name], check=raise_on_failure
             )
             self._run_command(
-                [BACKEND_TYPE, "rm", deployment_name], check=raise_on_failure
+                [self.backend_name, "rm", deployment_name], check=raise_on_failure
             )
             logger.info("Deleted deployment %s", deployment_name)
             return True
@@ -1010,9 +1192,9 @@ EOF""",
         """
         try:
             if force:
-                self._run_command([BACKEND_TYPE, "kill", deployment_name])
+                self._run_command([self.backend_name, "kill", deployment_name])
             else:
-                self._run_command([BACKEND_TYPE, "stop", deployment_name])
+                self._run_command([self.backend_name, "stop", deployment_name])
             return True
         except subprocess.CalledProcessError:
             return False
@@ -1038,7 +1220,13 @@ EOF""",
         )
 
         # Build the Docker image
-        build_command = [BACKEND_TYPE, "build", "-t", image_name, str(template_dir)]
+        build_command = [
+            self.backend_name,
+            "build",
+            "-t",
+            image_name,
+            str(template_dir),
+        ]
         self._run_command(build_command)
 
     def connect_to_deployment(self, deployment_id: str):
@@ -1072,7 +1260,7 @@ EOF""",
         for shell in shells_to_try:
             try:
                 # Check if shell exists in container
-                check_cmd = [BACKEND_TYPE, "exec", deployment_id, "which", shell]
+                check_cmd = [self.backend_name, "exec", deployment_id, "which", shell]
                 result = subprocess.run(
                     check_cmd, capture_output=True, text=True, timeout=5
                 )
@@ -1090,11 +1278,11 @@ EOF""",
         # Try to connect using available shells
         for shell in available_shells:
             try:
-                cmd = [BACKEND_TYPE, "exec", "-it", deployment_id, shell]
+                cmd = [self.backend_name, "exec", "-it", deployment_id, shell]
                 logger.info(f"Connecting with {shell}...")
 
                 # Use os.execvp to replace current process for proper terminal handling
-                os.execvp(BACKEND_TYPE, cmd)
+                os.execvp(self.backend_name, cmd)
 
                 # Note: execvp only returns if it fails, so this line should never be reached
                 # in normal operation. However, in testing scenarios where execvp is mocked,
@@ -1127,7 +1315,7 @@ EOF""",
             if template_name:
                 # Get all containers for this template
                 cmd = [
-                    BACKEND_TYPE,
+                    self.backend_name,
                     "ps",
                     "-a",
                     "--filter",
@@ -1140,7 +1328,7 @@ EOF""",
             else:
                 # Get all stopped MCP containers
                 cmd = [
-                    BACKEND_TYPE,
+                    self.backend_name,
                     "ps",
                     "-a",
                     "--filter",
@@ -1177,7 +1365,7 @@ EOF""",
             for container in containers_to_clean:
                 try:
                     subprocess.run(
-                        [BACKEND_TYPE, "rm", container["id"]],
+                        [self.backend_name, "rm", container["id"]],
                         check=True,
                         capture_output=True,
                     )
@@ -1216,7 +1404,7 @@ EOF""",
         """
         try:
             # Find dangling images
-            cmd = [BACKEND_TYPE, "images", "--filter", "dangling=true", "-q"]
+            cmd = [self.backend_name, "images", "--filter", "dangling=true", "-q"]
             result = subprocess.run(cmd, capture_output=True, text=True, check=True)
 
             if not result.stdout.strip():
@@ -1231,7 +1419,9 @@ EOF""",
             # Remove dangling images
             try:
                 subprocess.run(
-                    [BACKEND_TYPE, "rmi"] + image_ids, check=True, capture_output=True
+                    [self.backend_name, "rmi"] + image_ids,
+                    check=True,
+                    capture_output=True,
                 )
 
                 return {

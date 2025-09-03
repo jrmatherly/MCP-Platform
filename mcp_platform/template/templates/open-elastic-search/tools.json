@@ -1,0 +1,258 @@
+[
+  {
+    "name": "general_api_request",
+    "description": "Perform a general HTTP API request. Use this tool for any Elasticsearch/OpenSearch API that does not have a dedicated tool.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "method": {
+          "type": "string",
+          "description": "HTTP method (GET, POST, PUT, DELETE, etc.)"
+        },
+        "path": {
+          "type": "string", 
+          "description": "API endpoint path"
+        },
+        "params": {
+          "type": "object",
+          "description": "Query parameters"
+        },
+        "body": {
+          "type": "object",
+          "description": "Request body"
+        }
+      },
+      "required": ["method", "path"]
+    }
+  },
+  {
+    "name": "list_indices",
+    "description": "List all indices in the cluster",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    }
+  },
+  {
+    "name": "get_index",
+    "description": "Returns information (mappings, settings, aliases) about one or more indices",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "index": {
+          "type": "string",
+          "description": "Name of the index"
+        }
+      },
+      "required": ["index"]
+    }
+  },
+  {
+    "name": "create_index",
+    "description": "Create a new index",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "index": {
+          "type": "string",
+          "description": "Name of the index"
+        },
+        "body": {
+          "type": "object",
+          "description": "Optional index configuration including mappings and settings"
+        }
+      },
+      "required": ["index"]
+    }
+  },
+  {
+    "name": "delete_index",
+    "description": "Delete an index",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "index": {
+          "type": "string",
+          "description": "Name of the index"
+        }
+      },
+      "required": ["index"]
+    }
+  },
+  {
+    "name": "search_documents",
+    "description": "Search for documents in an index",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "index": {
+          "type": "string",
+          "description": "Name of the index"
+        },
+        "body": {
+          "type": "object",
+          "description": "Search query"
+        }
+      },
+      "required": ["index", "body"]
+    }
+  },
+  {
+    "name": "index_document",
+    "description": "Creates or updates a document in the index",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "index": {
+          "type": "string",
+          "description": "Name of the index"
+        },
+        "document": {
+          "type": "object",
+          "description": "Document data"
+        },
+        "id": {
+          "type": "string",
+          "description": "Optional document ID"
+        }
+      },
+      "required": ["index", "document"]
+    }
+  },
+  {
+    "name": "get_document",
+    "description": "Get a document by ID",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "index": {
+          "type": "string",
+          "description": "Name of the index"
+        },
+        "id": {
+          "type": "string",
+          "description": "Document ID"
+        }
+      },
+      "required": ["index", "id"]
+    }
+  },
+  {
+    "name": "delete_document",
+    "description": "Delete a document by ID",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "index": {
+          "type": "string",
+          "description": "Name of the index"
+        },
+        "id": {
+          "type": "string",
+          "description": "Document ID"
+        }
+      },
+      "required": ["index", "id"]
+    }
+  },
+  {
+    "name": "delete_by_query",
+    "description": "Deletes documents matching the provided query",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "index": {
+          "type": "string",
+          "description": "Name of the index"
+        },
+        "body": {
+          "type": "object",
+          "description": "Query to match documents for deletion"
+        }
+      },
+      "required": ["index", "body"]
+    }
+  },
+  {
+    "name": "get_cluster_health",
+    "description": "Returns basic information about the health of the cluster",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    }
+  },
+  {
+    "name": "get_cluster_stats",
+    "description": "Returns high-level overview of cluster statistics",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    }
+  },
+  {
+    "name": "list_aliases",
+    "description": "List all aliases in the cluster",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    }
+  },
+  {
+    "name": "get_alias",
+    "description": "Get alias information for a specific index",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "index": {
+          "type": "string",
+          "description": "Name of the index"
+        }
+      },
+      "required": ["index"]
+    }
+  },
+  {
+    "name": "put_alias",
+    "description": "Create or update an alias for a specific index",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "index": {
+          "type": "string",
+          "description": "Name of the index"
+        },
+        "alias": {
+          "type": "string",
+          "description": "Name of the alias"
+        },
+        "body": {
+          "type": "object",
+          "description": "Optional alias configuration"
+        }
+      },
+      "required": ["index", "alias"]
+    }
+  },
+  {
+    "name": "delete_alias",
+    "description": "Delete an alias for a specific index",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "index": {
+          "type": "string",
+          "description": "Name of the index"
+        },
+        "alias": {
+          "type": "string",
+          "description": "Name of the alias"
+        }
+      },
+      "required": ["index", "alias"]
+    }
+  }
+]

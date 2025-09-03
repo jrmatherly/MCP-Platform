@@ -217,7 +217,19 @@
         "env_mapping": "SLACK_MCP_CHANNELS_CACHE"
       }
     },
-    "required": []
+    "required": [],
+    "oneOf": [
+      {
+        "title": "Cookie Authentication (XOXC + XOXD)",
+        "description": "Use browser-based cookie authentication with both XOXC and XOXD tokens",
+        "required": ["slack_mcp_xoxc_token", "slack_mcp_xoxd_token"]
+      },
+      {
+        "title": "User OAuth Token (XOXP)",
+        "description": "Use user OAuth token authentication",
+        "required": ["slack_mcp_xoxp_token"]
+      }
+    ]
   },
   "tool_discovery": "dynamic",
   "tool_endpoint": "/tools",

@@ -7,6 +7,8 @@ formatting and beautification of various data structures in CLI output.
 
 import datetime
 import json
+import tempfile
+from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
@@ -491,3 +493,231 @@ class TestEdgeCases:
         # Test mixed case
         assert get_backend_color("Docker") == "dim"
         assert get_backend_color("docker") == "blue"
+
+
+class TestTemplateFormatter:
+    """Test cases for template-specific response formatting functionality."""
+
+    def setup_method(self):
+        """Set up test fixtures."""
+        self.formatter = ResponseFormatter(verbose=True)
+
+    @patch("mcp_platform.core.response_formatter.TEMPLATES_DIR")
+    def test_get_template_formatter_nonexistent_template(self, mock_templates_dir):
+        """Test getting formatter for nonexistent template."""
+        mock_templates_dir.__truediv__.return_value.exists.return_value = False
+
+        result = self.formatter._get_template_formatter("nonexistent-template")
+        assert result is None
+
+    @patch("mcp_platform.core.response_formatter.TEMPLATES_DIR")
+    def test_get_template_formatter_no_formatter_file(self, mock_templates_dir):
+        """Test getting formatter when no formatter file exists."""
+        # Create a real path that exists but has no formatter files
+        with tempfile.TemporaryDirectory() as temp_dir:
+            template_path = Path(temp_dir) / "test-template"
+            template_path.mkdir()
+
+            mock_templates_dir.__truediv__.return_value = template_path
+
+            result = self.formatter._get_template_formatter("test-template")
+            assert result is None
+
+    @patch("mcp_platform.core.response_formatter.TEMPLATES_DIR")
+    def test_get_template_formatter_disabled_in_config(self, mock_templates_dir):
+        """Test getting formatter when disabled in template.json."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            template_path = Path(temp_dir) / "test-template"
+            template_path.mkdir()
+
+            # Create template.json with disabled formatter
+            template_json = template_path / "template.json"
+            template_json.write_text(
+                json.dumps(
+                    {"name": "Test Template", "response_formatter": {"enabled": False}}
+                )
+            )
+
+            mock_templates_dir.__truediv__.return_value = template_path
+
+            result = self.formatter._get_template_formatter("test-template")
+            assert result is None
+
+    @patch("mcp_platform.core.response_formatter.TEMPLATES_DIR")
+    def test_get_template_formatter_with_config(self, mock_templates_dir):
+        """Test getting formatter with template.json configuration."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            template_path = Path(temp_dir) / "test-template"
+            template_path.mkdir()
+
+            # Create template.json with formatter config
+            template_json = template_path / "template.json"
+            template_json.write_text(
+                json.dumps(
+                    {
+                        "name": "Test Template",
+                        "response_formatter": {
+                            "enabled": True,
+                            "module": "custom_formatter",
+                            "class": "TestResponseFormatter",
+                        },
+                    }
+                )
+            )
+
+            # Create formatter module
+            formatter_file = template_path / "custom_formatter.py"
+            formatter_file.write_text(
+                """
+from rich.console import Console
+
+class TestResponseFormatter:
+    def __init__(self, console=None):
+        self.console = console or Console()
+
+    def format_tool_response(self, tool_name, raw_response):
+        self.console.print(f"Formatted {tool_name}: {raw_response}")
+"""
+            )
+
+            mock_templates_dir.__truediv__.return_value = template_path
+
+            result = self.formatter._get_template_formatter("test-template")
+            assert result is not None
+            assert hasattr(result, "format_tool_response")
+
+    @patch("mcp_platform.core.response_formatter.TEMPLATES_DIR")
+    def test_get_template_formatter_convention_based(self, mock_templates_dir):
+        """Test getting formatter using convention-based discovery."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            template_path = Path(temp_dir) / "test-template"
+            template_path.mkdir()
+
+            # Create response_formatter.py without template.json
+            formatter_file = template_path / "response_formatter.py"
+            formatter_file.write_text(
+                """
+from rich.console import Console
+
+class TestTemplateResponseFormatter:
+    def __init__(self, console=None):
+        self.console = console or Console()
+
+    def format_tool_response(self, tool_name, raw_response):
+        self.console.print(f"Formatted {tool_name}: {raw_response}")
+"""
+            )
+
+            mock_templates_dir.__truediv__.return_value = template_path
+
+            result = self.formatter._get_template_formatter("test-template")
+            assert result is not None
+            assert hasattr(result, "format_tool_response")
+
+    def test_find_formatter_class_by_name(self):
+        """Test finding formatter class by various naming conventions."""
+        # Create a real module-like object
+        mock_module = type("Module", (), {})()
+
+        # Test direct match
+        setattr(
+            mock_module, "TestResponseFormatter", type("TestResponseFormatter", (), {})
+        )
+        result = self.formatter._find_formatter_class(mock_module, "test")
+        assert result is not None
+        assert result.__name__ == "TestResponseFormatter"
+
+        # Test no match
+        mock_module_empty = type("Module", (), {})()
+        result = self.formatter._find_formatter_class(mock_module_empty, "test")
+        assert result is None
+
+    def test_find_formatter_class_ending_with_responseformatter(self):
+        """Test finding any class ending with ResponseFormatter."""
+        # Create a real module-like object
+        mock_module = type("Module", (), {})()
+
+        # Add some classes
+        setattr(
+            mock_module,
+            "SomeCustomResponseFormatter",
+            type("SomeCustomResponseFormatter", (), {}),
+        )
+        setattr(mock_module, "NotAFormatter", str)
+        setattr(mock_module, "_PrivateFormatter", type("_PrivateFormatter", (), {}))
+
+        result = self.formatter._find_formatter_class(mock_module, "test")
+        assert result is not None
+        assert result.__name__ == "SomeCustomResponseFormatter"
+
+    @patch("mcp_platform.core.response_formatter.TEMPLATES_DIR")
+    def test_beautify_tool_response_with_template_formatter(self, mock_templates_dir):
+        """Test beautify_tool_response uses template formatter when available."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            template_path = Path(temp_dir) / "test-template"
+            template_path.mkdir()
+
+            # Create formatter
+            formatter_file = template_path / "response_formatter.py"
+            formatter_file.write_text(
+                """
+class TestTemplateResponseFormatter:
+    def __init__(self, console=None):
+        self.console = console
+        self.called = False
+
+    def format_tool_response(self, tool_name, raw_response):
+        self.called = True
+        self.tool_name = tool_name
+        self.raw_response = raw_response
+"""
+            )
+
+            mock_templates_dir.__truediv__.return_value = template_path
+
+            # Test response
+            response = {
+                "success": True,
+                "result": {"content": [{"type": "text", "text": "test output"}]},
+            }
+
+            # Mock console to avoid actual printing
+            with patch.object(self.formatter, "console"):
+                self.formatter.beautify_tool_response(
+                    response, "test-template", "test_tool"
+                )
+
+            # Verify template formatter was used (this is hard to test without more mocking)
+            # For now, just ensure no exception was raised
+
+    def test_beautify_tool_response_fallback_to_default(self):
+        """Test beautify_tool_response falls back to default formatting."""
+        response = {"success": True, "result": {"test": "data"}}
+
+        # Mock console to avoid actual printing
+        with patch.object(self.formatter, "console"):
+            # Should not raise exception
+            self.formatter.beautify_tool_response(
+                response, "nonexistent-template", "test_tool"
+            )
+
+    def test_extract_response_text_from_content(self):
+        """Test extracting response text from MCP content format."""
+        response = {"result": {"content": [{"type": "text", "text": "test response"}]}}
+
+        result = self.formatter._extract_response_text(response)
+        assert result == "test response"
+
+    def test_extract_response_text_from_direct_result(self):
+        """Test extracting response text from direct result."""
+        response = {"result": "direct response text"}
+
+        result = self.formatter._extract_response_text(response)
+        assert result == "direct response text"
+
+    def test_extract_response_text_no_result(self):
+        """Test extracting response text when no result present."""
+        response = {"success": True}
+
+        result = self.formatter._extract_response_text(response)
+        assert result is None

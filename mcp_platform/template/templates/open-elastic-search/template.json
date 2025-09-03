@@ -1,0 +1,150 @@
+{
+  "name": "Open Elastic Search",
+  "description": "Custom MCP server implementation for connecting to both Elasticsearch and OpenSearch clusters",
+  "version": "2.0.11",
+  "author": "Data Everything",
+  "category": "Database",
+  "tags": ["elasticsearch", "opensearch", "search", "database", "analytics", "indexing", "experimental"],
+  "docker_image": "dataeverything/mcp-open-elastic-search",
+  "docker_tag": "latest",
+  "ports": {},
+  "command": [],
+  "transport": {
+    "default": "stdio",
+    "supported": ["stdio", "sse", "streamable-http"]
+  },
+  "capabilities": [],
+  "config_schema": {
+    "type": "object",
+    "properties": {
+      "engine_type": {
+        "type": "string",
+        "title": "Search Engine Type",
+        "description": "Type of search engine to connect to",
+        "enum": ["elasticsearch", "opensearch"],
+        "default": "elasticsearch",
+        "env_mapping": "ENGINE_TYPE"
+      },
+      "elasticsearch_hosts": {
+        "type": "string",
+        "title": "Elasticsearch Hosts",
+        "description": "Comma-separated list of Elasticsearch hosts (e.g., https://localhost:9200)",
+        "env_mapping": "ELASTICSEARCH_HOSTS"
+      },
+      "elasticsearch_api_key": {
+        "type": "string",
+        "title": "Elasticsearch API Key",
+        "description": "Elasticsearch API key for authentication (recommended)",
+        "env_mapping": "ELASTICSEARCH_API_KEY",
+        "sensitive": true
+      },
+      "elasticsearch_username": {
+        "type": "string",
+        "title": "Elasticsearch Username",
+        "description": "Elasticsearch username for basic authentication",
+        "env_mapping": "ELASTICSEARCH_USERNAME"
+      },
+      "elasticsearch_password": {
+        "type": "string",
+        "title": "Elasticsearch Password",
+        "description": "Elasticsearch password for basic authentication",
+        "env_mapping": "ELASTICSEARCH_PASSWORD",
+        "sensitive": true
+      },
+      "elasticsearch_verify_certs": {
+        "type": "boolean",
+        "title": "Verify SSL Certificates (Elasticsearch)",
+        "description": "Whether to verify SSL certificates for Elasticsearch",
+        "default": false,
+        "env_mapping": "ELASTICSEARCH_VERIFY_CERTS"
+      },
+      "opensearch_hosts": {
+        "type": "string",
+        "title": "OpenSearch Hosts",
+        "description": "Comma-separated list of OpenSearch hosts (e.g., https://localhost:9200)",
+        "env_mapping": "OPENSEARCH_HOSTS"
+      },
+      "opensearch_username": {
+        "type": "string",
+        "title": "OpenSearch Username",
+        "description": "OpenSearch username for basic authentication",
+        "env_mapping": "OPENSEARCH_USERNAME"
+      },
+      "opensearch_password": {
+        "type": "string",
+        "title": "OpenSearch Password",
+        "description": "OpenSearch password for basic authentication",
+        "env_mapping": "OPENSEARCH_PASSWORD",
+        "sensitive": true
+      },
+      "opensearch_verify_certs": {
+        "type": "boolean",
+        "title": "Verify SSL Certificates (OpenSearch)",
+        "description": "Whether to verify SSL certificates for OpenSearch",
+        "default": false,
+        "env_mapping": "OPENSEARCH_VERIFY_CERTS"
+      },
+      "mcp_transport": {
+        "type": "string",
+        "title": "MCP Transport",
+        "description": "MCP transport mode",
+        "enum": ["stdio", "sse", "streamable-http"],
+        "default": "stdio",
+        "env_mapping": "MCP_TRANSPORT"
+      },
+      "mcp_host": {
+        "type": "string",
+        "title": "MCP Host",
+        "description": "Host for MCP server when using HTTP-based transport",
+        "default": "0.0.0.0",
+        "env_mapping": "MCP_HOST"
+      },
+      "mcp_port": {
+        "type": "integer",
+        "title": "MCP Port",
+        "description": "Port for MCP server when using HTTP-based transport",
+        "default": 8000,
+        "env_mapping": "MCP_PORT"
+      },
+      "mcp_path": {
+        "type": "string",
+        "title": "MCP Path",
+        "description": "Path for MCP server when using HTTP-based transport",
+        "default": "/mcp",
+        "env_mapping": "MCP_PATH"
+      }
+    },
+    "anyOf": [
+      {
+        "properties": {
+          "engine_type": { "const": "elasticsearch" }
+        },
+        "required": ["elasticsearch_hosts"],
+        "oneOf": [
+          { "required": ["elasticsearch_api_key"] },
+          { "required": ["elasticsearch_username", "elasticsearch_password"] }
+        ]
+      },
+      {
+        "properties": {
+          "engine_type": { "const": "opensearch" }
+        },
+        "required": ["opensearch_hosts", "opensearch_username", "opensearch_password"]
+      }
+    ]
+  },
+  "tool_discovery": "static",
+  "response_formatter": {
+    "enabled": true,
+    "tools": ["list_indices", "get_index", "search", "general_api_request"]
+  },
+  "has_image": true,
+  "origin": "custom",
+  "experimental": true,
+  "warnings": [
+    "⚠️ WARNING: This MCP server is EXPERIMENTAL and supports both Elasticsearch and OpenSearch.",
+    "⚠️ Elasticsearch support: versions 7.x, 8.x, and 9.x.",
+    "⚠️ OpenSearch support: versions 1.x, 2.x, and 3.x.",
+    "⚠️ Ensure your cluster is properly secured and accessible."
+  ]
+}

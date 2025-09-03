@@ -270,7 +270,7 @@ This guide shows how to use the {template_name} with different MCP clients and i
 
     ```bash
     # Start interactive mode
-    python -m mcp_platform interactive
+    mcp_platform interactive
 
     # List available tools
     mcpp> tools {template_id}
@@ -280,7 +280,7 @@ This guide shows how to use the {template_name} with different MCP clients and i
 
     ```bash
     # Discover tools using CLI
-    python -m mcp_platform tools {template_id}
+    mcp_platform tools {template_id}
     ```
 
 === "Python Client"
@@ -363,7 +363,7 @@ Use the tool discovery methods above to see the full list of available tools for
 
     ```bash
     # Start interactive mode
-    python -m mcp_platform interactive
+    mcp_platform interactive
 
     # Deploy the template (if not already deployed)
     mcpp> deploy {template_id}
@@ -440,16 +440,16 @@ Use the tool discovery methods above to see the full list of available tools for
 
     ```bash
     # Deploy the template
-    python -m mcp_platform deploy {template_id}
+    mcp_platform deploy {template_id}
 
     # Check deployment status
-    python -m mcp_platform status
+    mcp_platform status
 
     # View logs
-    python -m mcp_platform logs {template_id}
+    mcp_platform logs {template_id}
 
     # Stop the template
-    python -m mcp_platform stop {template_id}
+    mcp_platform stop {template_id}
     ```
 
 === "Python Client"
@@ -584,8 +584,8 @@ Use the tool discovery methods above to see the full list of available tools for
 
     ```bash
     # Get connection details for other integrations
-    python -m mcp_platform connect {template_id} --llm claude
-    python -m mcp_platform connect {template_id} --llm vscode
+    mcp_platform connect {template_id} --llm claude
+    mcp_platform connect {template_id} --llm vscode
     ```
 
 ## Configuration
@@ -596,24 +596,24 @@ For template-specific configuration options, see the main template documentation
 
     ```bash
     # Deploy with environment variables
-    python -m mcp_platform deploy {template_id} --env KEY=VALUE
+    mcp_platform deploy {template_id} --env KEY=VALUE
     ```
 
 === "CLI Configuration"
 
     ```bash
     # Deploy with configuration
-    python -m mcp_platform deploy {template_id} --config key=value
+    mcp_platform deploy {template_id} --config key=value
 
     # Deploy with nested configuration
-    python -m mcp_platform deploy {template_id} --config category__property=value
+    mcp_platform deploy {template_id} --config category__property=value
     ```
 
 === "Config File"
 
     ```bash
     # Deploy with config file
-    python -m mcp_platform deploy {template_id} --config-file config.json
+    mcp_platform deploy {template_id} --config-file config.json
     ```
 
 ## Troubleshooting
@@ -622,12 +622,12 @@ For template-specific configuration options, see the main template documentation
 
 1. **Template not found**: Ensure the template name is correct
    ```bash
-   python -m mcp_platform list  # List available templates
+   mcp_platform list  # List available templates
    ```
 
 2. **Connection issues**: Check if the server is running
    ```bash
-   python -m mcp_platform status
+   mcp_platform status
    ```
 
 3. **Tool discovery fails**: Try refreshing the tool cache
@@ -643,14 +643,14 @@ Enable debug logging for troubleshooting:
 
     ```bash
     # Interactive CLI with debug
-    LOG_LEVEL=debug python -m mcp_platform interactive
+    LOG_LEVEL=debug mcp_platform interactive
     ```
 
 === "Deploy with Debug"
 
     ```bash
     # Deploy with debug logging
-    python -m mcp_platform deploy {template_id} --config log_level=debug
+    mcp_platform deploy {template_id} --config log_level=debug
     ```
 
 For more help, see the [main documentation](../../) or open an issue in the repository.
@@ -741,7 +741,7 @@ This reference provides detailed information about all available tools and their
 
 === "CLI"
     ```bash
-    python -m mcp_platform call {template_id} {name}
+    mcp_platform call {template_id} {name}
     ```
 
 === "Python"
@@ -813,18 +813,18 @@ async def copy_template_docs(template_docs: Dict[str, Dict], docs_dir: Path):
         # Fix CLI commands - add 'python -m' prefix and 'deploy' command
         content = content.replace(
             f"mcpp deploy {template_id}",
-            f"python -m mcp_platform deploy {template_id}",
+            f"mcp_platform deploy {template_id}",
         )
         content = content.replace(
             f"mcpp {template_id}",
-            f"python -m mcp_platform deploy {template_id}",
+            f"mcp_platform deploy {template_id}",
         )
-        content = content.replace("mcpp create", "python -m mcp_platform create")
-        content = content.replace("mcpp list", "python -m mcp_platform list")
-        content = content.replace("mcpp stop", "python -m mcp_platform stop")
-        content = content.replace("mcpp logs", "python -m mcp_platform logs")
-        content = content.replace("mcpp shell", "python -m mcp_platform shell")
-        content = content.replace("mcpp cleanup", "python -m mcp_platform cleanup")
+        content = content.replace("mcpp create", "mcp_platform create")
+        content = content.replace("mcpp list", "mcp_platform list")
+        content = content.replace("mcpp stop", "mcp_platform stop")
+        content = content.replace("mcpp logs", "mcp_platform logs")
+        content = content.replace("mcpp shell", "mcp_platform shell")
+        content = content.replace("mcpp cleanup", "mcp_platform cleanup")
 
         # Remove existing usage sections and replace with link to usage.md
         content = remove_usage_sections_and_add_link(content, template_id)
@@ -854,19 +854,19 @@ async def copy_template_docs(template_docs: Dict[str, Dict], docs_dir: Path):
             config_section += "\n### Usage Examples\n\n"
             config_section += "```bash\n"
             config_section += "# Deploy with configuration\n"
-            config_section += (
-                f"python -m mcp_platform deploy {template_id} --show-config\n\n"
-            )
+            config_section += f"mcp_platform deploy {template_id} --show-config\n\n"
             if properties:
                 first_prop = next(iter(properties.keys()))
                 first_prop_config = properties[first_prop]
                 if first_prop_config.get("env_mapping"):
                     config_section += "# Using environment variables\n"
-                    config_section += f"python -m mcp_platform deploy {template_id} --env {first_prop_config['env_mapping']}=value\n\n"
+                    config_section += f"mcp_platform deploy {template_id} --env {first_prop_config['env_mapping']}=value\n\n"
                 config_section += "# Using CLI configuration\n"
-                config_section += "python -m mcp_platform deploy {template_id} --config {first_prop}=value\n\n"
+                config_section += (
+                    "mcp_platform deploy {template_id} --config {first_prop}=value\n\n"
+                )
                 config_section += "# Using nested configuration\n"
-                config_section += "python -m mcp_platform deploy {template_id} --config category__property=value\n"
+                config_section += "mcp_platform deploy {template_id} --config category__property=value\n"
             config_section += "```\n"
 
             # Replace or append configuration section

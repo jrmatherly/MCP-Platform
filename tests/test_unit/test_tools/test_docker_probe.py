@@ -5,12 +5,10 @@ Tests Docker container-based MCP server tool discovery functionality.
 """
 
 import subprocess
-import threading
 import time
 from unittest.mock import Mock, call, patch
 
 import pytest
-import requests
 
 pytestmark = pytest.mark.unit
 

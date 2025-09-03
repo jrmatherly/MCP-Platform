@@ -12,6 +12,7 @@ that replaces the cmd2-based interactive CLI with:
 - Tab completion for commands and template names
 """
 
+import asyncio
 import json
 import logging
 import os
@@ -28,6 +29,7 @@ except ImportError:
 
 import shlex
 
+import click
 import typer
 from rich.console import Console
 from rich.panel import Panel
@@ -36,6 +38,7 @@ from rich.table import Table
 
 from mcp_platform.client import MCPClient
 from mcp_platform.core.cache import CacheManager
+from mcp_platform.core.config_processor import ConditionalConfigValidator
 from mcp_platform.core.response_formatter import ResponseFormatter
 
 console = Console()
@@ -154,7 +157,7 @@ class InteractiveSession:
     def _load_cached_configs(self):
         """Load previously cached template configurations."""
         try:
-            cached_configs = self.cache.get("interactive_session_configs", {})
+            cached_configs = self.cache.get("interactive_session_configs")
             self.session_configs.update(cached_configs)
         except Exception:
             # Cache errors are non-fatal
@@ -244,7 +247,7 @@ app = typer.Typer(
 
 
 @app.callback()
-def main(
+def app_callback(
     backend: Annotated[
         str, typer.Option("--backend", help="Backend type to use")
     ] = "docker",
@@ -365,7 +368,7 @@ def call_tool(
         ),
     ] = None,
     no_pull: Annotated[
-        bool, typer.Option("--no-pull", help="Don't pull Docker images")
+        bool, typer.Option("--no-pull", "-np", help="Don't pull Docker images")
     ] = False,
     raw: Annotated[
         bool, typer.Option("--raw", "-R", help="Show raw JSON response")
@@ -483,7 +486,7 @@ def call_tool(
             if raw:
                 console.print(json.dumps(result, indent=2))
             else:
-                session.formatter.beautify_tool_response(result)
+                session.formatter.beautify_tool_response(result, template, tool_name)
                 # _display_tool_result(result.get("result"), tool_name, raw=False)
 
                 # Show additional info if available
@@ -633,19 +636,33 @@ def show_config(
         table.add_column("Default", style="magenta", width=30)
         table.add_column("Options", style="magenta", width=30)
 
+        # Enhanced status determination with conditional requirements
+        # Use centralized validator
+        validator = ConditionalConfigValidator()
+        validation_result = validator.validate_config_schema(
+            config_schema, current_config
+        )
+        conditional_issues = validation_result.get("conditional_issues", [])
+        suggestions = validation_result.get("suggestions", [])
+
         for prop_name, prop_info in properties.items():
-            # Determine status
-            is_required = prop_name in required_props
+            # Determine status with enhanced conditional logic
+            is_basic_required = prop_name in required_props
             has_value = prop_name in current_config
 
+            # Check if this property is conditionally required
+            validator = ConditionalConfigValidator()
+            is_conditionally_required = validator.is_conditionally_required(
+                prop_name, config_schema, current_config
+            )
+
             if has_value:
-                if is_required:
-                    status = "[green]✅ SET[/green]"
-                else:
-                    status = "[green]✅ SET[/green]"
+                status = "[green]✅ SET[/green]"
             else:
-                if is_required:
+                if is_basic_required:
                     status = "[red]❌ REQUIRED[/red]"
+                elif is_conditionally_required:
+                    status = "[yellow]⚠️ CONDITIONAL[/yellow]"
                 else:
                     status = "[dim]⚪ OPTIONAL[/dim]"
 
@@ -690,7 +707,7 @@ def show_config(
 
         console.print(table)
 
-        # Show summary
+        # Enhanced summary with conditional validation
         total_props = len(properties)
         set_props = len(current_config)
         required_count = len(required_props)
@@ -699,6 +716,7 @@ def show_config(
         console.print(
             f"\n[dim]Summary: {set_props}/{total_props} properties configured"
         )
+
         if missing_required > 0:
             console.print(
                 f"[red]⚠️  {missing_required} required properties missing[/red]"
@@ -707,6 +725,22 @@ def show_config(
             console.print(
                 f"[green]✅ All {required_count} required properties are set[/green]"
             )
+
+        # Show conditional validation results
+        if not validation_result.get("valid", True):
+            console.print("\n[yellow]⚠️ Conditional Requirements Status:[/yellow]")
+
+            if conditional_issues:
+                console.print(
+                    "[red]❌ Configuration does not satisfy conditional requirements[/red]"
+                )
+
+            if suggestions:
+                console.print("\n[cyan]💡 Suggestions:[/cyan]")
+                for suggestion in suggestions:
+                    console.print(f"  • {suggestion}")
+        else:
+            console.print("[green]✅ All conditional requirements satisfied[/green]")
 
     except Exception as e:
         console.print(f"[red]❌ Error showing config: {e}[/red]")
@@ -864,8 +898,23 @@ def show_help(
     if command:
         # Show help for specific command
         try:
-            ctx = typer.Context(app)
-            ctx.invoke(app.get_command(ctx, command), "--help")
+            # Typer stores commands as CommandInfo objects in app.registered_commands.
+            # Build a lightweight click.Command around the callback to show help.
+            cmd_info = next(
+                (c for c in app.registered_commands if c.name == command), None
+            )
+            if cmd_info is None or not getattr(cmd_info, "callback", None):
+                console.print(f"[red]Unknown command: {command}[/red]")
+                return
+            # Create a click.Command wrapper for the callback to render help text.
+            click_cmd = click.Command(
+                name=cmd_info.name, callback=cmd_info.callback, params=[]
+            )
+            cmd_ctx = click.Context(click_cmd, info_name=click_cmd.name)
+            help_text = click_cmd.get_help(cmd_ctx)
+            console.print(
+                Panel(help_text, title=f"Help: {command}", border_style="blue")
+            )
         except Exception:
             console.print(f"[red]Unknown command: {command}[/red]")
     else:
@@ -1065,7 +1114,7 @@ def remove_server(
 
         # Import and use the main CLI function if it exists
         try:
-            from mcp_platform.cli import remove as cli_remove
+            from mcp_platform.cli import stop as cli_remove
 
             cli_remove(
                 target=target,
@@ -1080,11 +1129,9 @@ def remove_server(
             if all:
                 result = session.client.stop_all_servers(force=force)
             elif template:
-                result = session.client.stop_template_servers(
-                    template=template, force=force
-                )
+                result = session.client.stop_all_servers(template=template, force=force)
             else:
-                result = session.client.stop_server(deployment_id=target, force=force)
+                result = session.client.stop_server(deployment_id=target)
 
             if result:
                 console.print(
@@ -1100,184 +1147,54 @@ def remove_server(
 @app.command(name="cleanup")
 def cleanup_resources():
     """Cleanup stopped containers and unused resources."""
-    try:
-        # Import and use the main CLI function if it exists
-        try:
-            from mcp_platform.cli import cleanup as cli_cleanup
-
-            cli_cleanup()
-        except ImportError:
-            # Fallback implementation
-            session = get_session()
-            result = session.client.cleanup_stopped_containers()
-            if result:
-                console.print("[green]✅ Cleanup completed successfully[/green]")
-            else:
-                console.print("[red]❌ Cleanup failed[/red]")
-
-    except Exception as e:
-        console.print(f"[red]❌ Error during cleanup: {e}[/red]")
-
-
-@app.command(name="help")
-def show_help(
-    command: Annotated[
-        Optional[str], typer.Argument(help="Show help for specific command")
-    ] = None,
-):
-    """Show help information."""
-    if command:
-        # Show help for specific command
-        try:
-            ctx = typer.Context(app)
-            ctx.invoke(app.get_command(ctx, command), "--help")
-        except Exception:
-            console.print(f"[red]Unknown command: {command}[/red]")
+    session = get_session()
+    result = asyncio.run(session.client.cleanup())
+    if result:
+        console.print("[green]✅ Cleanup completed successfully[/green]")
     else:
-        # Show general help
-        console.print(
-            Panel(
-                """
-[cyan]Available Commands:[/cyan]
-
-[yellow]Template Selection:[/yellow]
-  • [bold]select[/bold] TEMPLATE  - Select a template for session (avoids repeating template name)
-  • [bold]unselect[/bold]  - Unselect current template
-
-[yellow]Template & Server Management:[/yellow]
-  • [bold]templates[/bold] [--status] [--all-backends]  - List available templates
-  • [bold]servers[/bold] [--template NAME] [--all-backends]  - List deployed servers
-  • [bold]deploy[/bold] [TEMPLATE] [options]  - Deploy a template as server
-
-[yellow]Tool Operations:[/yellow]
-  • [bold]tools[/bold] [TEMPLATE] [--force-refresh] [--help-info]  - List tools for template
-  • [bold]call[/bold] [TEMPLATE] TOOL [JSON_ARGS] [options]  - Call a tool
-    [dim]Options: --config-file, --env KEY=VALUE, --config KEY=VALUE, --raw, --stdio[/dim]
-
-[yellow]Configuration Management:[/yellow]
-  • [bold]configure[/bold] [TEMPLATE] KEY=VALUE [KEY2=VALUE2...]  - Set configuration
-  • [bold]show-config[/bold] [TEMPLATE]  - Show current configuration
-  • [bold]clear-config[/bold] [TEMPLATE]  - Clear configuration
-
-[yellow]Server Operations:[/yellow]
-  • [bold]logs[/bold] TARGET [--lines N] [--backend NAME]  - Get logs from deployment
-  • [bold]stop[/bold] [TARGET] [--all] [--template NAME] [--force]  - Stop deployments
-  • [bold]status[/bold] [--format FORMAT]  - Show backend health and deployment summary
-  • [bold]remove[/bold] [TARGET] [--all] [--template NAME] [--force]  - Remove deployments
-  • [bold]cleanup[/bold]  - Cleanup stopped containers and unused resources
-
-[yellow]General:[/yellow]
-  • [bold]help[/bold] [COMMAND]  - Show this help or help for specific command
-  • [bold]exit[/bold] or Ctrl+C  - Exit interactive mode
-
-[green]Examples with Template Selection:[/green]
-  • [dim]select demo  # Select demo template[/dim]
-  • [dim]tools  # List tools for selected template[/dim]
-  • [dim]call say_hello '{"name": "Alice"}'  # Call tool without template name[/dim]
-  • [dim]configure github_token=ghp_xxxx  # Configure selected template[/dim]
-  • [dim]unselect  # Unselect template[/dim]
-
-[green]Traditional Examples:[/green]
-  • [dim]templates --status[/dim]
-  • [dim]configure github github_token=ghp_xxxx[/dim]
-  • [dim]tools github --help-info[/dim]
-  • [dim]call github search_repositories '{"query": "python"}'[/dim]
-  • [dim]call --env API_KEY=xyz demo say_hello '{"name": "Alice"}'[/dim]
-  • [dim]deploy demo --transport http --port 8080[/dim]
-  • [dim]logs demo-deployment-id --lines 50[/dim]
-  • [dim]stop --all --force[/dim]
-""",
-                title="MCP Interactive CLI Help",
-                border_style="blue",
-            )
-        )
-
-    """Show help information."""
-    if command:
-        # Show help for specific command
-        try:
-            ctx = typer.Context(app)
-            ctx.invoke(app.get_command(ctx, command), "--help")
-        except Exception:
-            console.print(f"[red]Unknown command: {command}[/red]")
-    else:
-        # Show general help
-        console.print(
-            Panel(
-                """
-[cyan]Available Commands:[/cyan]
-
-[yellow]Template Selection:[/yellow]
-  • [bold]select[/bold] TEMPLATE  - Select a template for session (avoids repeating template name)
-  • [bold]unselect[/bold]  - Unselect current template
-
-[yellow]Template & Server Management:[/yellow]
-  • [bold]templates[/bold] [--status] [--all-backends]  - List available templates
-  • [bold]servers[/bold] [--template NAME] [--all-backends]  - List deployed servers
-  • [bold]deploy[/bold] [TEMPLATE] [options]  - Deploy a template as server
-
-[yellow]Tool Operations:[/yellow]
-  • [bold]tools[/bold] [TEMPLATE] [--force-refresh] [--help-info]  - List tools for template
-  • [bold]call[/bold] [TEMPLATE] TOOL [JSON_ARGS] [options]  - Call a tool
-    [dim]Options: --config-file, --env KEY=VALUE, --config KEY=VALUE, --raw, --stdio[/dim]
-
-[yellow]Configuration Management:[/yellow]
-  • [bold]configure[/bold] [TEMPLATE] KEY=VALUE [KEY2=VALUE2...]  - Set configuration
-  • [bold]show-config[/bold] [TEMPLATE]  - Show current configuration
-  • [bold]clear-config[/bold] [TEMPLATE]  - Clear configuration
-
-[yellow]General:[/yellow]
-  • [bold]help[/bold] [COMMAND]  - Show this help or help for specific command
-  • [bold]exit[/bold] or Ctrl+C  - Exit interactive mode
-
-[green]Examples with Template Selection:[/green]
-  • [dim]select demo  # Select demo template[/dim]
-  • [dim]tools  # List tools for selected template[/dim]
-  • [dim]call say_hello '{"name": "Alice"}'  # Call tool without template name[/dim]
-  • [dim]configure github_token=ghp_xxxx  # Configure selected template[/dim]
-  • [dim]unselect  # Unselect template[/dim]
-
-[green]Traditional Examples:[/green]
-  • [dim]templates --status[/dim]
-  • [dim]configure github github_token=ghp_xxxx[/dim]
-  • [dim]tools github --help-info[/dim]
-  • [dim]call github search_repositories '{"query": "python"}'[/dim]
-  • [dim]call --env API_KEY=xyz demo say_hello '{"name": "Alice"}'[/dim]
-  • [dim]deploy demo --transport http --port 8080[/dim]
-""",
-                title="MCP Interactive CLI Help",
-                border_style="blue",
-            )
-        )
+        console.print("[red]❌ Cleanup failed[/red]")
 
 
 def _check_missing_config(
     template_info: Dict[str, Any], config: Dict[str, Any], env_vars: Dict[str, str]
 ) -> List[str]:
-    """Check for missing required configuration."""
+    """Check for missing required configuration with conditional requirements support."""
     config_schema = template_info.get("config_schema", {})
-    required_props = config_schema.get("required", [])
 
-    missing = []
-    for prop in required_props:
-        prop_config = config_schema.get("properties", {}).get(prop, {})
-        env_mapping = prop_config.get("env_mapping", prop.upper())
+    # Combine config and env_vars for validation
+    effective_config = dict(config)
+    properties = config_schema.get("properties", {})
 
-        # Check if we have this config value
-        if prop not in config and env_mapping not in env_vars:
-            missing.append(prop)
+    # Add env vars using their property mappings
+    for prop_name, prop_info in properties.items():
+        env_mapping = prop_info.get("env_mapping", prop_name.upper())
+        if env_mapping in env_vars and prop_name not in effective_config:
+            effective_config[prop_name] = env_vars[env_mapping]
 
-    return missing
+    # Check for validation errors using enhanced validation
+    # Use centralized validator
+    validator = ConditionalConfigValidator()
+    validation_result = validator.validate_config_schema(
+        config_schema, effective_config
+    )
+
+    return validation_result.get("missing_required", [])
 
 
 def _prompt_for_config(
     template_info: Dict[str, Any], missing_props: List[str]
 ) -> Dict[str, str]:
-    """Prompt user for missing configuration values."""
+    """Prompt user for missing configuration values with intelligent conditional handling."""
     config_schema = template_info.get("config_schema", {})
     properties = config_schema.get("properties", {})
 
     new_config = {}
+
+    # If we have conditional requirements, provide smart prompting
+    if "anyOf" in config_schema or "oneOf" in config_schema:
+        return _prompt_for_conditional_config(template_info, missing_props)
+
+    # Fallback to simple prompting for basic schemas
     for prop in missing_props:
         prop_info = properties.get(prop, {})
         description = prop_info.get("description", f"Value for {prop}")
@@ -1300,169 +1217,150 @@ def _prompt_for_config(
     return new_config
 
 
-def _display_tool_result(result: Any, tool_name: str, raw: bool = False):
-    """Display tool result in tabular format or raw JSON."""
-    try:
-        if raw:
-            # Show raw JSON format
-            console.print(f"\n[green]✅ Tool Result: {tool_name} (Raw)[/green]")
-            console.print(json.dumps(result, indent=2))
+def _prompt_for_conditional_config(
+    template_info: Dict[str, Any], missing_props: List[str]
+) -> Dict[str, str]:
+    """Handle intelligent prompting for templates with conditional requirements."""
+    config_schema = template_info.get("config_schema", {})
+    properties = config_schema.get("properties", {})
+    new_config = {}
+
+    # Special handling for engine type templates
+    if "engine_type" in properties:
+        return _prompt_for_engine_config(template_info, missing_props)
+
+    # Generic conditional prompting
+    console.print(
+        "[yellow]This template has conditional requirements. Let's configure it step by step.[/yellow]"
+    )
+
+    for prop in missing_props:
+        prop_info = properties.get(prop, {})
+        description = prop_info.get("description", f"Value for {prop}")
+
+        is_sensitive = any(
+            sensitive in prop.lower()
+            for sensitive in ["token", "key", "secret", "password"]
+        )
+
+        if is_sensitive:
+            value = Prompt.ask(f"[cyan]{description}[/cyan]", password=True)
         else:
-            # Show tabular format
-            _display_tool_result_table(result, tool_name)
-    except Exception:
-        # Fallback to simple display if both methods fail
-        console.print(f"[green]✅ Tool '{tool_name}' result:[/green]")
-        console.print(result)
+            default = prop_info.get("default")
+            if "enum" in prop_info:
+                choices = prop_info["enum"]
+                console.print(f"[dim]Available options: {', '.join(choices)}[/dim]")
+            value = Prompt.ask(f"[cyan]{description}[/cyan]", default=default)
+
+        if value:
+            new_config[prop] = value
+
+    return new_config
 
 
-def _display_tool_result_table(result: Any, tool_name: str):
-    """Display tool result in a user-friendly tabular format."""
+def _prompt_for_engine_config(
+    template_info: Dict[str, Any], missing_props: List[str]
+) -> Dict[str, str]:
+    """Handle smart prompting for search engine templates (Elasticsearch/OpenSearch)."""
+    config_schema = template_info.get("config_schema", {})
+    properties = config_schema.get("properties", {})
+    new_config = {}
 
-    # Handle different types of results
-    if isinstance(result, dict):
-        # Check if it's an MCP-style response with content
-        if "content" in result and isinstance(result["content"], list):
-            _display_mcp_content_table(result["content"], tool_name)
-        # Check if it's a structured response with result data
-        elif "structuredContent" in result and "result" in result["structuredContent"]:
-            _display_simple_result_table(
-                result["structuredContent"]["result"], tool_name
+    # First, determine the engine type
+    engine_type = None
+    if "engine_type" in properties:
+        default_engine = properties["engine_type"].get("default", "elasticsearch")
+        available_engines = properties["engine_type"].get(
+            "enum", ["elasticsearch", "opensearch"]
+        )
+
+        console.print(
+            "[cyan]🔍 Which search engine would you like to configure?[/cyan]"
+        )
+        for i, engine in enumerate(available_engines, 1):
+            console.print(f"  {i}. {engine.title()}")
+
+        while True:
+            choice = Prompt.ask(
+                f"[cyan]Choose engine type ({'/'.join(available_engines)})[/cyan]",
+                default=default_engine,
             )
-        # Check if it's a simple dict that can be displayed as key-value pairs
-        else:
-            _display_dict_as_table(result, tool_name)
-    elif isinstance(result, list):
-        _display_list_as_table(result, tool_name)
-    else:
-        # Single value result
-        _display_simple_result_table(result, tool_name)
-
-
-def _display_mcp_content_table(content_list: list, tool_name: str):
-    """Display MCP content array in tabular format."""
-    from rich import box
-
-    table = Table(
-        title=f"🎯 {tool_name} Results",
-        box=box.ROUNDED,
-        show_header=True,
-        header_style="bold cyan",
-    )
-
-    table.add_column("Type", style="yellow", width=12)
-    table.add_column("Content", style="white", min_width=40)
-
-    for i, content in enumerate(content_list):
-        if isinstance(content, dict):
-            content_type = content.get("type", "unknown")
-            if content_type == "text":
-                text_content = content.get("text", "")
-                # Try to parse as JSON for better formatting
-                try:
-                    parsed = json.loads(text_content)
-                    if isinstance(parsed, dict):
-                        # Display nested dict in a compact format
-                        formatted_content = "\n".join(
-                            [f"{k}: {v}" for k, v in parsed.items()]
-                        )
-                    else:
-                        formatted_content = str(parsed)
-                except (json.JSONDecodeError, AttributeError):
-                    formatted_content = text_content
-                table.add_row(content_type, formatted_content)
+            if choice in available_engines:
+                engine_type = choice
+                new_config["engine_type"] = choice
+                break
             else:
-                # Handle other content types
-                table.add_row(content_type, str(content))
+                console.print(
+                    f"[red]Please choose from: {', '.join(available_engines)}[/red]"
+                )
+
+    # Configure based on engine type
+    if engine_type == "elasticsearch":
+        console.print("\n[cyan]📡 Configuring Elasticsearch connection...[/cyan]")
+
+        # Hosts
+        if "elasticsearch_hosts" not in new_config:
+            hosts = Prompt.ask(
+                "[cyan]Elasticsearch hosts (comma-separated)[/cyan]",
+                default="https://localhost:9200",
+            )
+            if hosts:
+                new_config["elasticsearch_hosts"] = hosts
+
+        # Authentication method
+        console.print("\n[cyan]🔐 Choose authentication method:[/cyan]")
+        console.print("  1. API Key (recommended)")
+        console.print("  2. Username & Password")
+
+        auth_choice = Prompt.ask(
+            "[cyan]Authentication method (1/2)[/cyan]", default="1"
+        )
+
+        if auth_choice == "1":
+            api_key = Prompt.ask("[cyan]Elasticsearch API key[/cyan]", password=True)
+            if api_key:
+                new_config["elasticsearch_api_key"] = api_key
         else:
-            table.add_row("unknown", str(content))
+            username = Prompt.ask("[cyan]Elasticsearch username[/cyan]")
+            if username:
+                new_config["elasticsearch_username"] = username
+            password = Prompt.ask("[cyan]Elasticsearch password[/cyan]", password=True)
+            if password:
+                new_config["elasticsearch_password"] = password
 
-    console.print(table)
+        # SSL verification
+        verify_certs = Confirm.ask(
+            "[cyan]Verify SSL certificates?[/cyan]", default=False
+        )
+        new_config["elasticsearch_verify_certs"] = verify_certs
 
+    elif engine_type == "opensearch":
+        console.print("\n[cyan]📡 Configuring OpenSearch connection...[/cyan]")
 
-def _display_simple_result_table(result: Any, tool_name: str):
-    """Display a simple result value in a clean format."""
-    from rich import box
+        # Hosts
+        hosts = Prompt.ask(
+            "[cyan]OpenSearch hosts (comma-separated)[/cyan]",
+            default="https://localhost:9200",
+        )
+        if hosts:
+            new_config["opensearch_hosts"] = hosts
 
-    table = Table(
-        title=f"🎯 {tool_name} Result", box=box.ROUNDED, show_header=False, width=60
-    )
+        # Authentication (required for OpenSearch)
+        username = Prompt.ask("[cyan]OpenSearch username[/cyan]")
+        if username:
+            new_config["opensearch_username"] = username
 
-    table.add_column("", style="bold green", justify="center")
-    table.add_row(str(result))
+        password = Prompt.ask("[cyan]OpenSearch password[/cyan]", password=True)
+        if password:
+            new_config["opensearch_password"] = password
 
-    console.print(table)
+        # SSL verification
+        verify_certs = Confirm.ask(
+            "[cyan]Verify SSL certificates?[/cyan]", default=False
+        )
+        new_config["opensearch_verify_certs"] = verify_certs
 
-
-def _display_dict_as_table(data: dict, tool_name: str):
-    """Display a dictionary as a key-value table."""
-    from rich import box
-
-    table = Table(
-        title=f"🎯 {tool_name} Results",
-        box=box.ROUNDED,
-        show_header=True,
-        header_style="bold cyan",
-    )
-
-    table.add_column("Property", style="yellow", width=20)
-    table.add_column("Value", style="white", min_width=40)
-
-    for key, value in data.items():
-        if isinstance(value, (dict, list)):
-            # For complex values, show a summary
-            if isinstance(value, dict):
-                display_value = f"Dict with {len(value)} items"
-                if len(value) <= 3:  # Show small dicts inline
-                    display_value = ", ".join([f"{k}: {v}" for k, v in value.items()])
-            else:  # list
-                display_value = f"List with {len(value)} items"
-                if len(value) <= 3 and all(
-                    not isinstance(item, (dict, list)) for item in value
-                ):
-                    display_value = ", ".join(str(item) for item in value)
-        else:
-            display_value = str(value)
-
-        table.add_row(key, display_value)
-
-    console.print(table)
-
-
-def _display_list_as_table(data: list, tool_name: str):
-    """Display a list as a table."""
-    from rich import box
-
-    table = Table(
-        title=f"🎯 {tool_name} Results",
-        box=box.ROUNDED,
-        show_header=True,
-        header_style="bold cyan",
-    )
-
-    if data and isinstance(data[0], dict):
-        # List of dicts - use dict keys as columns
-        if data:
-            keys = list(data[0].keys())
-            for key in keys:
-                table.add_column(key.title(), style="white")
-
-            for item in data:
-                row = []
-                for key in keys:
-                    value = item.get(key, "")
-                    if isinstance(value, (dict, list)):
-                        row.append(f"{type(value).__name__}({len(value)})")
-                    else:
-                        row.append(str(value))
-                table.add_row(*row)
-    else:
-        # Simple list - show as single column
-        table.add_column("Item", style="white")
-        for i, item in enumerate(data):
-            table.add_row(str(item))
-
-    console.print(table)
+    return new_config
 
 
 def _show_template_help(template: str, tools: List[Dict[str, Any]]):

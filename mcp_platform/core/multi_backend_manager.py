@@ -337,11 +337,11 @@ class MultiBackendManager:
                             }
                     except Exception as e:
                         logger.debug(
-                            f"Failed to get static tools for {template_id}: {e}"
+                            "Failed to get static tools for %s: %s", template_id, e
                         )
 
             except Exception as e:
-                logger.warning(f"Failed to get template tools: {e}")
+                logger.warning("Failed to get template tools: %s", e)
 
         return all_tools
 
@@ -438,14 +438,15 @@ class MultiBackendManager:
                         return result
                     except Exception as e:
                         logger.warning(
-                            f"Failed to call tool on existing deployment {deployment_id}: {e}"
+                            "Failed to call tool on existing deployment %s: %s",
+                            deployment_id,
+                            e,
                         )
                         # Fall through to stdio attempt
 
         # Priority 2: Check if stdio is supported and try backends in order
         first_backend = next(iter(self.tool_managers.keys()))
         template_manager = TemplateManager(first_backend)
-
         try:
             template_info = template_manager.get_template_info(template_name)
             if template_info:
@@ -476,7 +477,7 @@ class MultiBackendManager:
                                     last_error = result.get("error", "Unknown error")
                         except Exception as e:
                             last_error = str(e)
-                            logger.debug(f"Failed stdio call on {backend}: {e}")
+                            logger.debug("Failed stdio call on %s: %s", backend, e)
                             continue
 
                     # All stdio attempts failed

@@ -5,6 +5,7 @@ MCP Client probe for discovering tools from MCP servers via stdio.
 import asyncio
 import json
 import logging
+import os
 import time
 from typing import Any, Dict, List, Optional
 
@@ -22,6 +23,20 @@ class MCPClientProbe:
             timeout: Timeout for MCP communication
         """
         self.timeout = timeout
+
+    def _ensure_network_exists(self):
+        """Ensure the mcp-platform network exists before running containers."""
+        try:
+            from mcp_platform.backends.docker import DockerDeploymentService
+
+            docker_service = DockerDeploymentService()
+            network_name = docker_service.create_network()
+        except Exception as e:
+            # Network creation failed, but don't fail the whole probe
+            logger.warning("Failed to create/verify mcp-platform network: %s", e)
+            # Continue without network - containers will use default bridge
+            network_name = None
+        return network_name
 
     async def discover_tools_from_command(
         self, command: List[str], working_dir: Optional[str] = None
@@ -103,8 +118,10 @@ class MCPClientProbe:
         """
 
         container_name = f"mcp-discovery-{image_name.replace('/', '-').replace(':', '-')}-{int(time.time())}"
-
         try:
+            # Ensure network exists before starting container
+            network_name = self._ensure_network_exists()
+
             # Build docker command
             docker_cmd = [
                 "docker",
@@ -113,6 +130,8 @@ class MCPClientProbe:
                 "-i",
                 "--name",
                 container_name,
+                "--network",
+                network_name or os.getenv("MCP_PLATFORM_NETWORK_NAME", "mcp-platform"),
             ]
 
             # Add environment variables

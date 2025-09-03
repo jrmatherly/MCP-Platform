@@ -1,7 +1,6 @@
 # Test all templates in the repository
 
 import json
-from pathlib import Path
 
 import pytest
 

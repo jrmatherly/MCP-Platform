@@ -4,6 +4,7 @@ Docker probe for discovering MCP server tools from Docker images.
 
 import asyncio
 import logging
+import os
 import socket
 import subprocess
 import time
@@ -30,6 +31,20 @@ class DockerProbe(BaseProbe):
         """Initialize Docker probe."""
         super().__init__()
 
+    def _ensure_network_exists(self):
+        """Ensure the mcp-platform network exists before running containers."""
+        try:
+            from mcp_platform.backends.docker import DockerDeploymentService
+
+            docker_service = DockerDeploymentService()
+            network_name = docker_service.create_network()
+        except Exception as e:
+            # Network creation failed, but don't fail the whole probe
+            logger.warning("Failed to create/verify mcp-platform network: %s", e)
+            # Continue without network - containers will use default bridge
+            network_name = None
+        return network_name
+
     def _background_cleanup(self, container_name: str, max_retries: int = 3):
         """Background cleanup with retries."""
 
@@ -44,16 +59,23 @@ class DockerProbe(BaseProbe):
                     check=False,
                 )
                 logger.info(
-                    f"Background cleanup successful for {container_name} on attempt {attempt + 1}"
+                    "Background cleanup successful for %s on attempt %d",
+                    container_name,
+                    attempt + 1,
                 )
                 return
             except (subprocess.TimeoutExpired, subprocess.CalledProcessError) as e:
                 logger.debug(
-                    f"Background cleanup attempt {attempt + 1} failed for {container_name}: {e}"
+                    "Background cleanup attempt %d failed for %s: %s",
+                    attempt + 1,
+                    container_name,
+                    e,
                 )
                 if attempt == max_retries - 1:
                     logger.error(
-                        f"Background cleanup failed after {max_retries} attempts for {container_name}"
+                        "Background cleanup failed after %d attempts for %s",
+                        max_retries,
+                        container_name,
                     )
 
     def discover_tools_from_image(
@@ -195,12 +217,17 @@ class DockerProbe(BaseProbe):
     ) -> bool:
         """Start container with HTTP server (fallback method)."""
         try:
+            # Ensure network exists before starting container
+            network_name = self._ensure_network_exists()
+
             cmd = [
                 "docker",
                 "run",
                 "-d",
                 "--name",
                 container_name,
+                "--network",
+                network_name or os.getenv("MCP_PLATFORM_NETWORK_NAME", "mcp-platform"),
                 "-p",
                 f"{port}:8000",
                 image_name,

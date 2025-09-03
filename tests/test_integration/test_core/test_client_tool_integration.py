@@ -3,7 +3,6 @@ Integration tests for the enhanced MCP Client and ToolCaller.
 """
 
 import subprocess
-import time
 from pathlib import Path
 
 import pytest

@@ -27,6 +27,7 @@ from rich.table import Table
 from mcp_platform.backends import available_valid_backends
 from mcp_platform.cli.interactive_cli import run_interactive_shell
 from mcp_platform.client import MCPClient
+from mcp_platform.core.config_processor import ConditionalConfigValidator
 from mcp_platform.core.multi_backend_manager import MultiBackendManager
 from mcp_platform.core.response_formatter import (
     ResponseFormatter,
@@ -396,6 +397,53 @@ def deploy(
             console.print(f"Supported transports: {', '.join(supported_transports)}\n")
             raise typer.Exit(1)
         console.line(1)
+
+        # Validate configuration if we have a config schema
+        config_schema = template_info.get("config_schema", {})
+        if config_schema:
+            # Combine all configuration for validation
+            effective_config = {}
+            effective_config.update(config_values)
+            effective_config.update(env_vars)
+            effective_config.update(override_values)
+
+            # Run conditional validation
+            validator = ConditionalConfigValidator()
+            validation_result = validator.validate_config_schema(
+                config_schema, effective_config
+            )
+
+            if not validation_result["valid"]:
+                console.print("[red]❌ Configuration validation failed:[/red]")
+
+                # Show missing required fields
+                if validation_result.get("missing_required"):
+                    console.print(
+                        f"[red]Missing required fields: {', '.join(validation_result['missing_required'])}[/red]"
+                    )
+
+                # Show conditional issues
+                if validation_result.get("conditional_issues"):
+                    console.print("[red]Conditional requirements not met:[/red]")
+                    for issue in validation_result["conditional_issues"]:
+                        if "error" in issue:
+                            console.print(f"  • {issue['error']}")
+                        else:
+                            console.print(
+                                f"  • Missing: {', '.join(issue.get('missing', []))}"
+                            )
+                            if issue.get("errors"):
+                                for error in issue["errors"]:
+                                    console.print(f"    - {error}")
+
+                # Show suggestions
+                if validation_result.get("suggestions"):
+                    console.print("\n[yellow]💡 Suggestions:[/yellow]")
+                    for suggestion in validation_result["suggestions"]:
+                        console.print(f"  • {suggestion}")
+
+                raise typer.Exit(1)
+
         # Show deployment plan
         console.print(f"[cyan]📋 Deployment Plan for '{template}'[/cyan]")
 
@@ -464,7 +512,9 @@ def deploy(
         raise typer.Exit(1)
 
 
-@app.command()
+@app.command(
+    "list-tools/tools",
+)
 def list_tools(
     template: Annotated[str, typer.Argument(help="Template name or deployment ID")],
     backend: Annotated[
@@ -1027,37 +1077,6 @@ def interactive():
     try:
         console.print("[cyan]🚀 Starting enhanced interactive CLI mode...[/cyan]")
         run_interactive_shell()
-
-    except KeyboardInterrupt:
-        console.print("\n[yellow]Interactive mode interrupted[/yellow]")
-    except Exception as e:
-        console.print(f"[red]❌ Error in interactive mode: {e}[/red]")
-        raise typer.Exit(1)
-
-
-@app.command(
-    "interactive-legacy",
-    help="Start the legacy interactive shell (cmd2-based)",
-)
-def interactive_legacy():
-    """
-    Start the legacy interactive CLI mode (cmd2-based).
-
-    This command launches the old interactive shell for compatibility.
-    Use 'interactive' for the enhanced version.
-    """
-    try:
-        console.print("[cyan]🚀 Starting legacy interactive CLI mode...[/cyan]")
-        console.print("[dim]Type 'help' for available commands, 'quit' to exit[/dim]")
-        console.print(
-            "[yellow]⚠️  Consider using 'mcpp interactive' for the enhanced version[/yellow]"
-        )
-
-        # Import and start the legacy interactive CLI
-        from mcp_platform.cli.interactive_cli import InteractiveCLI
-
-        interactive_cli = InteractiveCLI()
-        interactive_cli.cmdloop()
 
     except KeyboardInterrupt:
         console.print("\n[yellow]Interactive mode interrupted[/yellow]")
