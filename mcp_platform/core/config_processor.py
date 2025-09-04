@@ -542,7 +542,7 @@ class ConfigProcessor:
             return self._map_file_config_to_env(file_config, template)
 
         except Exception as e:
-            logger.error(f"Failed to load config file {config_file}: {e}")
+            logger.error("Failed to load config file %s: %s", config_file, e)
             raise
 
     def _map_file_config_to_env(

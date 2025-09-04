@@ -439,8 +439,10 @@ class MCPClient:
                             raise ValueError(
                                 "Invalid volume format. Expected dict or list"
                             )
-                    except json.JSONDecodeError:
-                        raise ValueError("Invalid JSON format for volumes")
+                    except json.JSONDecodeError as exception:
+                        raise ValueError(
+                            "Invalid JSON format for volumes"
+                        ) from exception
                 else:
                     raise ValueError("Invalid volume format. Expected dict or list")
 

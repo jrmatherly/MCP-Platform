@@ -35,6 +35,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Confirm, Prompt
 from rich.table import Table
+from typer.main import get_command as typer_get_command
 
 from mcp_platform.client import MCPClient
 from mcp_platform.core.cache import CacheManager
@@ -1481,513 +1482,53 @@ Type [bold]help[/bold] for available commands or [bold]help COMMAND[/bold] for s
                     cmd = args[0]
                     cmd_args = args[1:]
 
-                    # Direct command dispatch to preserve session
+                    # Generic dispatch via Typer/Click to leverage automatic parsing
+                    # and validation from the Typer command definitions.
                     if cmd == "help":
                         if cmd_args:
                             show_help(cmd_args[0])
                         else:
                             show_help()
-                    elif cmd == "templates":
-                        list_templates()
-                    elif cmd == "select":
-                        if cmd_args:
-                            select_template(cmd_args[0])
-                        else:
-                            console.print(
-                                "[red]❌ Template name required for select command[/red]"
-                            )
-                    elif cmd == "unselect":
-                        unselect_template()
-                    elif cmd == "tools":
-                        # Parse tools command arguments and flags
-                        template_arg = None
-                        force_refresh = False
-                        show_help_flag = False
-
-                        for arg in cmd_args:
-                            if arg == "--force-refresh":
-                                force_refresh = True
-                            elif arg == "--help-info":
-                                show_help_flag = True
-                            elif not arg.startswith("-"):
-                                template_arg = arg
-
-                        list_tools(
-                            template=template_arg,
-                            force_refresh=force_refresh,
-                            show_help=show_help_flag,
-                        )
-                    elif cmd == "servers":
-                        # Parse servers command arguments and flags
-                        template_arg = None
-                        all_backends = False
-
-                        for arg in cmd_args:
-                            if arg == "--all-backends":
-                                all_backends = True
-                            elif arg == "--template" and cmd_args.index(arg) + 1 < len(
-                                cmd_args
-                            ):
-                                template_arg = cmd_args[cmd_args.index(arg) + 1]
-                            elif not arg.startswith("-") and template_arg is None:
-                                # Positional template argument
-                                template_arg = arg
-
-                        list_servers(template=template_arg, all_backends=all_backends)
-                    elif cmd == "deploy":
-                        # Parse deploy command arguments and flags
-                        template_arg = None
-                        config_file = None
-                        env_vars = []
-                        config_overrides = []
-                        transport = "http"
-                        port = None
-                        no_pull = False
-
-                        i = 0
-                        while i < len(cmd_args):
-                            arg = cmd_args[i]
-
-                            if arg in ["-c", "--config-file"]:
-                                if i + 1 < len(cmd_args):
-                                    config_file = Path(cmd_args[i + 1])
-                                    i += 2
-                                else:
-                                    console.print(
-                                        "[red]❌ --config-file requires a file path[/red]"
-                                    )
-                                    break
-                            elif arg in ["-e", "--env"]:
-                                if i + 1 < len(cmd_args):
-                                    env_vars.append(cmd_args[i + 1])
-                                    i += 2
-                                else:
-                                    console.print(
-                                        "[red]❌ --env requires a KEY=VALUE argument[/red]"
-                                    )
-                                    break
-                            elif arg in ["-C", "--config"]:
-                                if i + 1 < len(cmd_args):
-                                    config_overrides.append(cmd_args[i + 1])
-                                    i += 2
-                                else:
-                                    console.print(
-                                        "[red]❌ --config requires a KEY=VALUE argument[/red]"
-                                    )
-                                    break
-                            elif arg in ["-t", "--transport"]:
-                                if i + 1 < len(cmd_args):
-                                    transport = cmd_args[i + 1]
-                                    i += 2
-                                else:
-                                    console.print(
-                                        "[red]❌ --transport requires a transport type[/red]"
-                                    )
-                                    break
-                            elif arg in ["-p", "--port"]:
-                                if i + 1 < len(cmd_args):
-                                    try:
-                                        port = int(cmd_args[i + 1])
-                                        i += 2
-                                    except ValueError:
-                                        console.print(
-                                            "[red]❌ --port requires a valid port number[/red]"
-                                        )
-                                        break
-                                else:
-                                    console.print(
-                                        "[red]❌ --port requires a port number[/red]"
-                                    )
-                                    break
-                            elif arg == "--no-pull":
-                                no_pull = True
-                                i += 1
-                            elif arg.startswith("-"):
-                                console.print(
-                                    f"[yellow]⚠️ Ignoring unknown flag: {arg}[/yellow]"
-                                )
-                                i += 1
-                            else:
-                                # Positional argument - template name
-                                if template_arg is None:
-                                    template_arg = arg
-                                i += 1
-
-                        # If no template specified, use selected template
-                        if template_arg is None:
-                            session = get_session()
-                            template_arg = session.get_selected_template()
-                            if template_arg is None:
-                                console.print(
-                                    "[red]❌ Template name required for deploy command when none selected[/red]"
-                                )
-                                continue
-
-                        deploy_template(
-                            template=template_arg,
-                            config_file=config_file,
-                            env=env_vars if env_vars else None,
-                            config=config_overrides if config_overrides else None,
-                            transport=transport,
-                            port=port,
-                            no_pull=no_pull,
-                        )
-                    elif cmd == "call":
-                        # Robust argument parsing for call command
-                        session = get_session()
-                        available_templates = session.client.list_templates()
-
-                        # Initialize variables
-                        template_arg = None
-                        tool_name = None
-                        tool_args = "{}"
-                        config_overrides = []
-                        env_vars = []
-                        backend_arg = None
-
-                        # Parse command line arguments properly
-                        i = 0
-                        positional_args = []
-
-                        while i < len(cmd_args):
-                            arg = cmd_args[i]
-
-                            if arg in ["-C", "-c", "--config"]:
-                                # Next argument should be key=value
-                                if i + 1 < len(cmd_args):
-                                    config_overrides.append(cmd_args[i + 1])
-                                    i += 2
-                                else:
-                                    console.print(
-                                        "[red]❌ -C/--config requires a key=value argument[/red]"
-                                    )
-                                    break
-                            elif arg in ["-e", "--env"]:
-                                # Next argument should be key=value
-                                if i + 1 < len(cmd_args):
-                                    env_vars.append(cmd_args[i + 1])
-                                    i += 2
-                                else:
-                                    console.print(
-                                        "[red]❌ -e/--env requires a key=value argument[/red]"
-                                    )
-                                    break
-                            elif arg in ["-b", "--backend"]:
-                                # Next argument should be backend name
-                                if i + 1 < len(cmd_args):
-                                    backend_arg = cmd_args[i + 1]
-                                    i += 2
-                                else:
-                                    console.print(
-                                        "[red]❌ -b/--backend requires a backend name[/red]"
-                                    )
-                                    break
-                            elif arg.startswith("-"):
-                                # Skip unknown flags for now
-                                console.print(
-                                    f"[yellow]⚠️ Ignoring unknown flag: {arg}[/yellow]"
-                                )
-                                i += 1
-                            else:
-                                # This is a positional argument
-                                positional_args.append(arg)
-                                i += 1
-
-                        # Now determine template, tool_name, and tool_args from positional args
-                        if not positional_args:
-                            console.print(
-                                "[red]❌ Tool name required for call command[/red]"
-                            )
-                        elif len(positional_args) == 1:
-                            # call tool_name (use selected template, no args)
-                            tool_name = positional_args[0]
-                        elif len(positional_args) == 2:
-                            # Could be: call template tool_name OR call tool_name args
-                            if positional_args[0] in available_templates:
-                                # call template tool_name
-                                template_arg = positional_args[0]
-                                tool_name = positional_args[1]
-                            else:
-                                # call tool_name args
-                                tool_name = positional_args[0]
-                                tool_args = positional_args[1]
-                        elif len(positional_args) >= 3:
-                            # call template tool_name args
-                            if positional_args[0] in available_templates:
-                                template_arg = positional_args[0]
-                                tool_name = positional_args[1]
-                                tool_args = positional_args[2]
-                            else:
-                                # call tool_name args (with extra args - use last one)
-                                tool_name = positional_args[0]
-                                tool_args = positional_args[
-                                    -1
-                                ]  # Use the last argument as JSON
-
-                        if tool_name:
-                            call_tool(
-                                template=template_arg,
-                                tool_name=tool_name,
-                                args=tool_args,
-                                config=config_overrides if config_overrides else None,
-                                env=env_vars if env_vars else None,
-                                backend=backend_arg,
-                            )
-                        else:
-                            console.print(
-                                "[red]❌ Tool name required for call command[/red]"
-                            )
-                    elif cmd == "configure":
-                        # Smart argument parsing for configure command
-                        session = get_session()
-                        available_templates = session.client.list_templates()
-
-                        if len(cmd_args) == 0:
-                            # No arguments - show usage
-                            console.print(
-                                "[red]❌ Configuration KEY=VALUE pairs are required. Usage: configure [template] key=value ...[/red]"
-                            )
-                        elif len(cmd_args) == 1:
-                            # Check if it's a template name or key=value pair
-                            if cmd_args[0] in available_templates:
-                                # Just template name without config pairs - show usage
-                                console.print(
-                                    f"[red]❌ Configuration KEY=VALUE pairs are required for template '{cmd_args[0]}'. Usage: configure {cmd_args[0]} key=value ...[/red]"
-                                )
-                            elif "=" in cmd_args[0]:
-                                # Single key=value pair with selected template
-                                configure_template(template=None, config_pairs=cmd_args)
-                            else:
-                                # Invalid single argument
-                                console.print(
-                                    "[red]❌ Invalid argument. Usage: configure [template] key=value ...[/red]"
-                                )
-                        else:
-                            # Multiple arguments
-                            if cmd_args[0] in available_templates:
-                                # configure template key=value...
-                                template_arg = cmd_args[0]
-                                config_pairs = cmd_args[1:]
-                                # Validate that we have config pairs
-                                if not any("=" in pair for pair in config_pairs):
-                                    console.print(
-                                        f"[red]❌ Configuration KEY=VALUE pairs are required for template '{template_arg}'. Usage: configure {template_arg} key=value ...[/red]"
-                                    )
-                                else:
-                                    configure_template(
-                                        template=template_arg, config_pairs=config_pairs
-                                    )
-                            else:
-                                # configure key=value... (with selected template)
-                                configure_template(template=None, config_pairs=cmd_args)
-                    elif cmd == "show-config":
-                        template_arg = cmd_args[0] if cmd_args else None
-                        show_config(template=template_arg)
-                    elif cmd == "clear-config":
-                        template_arg = cmd_args[0] if cmd_args else None
-                        clear_config(template=template_arg)
-                    elif cmd == "logs":
-                        # Parse logs command arguments
-                        target_arg = None
-                        backend_arg = None
-                        lines = 100
-
-                        i = 0
-                        while i < len(cmd_args):
-                            arg = cmd_args[i]
-
-                            if arg in ["--backend"]:
-                                if i + 1 < len(cmd_args):
-                                    backend_arg = cmd_args[i + 1]
-                                    i += 2
-                                else:
-                                    console.print(
-                                        "[red]❌ --backend requires a backend name[/red]"
-                                    )
-                                    break
-                            elif arg in ["-n", "--lines"]:
-                                if i + 1 < len(cmd_args):
-                                    try:
-                                        lines = int(cmd_args[i + 1])
-                                        i += 2
-                                    except ValueError:
-                                        console.print(
-                                            "[red]❌ --lines requires a valid number[/red]"
-                                        )
-                                        break
-                                else:
-                                    console.print(
-                                        "[red]❌ --lines requires a number[/red]"
-                                    )
-                                    break
-                            elif arg.startswith("-"):
-                                console.print(
-                                    f"[yellow]⚠️ Ignoring unknown flag: {arg}[/yellow]"
-                                )
-                                i += 1
-                            else:
-                                # Positional argument - target
-                                if target_arg is None:
-                                    target_arg = arg
-                                i += 1
-
-                        # If no target specified, use selected template
-                        if target_arg is None:
-                            session = get_session()
-                            target_arg = session.get_selected_template()
-                            if target_arg is None:
-                                console.print(
-                                    "[red]❌ Target required: deployment ID or template name[/red]"
-                                )
-                                continue
-
-                        get_logs(target=target_arg, backend=backend_arg, lines=lines)
-                    elif cmd == "stop":
-                        # Parse stop command arguments
-                        target_arg = None
-                        backend_arg = None
-                        all_flag = False
-                        template_arg = None
-                        dry_run = False
-                        timeout = 30
-                        force = False
-
-                        i = 0
-                        while i < len(cmd_args):
-                            arg = cmd_args[i]
-
-                            if arg == "--all":
-                                all_flag = True
-                                i += 1
-                            elif arg == "--dry-run":
-                                dry_run = True
-                                i += 1
-                            elif arg == "--force":
-                                force = True
-                                i += 1
-                            elif arg in ["--backend"]:
-                                if i + 1 < len(cmd_args):
-                                    backend_arg = cmd_args[i + 1]
-                                    i += 2
-                                else:
-                                    console.print(
-                                        "[red]❌ --backend requires a backend name[/red]"
-                                    )
-                                    break
-                            elif arg in ["--template"]:
-                                if i + 1 < len(cmd_args):
-                                    template_arg = cmd_args[i + 1]
-                                    i += 2
-                                else:
-                                    console.print(
-                                        "[red]❌ --template requires a template name[/red]"
-                                    )
-                                    break
-                            elif arg in ["--timeout"]:
-                                if i + 1 < len(cmd_args):
-                                    try:
-                                        timeout = int(cmd_args[i + 1])
-                                        i += 2
-                                    except ValueError:
-                                        console.print(
-                                            "[red]❌ --timeout requires a valid number[/red]"
-                                        )
-                                        break
-                                else:
-                                    console.print(
-                                        "[red]❌ --timeout requires a number[/red]"
-                                    )
-                                    break
-                            elif arg.startswith("-"):
-                                console.print(
-                                    f"[yellow]⚠️ Ignoring unknown flag: {arg}[/yellow]"
-                                )
-                                i += 1
-                            else:
-                                # Positional argument - target
-                                if target_arg is None:
-                                    target_arg = arg
-                                i += 1
-
-                        stop_server(
-                            target=target_arg,
-                            backend=backend_arg,
-                            all=all_flag,
-                            template=template_arg,
-                            dry_run=dry_run,
-                            timeout=timeout,
-                            force=force,
-                        )
-                    elif cmd == "status":
-                        # Parse status command arguments
-                        output_format = "table"
-
-                        for arg in cmd_args:
-                            if arg == "--format" and cmd_args.index(arg) + 1 < len(
-                                cmd_args
-                            ):
-                                output_format = cmd_args[cmd_args.index(arg) + 1]
-
-                        show_status(output_format=output_format)
-                    elif cmd == "remove":
-                        # Parse remove command arguments
-                        target_arg = None
-                        backend_arg = None
-                        all_flag = False
-                        template_arg = None
-                        force = False
-
-                        i = 0
-                        while i < len(cmd_args):
-                            arg = cmd_args[i]
-
-                            if arg == "--all":
-                                all_flag = True
-                                i += 1
-                            elif arg == "--force":
-                                force = True
-                                i += 1
-                            elif arg in ["--backend"]:
-                                if i + 1 < len(cmd_args):
-                                    backend_arg = cmd_args[i + 1]
-                                    i += 2
-                                else:
-                                    console.print(
-                                        "[red]❌ --backend requires a backend name[/red]"
-                                    )
-                                    break
-                            elif arg in ["--template"]:
-                                if i + 1 < len(cmd_args):
-                                    template_arg = cmd_args[i + 1]
-                                    i += 2
-                                else:
-                                    console.print(
-                                        "[red]❌ --template requires a template name[/red]"
-                                    )
-                                    break
-                            elif arg.startswith("-"):
-                                console.print(
-                                    f"[yellow]⚠️ Ignoring unknown flag: {arg}[/yellow]"
-                                )
-                                i += 1
-                            else:
-                                # Positional argument - target
-                                if target_arg is None:
-                                    target_arg = arg
-                                i += 1
-
-                        remove_server(
-                            target=target_arg,
-                            backend=backend_arg,
-                            all=all_flag,
-                            template=template_arg,
-                            force=force,
-                        )
-                    elif cmd == "cleanup":
-                        cleanup_resources()
                     else:
-                        console.print(f"[red]❌ Unknown command: {cmd}[/red]")
-                        console.print("[dim]Type 'help' for available commands[/dim]")
+                        try:
+                            # Build argv for Click/Typer: command + its args
+                            argv = [cmd] + cmd_args
+
+                            # Get the click.Command for this Typer app and let Click parse/validate
+                            click_cmd = typer_get_command(app)
+
+                            # Create a Click context which parses and validates argv
+                            ctx = click_cmd.make_context(
+                                info_name=(
+                                    app.info.name
+                                    if getattr(app, "info", None)
+                                    else "mcpp"
+                                ),
+                                args=argv,
+                            )
+
+                            # Invoke the Click command (which will dispatch to the Typer callbacks)
+                            click_cmd.invoke(ctx)
+
+                        except click.ClickException as ce:
+                            # Preserve the original user-facing error prints where possible
+                            console.print(f"[red]❌ {ce.format_message()}[/red]")
+                            try:
+                                help_text = ce.format_message()
+                                console.print(
+                                    Panel(
+                                        help_text,
+                                        title=f"Help: {cmd}",
+                                        border_style="blue",
+                                    )
+                                )
+                            except Exception:
+                                pass
+                        except SystemExit:
+                            # Click may call sys.exit for bad args; ignore to keep shell alive
+                            pass
+                        except Exception as e:
+                            console.print(f"[red]❌ Error executing command: {e}[/red]")
 
                 except Exception as e:
                     console.print(f"[red]❌ Error executing command: {e}[/red]")
