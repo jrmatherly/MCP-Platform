@@ -33,7 +33,6 @@
         "type": "string",
         "title": "Trino Host",
         "description": "Trino server hostname or IP address",
-        "default": "localhost",
         "env_mapping": "TRINO_HOST"
       },
       "trino_port": {
@@ -49,7 +48,6 @@
         "type": "string",
         "title": "Trino User",
         "description": "Username for Trino authentication",
-        "default": "admin",
         "env_mapping": "TRINO_USER"
       },
       "trino_password": {
