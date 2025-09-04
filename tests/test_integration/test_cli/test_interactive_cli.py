@@ -99,6 +99,35 @@ class TestInteractiveSession:
             session.unselect_template()
             assert session.get_prompt() == "mcpp> "
 
+        def test_integration_deploy_injects_selected_template(self):
+            """Selecting a template should allow deploy_template to be called without explicit template."""
+            with patch(
+                "mcp_platform.cli.interactive_cli.CacheManager"
+            ) as mock_cache_manager:
+                mock_cache = Mock()
+                mock_cache_manager.return_value = mock_cache
+                mock_cache.get.return_value = {}
+
+                session = InteractiveSession()
+                session.select_template("demo")
+
+                with patch("mcp_platform.cli.deploy") as mock_cli_deploy:
+                    # Call deploy_template without passing template explicitly
+                    from mcp_platform.cli.interactive_cli import deploy_template
+
+                    deploy_template(
+                        template=None,
+                        config_file=None,
+                        env=[],
+                        config=[],
+                        transport="http",
+                        port=None,
+                        no_pull=False,
+                    )
+
+                    # Downstream deploy should be called
+                    assert mock_cli_deploy.called
+
 
 @pytest.mark.integration
 class TestCommandWorkflows:
@@ -748,6 +777,7 @@ class TestMainFunctionIntegration:
         mock_run_shell.assert_called_once()
 
 
+@pytest.mark.integration
 class TestStopCommandEnhanced:
     """Enhanced tests for stop command functionality in Interactive CLI."""
 

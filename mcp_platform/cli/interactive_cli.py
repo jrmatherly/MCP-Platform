@@ -13,6 +13,8 @@ that replaces the cmd2-based interactive CLI with:
 """
 
 import asyncio
+import functools
+import inspect
 import json
 import logging
 import os
@@ -238,6 +240,83 @@ def get_session() -> InteractiveSession:
     return session
 
 
+def inject_selected_template(func):
+    """Decorator: if the wrapped command accepts a `template` parameter and it's
+    not provided, inject the currently selected template from the interactive session.
+
+    This keeps command signatures unchanged for CLI/typing but removes the need to
+    repeatedly check for a selected template in each command implementation.
+    """
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            # Prefer the environment variable set by the interactive shell
+            # (helps when Click/Typer invoke the callbacks in slightly
+            # different call contexts). Fall back to the session value.
+            sel = os.environ.get("MCP_SELECTED_TEMPLATE")
+            if not sel:
+                sel = get_session().get_selected_template()
+            if not sel:
+                return func(*args, **kwargs)
+
+            sig = inspect.signature(func)
+            # Try to bind provided args/kwargs to parameter names. If successful,
+            # we can safely inject by name into bound.arguments and call the
+            # function with named arguments to avoid positional/kw conflicts.
+            try:
+                bound = sig.bind_partial(*args, **kwargs)
+                ba = bound.arguments  # OrderedDict of bound args by parameter name
+
+                # Prefer injecting into 'target' if it's a parameter
+                if "target" in sig.parameters:
+                    if "target" not in ba or ba.get("target") is None:
+                        ba["target"] = sel
+                        return func(**ba)
+
+                # Otherwise try 'template'
+                if "template" in sig.parameters:
+                    if "template" not in ba or ba.get("template") is None:
+                        ba["template"] = sel
+                        return func(**ba)
+
+            except Exception:
+                # If binding fails for any reason, fall back to positional/kwargs
+                # heuristics to avoid breaking commands.
+                params = list(sig.parameters.keys())
+                # Prefer injecting into 'target' when the command accepts it and it's not set
+                if "target" in sig.parameters:
+                    idx = params.index("target")
+                    pos_provided = len(args) > idx
+                    if pos_provided:
+                        if args[idx] is None:
+                            args = list(args)
+                            args[idx] = sel
+                            args = tuple(args)
+                    else:
+                        if "target" not in kwargs or kwargs.get("target") is None:
+                            kwargs["target"] = sel
+                elif "template" in sig.parameters:
+                    idx = params.index("template")
+                    pos_provided = len(args) > idx
+                    if pos_provided:
+                        if args[idx] is None:
+                            args = list(args)
+                            args[idx] = sel
+                            args = tuple(args)
+                    else:
+                        if "template" not in kwargs or kwargs.get("template") is None:
+                            kwargs["template"] = sel
+
+        except Exception:
+            # Don't fail command if injection fails; proceed as-is
+            pass
+
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
 # Create Typer app for interactive commands
 app = typer.Typer(
     name="mcpp-interactive",
@@ -294,6 +373,7 @@ def list_templates(
 
 
 @app.command(name="tools")
+@inject_selected_template
 def list_tools(
     template: Annotated[
         Optional[str],
@@ -308,16 +388,13 @@ def list_tools(
 ):
     """List available tools for a template."""
     try:
-        session = get_session()
-
-        # Use selected template if no template argument provided
-        if template is None:
-            template = session.get_selected_template()
-            if template is None:
-                console.print(
-                    "[red]❌ No template specified and none selected. Use 'select <template>' first or provide template name.[/red]"
-                )
-                return
+        # `@inject_selected_template` will inject the selected template when available.
+        # If we still don't have a template here, bail with a friendly message.
+        if not template:
+            console.print(
+                "[red]❌ No template specified and none selected. Use 'select <template>' first or provide template name.[/red]"
+            )
+            return
         # Import and use the main CLI function to avoid duplication
         from mcp_platform.cli import list_tools as cli_list_tools
 
@@ -342,6 +419,7 @@ def list_tools(
 
 
 @app.command(name="call")
+@inject_selected_template
 def call_tool(
     template: Annotated[
         Optional[str],
@@ -381,16 +459,16 @@ def call_tool(
     """Call a tool from a template."""
 
     try:
-        session = get_session()
+        # session is still required for later operations (template validation, config merging)
+        session = globals().get("session") or get_session()
 
-        # Handle template selection
-        if template is None:
-            template = session.get_selected_template()
-            if template is None:
-                console.print(
-                    "[red]❌ No template specified and none selected. Use 'select <template>' first or provide template name.[/red]"
-                )
-                return
+        # `@inject_selected_template` injects the selected template when available.
+        # If template is still None, show an error and exit.
+        if not template:
+            console.print(
+                "[red]❌ No template specified and none selected. Use 'select <template>' first or provide template name.[/red]"
+            )
+            return
 
         # Handle tool name requirement
         if tool_name is None:
@@ -438,6 +516,12 @@ def call_tool(
 
         # Merge with session config
         session_config = session.get_template_config(template)
+        # Ensure session_config is a dict-like object; guard against mocked sessions
+        if not isinstance(session_config, dict):
+            try:
+                session_config = dict(session_config)
+            except Exception:
+                session_config = {}
         final_config = {**session_config, **config_overrides}
 
         console.print(
@@ -524,6 +608,7 @@ def call_tool(
 
 
 @app.command(name="configure")
+@inject_selected_template
 def configure_template(
     template: Annotated[
         Optional[str],
@@ -535,16 +620,14 @@ def configure_template(
 ):
     """Configure a template with key=value pairs."""
     try:
-        session = get_session()
+        session = globals().get("session") or get_session()
 
-        # Handle template selection
-        if template is None:
-            template = session.get_selected_template()
-            if template is None:
-                console.print(
-                    "[red]❌ No template specified and none selected. Use 'select <template>' first or provide template name.[/red]"
-                )
-                return
+        # `@inject_selected_template` will populate `template` when a selection exists.
+        if not template:
+            console.print(
+                "[red]❌ No template specified and none selected. Use 'select <template>' first or provide template name.[/red]"
+            )
+            return
 
         # Handle config pairs requirement
         if not config_pairs:
@@ -589,6 +672,7 @@ def configure_template(
 
 
 @app.command(name="show-config")
+@inject_selected_template
 def show_config(
     template: Annotated[
         Optional[str],
@@ -597,16 +681,14 @@ def show_config(
 ):
     """Show current configuration for a template with all available properties."""
     try:
-        session = get_session()
+        session = globals().get("session") or get_session()
 
-        # Handle template selection
-        if template is None:
-            template = session.get_selected_template()
-            if template is None:
-                console.print(
-                    "[red]❌ No template specified and none selected. Use 'select <template>' first or provide template name.[/red]"
-                )
-                return
+        # `@inject_selected_template` handles injecting the selected template.
+        if not template:
+            console.print(
+                "[red]❌ No template specified and none selected. Use 'select <template>' first or provide template name.[/red]"
+            )
+            return
 
         # Get template info to understand schema
         template_info = session.client.get_template_info(template)
@@ -754,7 +836,7 @@ def clear_config(
 ):
     """Clear configuration for a template."""
     try:
-        session = get_session()
+        session = globals().get("session") or get_session()
 
         # Handle template selection
         if template is None:
@@ -775,6 +857,7 @@ def clear_config(
 
 
 @app.command(name="servers")
+@inject_selected_template
 def list_servers(
     template: Annotated[
         Optional[str], typer.Option("--template", help="Filter by template")
@@ -805,6 +888,7 @@ def list_servers(
 
 
 @app.command(name="deploy")
+@inject_selected_template
 def deploy_template(
     template: Annotated[str, typer.Argument(help="Template name")],
     config_file: Annotated[
@@ -836,6 +920,12 @@ def deploy_template(
         # Get session config for this template
         session = get_session()
         session_config = session.get_template_config(template)
+        # Ensure session_config is a dict-like object; guard against mocked sessions
+        if not isinstance(session_config, dict):
+            try:
+                session_config = dict(session_config)
+            except Exception:
+                session_config = {}
 
         # Merge session config with CLI config parameters
         merged_config = list(config) if config else []
@@ -871,6 +961,12 @@ def select_template(
     try:
         session = get_session()
         session.select_template(template)
+        try:
+            os.environ["MCP_SELECTED_TEMPLATE"] = template
+        except Exception:
+            pass
+        # Keep global selected name in sync
+        globals()["selected_template_name"] = template
 
     except Exception as e:
         console.print(f"[red]❌ Error selecting template: {e}[/red]")
@@ -882,6 +978,12 @@ def unselect_template():
     try:
         session = get_session()
         session.unselect_template()
+        try:
+            os.environ.pop("MCP_SELECTED_TEMPLATE", None)
+        except Exception:
+            pass
+        # Keep global selected name in sync
+        globals()["selected_template_name"] = None
 
     except Exception as e:
         console.print(f"[red]❌ Error unselecting template: {e}[/red]")
@@ -1002,6 +1104,7 @@ def get_logs(
 
 
 @app.command(name="stop")
+@inject_selected_template
 def stop_server(
     target: Annotated[
         Optional[str],
@@ -1079,6 +1182,7 @@ def show_status(
 
 
 @app.command(name="remove")
+@inject_selected_template
 def remove_server(
     target: Annotated[
         Optional[str],
@@ -1443,8 +1547,9 @@ Type [bold]help[/bold] for available commands or [bold]help COMMAND[/bold] for s
     try:
         while True:
             try:
-                # Get session for dynamic prompt
+                # Get session for dynamic prompt and publish it to module global
                 session = get_session()
+                globals()["session"] = session
                 prompt_text = session.get_prompt()
 
                 # Use input() with prompt parameter to avoid Rich console conflicts

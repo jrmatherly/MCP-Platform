@@ -9,18 +9,29 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from mcp_platform.cli.interactive_cli import (COMMANDS, InteractiveSession,
-                                              _check_missing_config,
-                                              _prompt_for_config,
-                                              _show_template_help, call_tool,
-                                              clear_config, configure_template,
-                                              deploy_template, get_logs,
-                                              get_session, list_servers,
-                                              list_templates, list_tools,
-                                              select_template,
-                                              setup_completion, show_config,
-                                              show_help, show_status,
-                                              stop_server, unselect_template)
+from mcp_platform.cli.interactive_cli import (
+    COMMANDS,
+    InteractiveSession,
+    _check_missing_config,
+    _prompt_for_config,
+    _show_template_help,
+    call_tool,
+    clear_config,
+    configure_template,
+    deploy_template,
+    get_logs,
+    get_session,
+    list_servers,
+    list_templates,
+    list_tools,
+    select_template,
+    setup_completion,
+    show_config,
+    show_help,
+    show_status,
+    stop_server,
+    unselect_template,
+)
 
 pytestmark = pytest.mark.unit
 
@@ -800,6 +811,67 @@ class TestCommandImplementationsUnit:
             mock_console.print.assert_called_with(
                 "[red]❌ Error clearing config: Clear error[/red]"
             )
+
+
+class TestDecoratorInjection:
+    """Tests to ensure the inject_selected_template decorator injects the
+    currently selected template when None or positional None is provided.
+    """
+
+    @patch("mcp_platform.cli.interactive_cli.get_session")
+    @patch("mcp_platform.cli.deploy")
+    def test_deploy_injects_selected_template_kwarg(
+        self, mock_cli_deploy, mock_get_session
+    ):
+        mock_session = Mock()
+        mock_session.get_selected_template.return_value = "demo"
+        mock_get_session.return_value = mock_session
+
+        # Call deploy_template with template=None (kwarg)
+        deploy_template(
+            template=None,
+            config_file=None,
+            env=[],
+            config=[],
+            transport="http",
+            port=None,
+            no_pull=False,
+        )
+
+        # Ensure the downstream deploy was called with injected template
+        assert mock_cli_deploy.called
+        called_kwargs = mock_cli_deploy.call_args[1]
+        assert called_kwargs.get("template") == "demo"
+
+    @patch("mcp_platform.cli.interactive_cli.get_session")
+    def test_call_tool_injects_selected_template_positional(self, mock_get_session):
+        mock_session = Mock()
+        mock_session.get_selected_template.return_value = "demo"
+        # Ensure client call returns a success so call_tool proceeds
+        mock_client = Mock()
+        mock_client.list_templates.return_value = {"demo": {"version": "1.0.0"}}
+        mock_client.get_template_info.return_value = None
+        mock_client.call_tool_with_config.return_value = {"success": True}
+        mock_session.client = mock_client
+        mock_session.formatter = Mock()
+        mock_get_session.return_value = mock_session
+
+        # Call call_tool positionally with template as first arg None
+        call_tool(
+            None,
+            "say_hello",
+            args='{"name":"x"}',
+            config_file=None,
+            env=[],
+            config=[],
+            backend=None,
+            no_pull=False,
+            raw=False,
+            force_stdio=False,
+        )
+
+        # Ensure client.call_tool_with_config was invoked
+        mock_client.call_tool_with_config.assert_called_once()
 
 
 class TestCallToolMissingConfig:

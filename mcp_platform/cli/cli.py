@@ -659,7 +659,7 @@ def list(
             output_format=output_format,
         )
         console.print(
-            "💡 [dim]Use `mcp list-deployments` for additional format options[/dim]"
+            "💡 [dim]Use `mcpp list-deployments` for additional format options[/dim]"
         )
         return
 
