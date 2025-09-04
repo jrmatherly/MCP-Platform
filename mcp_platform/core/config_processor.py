@@ -28,15 +28,32 @@ class ValidationResult:
     """Result of configuration validation."""
 
     def __init__(
-        self, valid: bool = True, errors: List[str] = None, warnings: List[str] = None
+        self,
+        valid: bool = True,
+        errors: List[str] = None,
+        warnings: List[str] = None,
+        missing_required: Optional[List[str]] = None,
+        conditional_issues: Optional[List[Dict[str, Any]]] = None,
+        suggestions: Optional[List[str]] = None,
     ):
         self.valid = valid
         self.errors = errors or []
         self.warnings = warnings or []
+        # Fields to support conditional validator output
+        self.missing_required = missing_required or []
+        self.conditional_issues = conditional_issues or []
+        self.suggestions = suggestions or []
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary format."""
-        return {"valid": self.valid, "errors": self.errors, "warnings": self.warnings}
+        return {
+            "valid": self.valid,
+            "errors": self.errors,
+            "warnings": self.warnings,
+            "missing_required": self.missing_required,
+            "conditional_issues": self.conditional_issues,
+            "suggestions": self.suggestions,
+        }
 
 
 class ConfigProcessor:
@@ -301,25 +318,111 @@ class ConfigProcessor:
         return config
 
     def validate_config(
-        self, config: Dict[str, Any], schema: Dict[str, Any]
+        self,
+        config_or_template: Dict[str, Any],
+        schema: Optional[Dict[str, Any]] = None,
+        *,
+        env_vars: Optional[Dict[str, str]] = None,
+        config_file: Optional[str] = None,
+        config_values: Optional[Dict[str, str]] = None,
+        session_config: Optional[Dict[str, Any]] = None,
+        inline_config: Optional[List[str]] = None,
+        env_var_list: Optional[List[str]] = None,
+        override_values: Optional[Dict[str, str]] = None,
     ) -> ValidationResult:
         """
-        Validate configuration against a schema.
+        Validate configuration.
 
-        Args:
-            config: Configuration to validate
-            schema: Configuration schema
+        Two modes supported:
+        1. Classic: validate_config(config_dict, schema_dict) - validates a property-keyed
+           `config_dict` against `schema_dict` and returns a ValidationResult.
+        2. Template-normalization: validate_config(template_info, schema=None, **sources)
+           When `schema` is None and `config_or_template` contains a `config_schema`, the
+           method will normalize configuration sources (env vars, config file, overrides,
+           etc.) via `prepare_configuration`, map env-vars back to property names, and
+           perform the full validation including conditional requirements.
 
-        Returns:
-            ValidationResult with validation status and messages
+        Returns a ValidationResult which is valid only when all checks pass.
         """
         try:
-            errors = []
-            warnings = []
+            # Mode 2: template-normalization mode
+            if (
+                schema is None
+                and isinstance(config_or_template, dict)
+                and "config_schema" in config_or_template
+            ):
+                template_info = config_or_template
+                config_schema = template_info.get("config_schema", {})
 
-            # If no schema provided, assume valid
+                # session_config is expected to be property-keyed config provided by caller
+                session_env_config: Dict[str, Any] = {}
+                if session_config:
+                    try:
+                        session_env_config = self._convert_config_values(
+                            session_config, template_info
+                        )
+                    except Exception:
+                        session_env_config = dict(session_config)
+
+                prepared_env = self.prepare_configuration(
+                    template_info,
+                    env_vars=env_vars,
+                    config_file=config_file,
+                    config_values=config_values,
+                    session_config=session_env_config,
+                    inline_config=inline_config,
+                    env_var_list=env_var_list,
+                    override_values=override_values,
+                )
+
+                # Map prepared env-var keys back to property names for schema validation
+                properties = config_schema.get("properties", {})
+                effective_config: Dict[str, Any] = {}
+                for prop_name, prop_info in properties.items():
+                    env_mapping = prop_info.get("env_mapping", prop_name.upper())
+                    if env_mapping in prepared_env:
+                        raw_val = prepared_env[env_mapping]
+                        # If the prepared env value is a string, try to coerce it
+                        # to a native Python type so conditional checks compare
+                        # booleans/numbers correctly against schema defaults.
+                        if isinstance(raw_val, str):
+                            coerced = ConfigProcessor()._convert_override_value(raw_val)
+                        else:
+                            coerced = raw_val
+                        effective_config[prop_name] = coerced
+
+                # Run plain validation (which will also check required fields)
+                schema_result = ConfigProcessor.validate_config_schema(
+                    config_schema, effective_config
+                )
+
+                # Merge with basic validation (existing checks)
+                basic_result = self.validate_config(
+                    effective_config, config_schema
+                )  # classic mode
+
+                # Combine results
+                errors = basic_result.errors + schema_result.get("errors", [])
+                warnings = basic_result.warnings
+
+                valid = basic_result.valid and schema_result.get("valid", True)
+
+                return ValidationResult(
+                    valid=valid,
+                    errors=errors,
+                    warnings=warnings,
+                    missing_required=schema_result.get("missing_required", []),
+                    conditional_issues=schema_result.get("conditional_issues", []),
+                    suggestions=schema_result.get("suggestions", []),
+                )
+
+            # Classic mode: config_or_template is a config dict and schema is provided
+            config = config_or_template
             if not schema:
                 return ValidationResult(valid=True)
+
+            errors = []
+            warnings = []
 
             # Check required fields
             required_fields = schema.get("required", [])
@@ -334,10 +437,8 @@ class ConfigProcessor:
                         f"Required field '{field}' (ENV VAR: {field_env_var}) is missing"
                     )
 
-            # Check field types and constraints
-            properties = schema.get("properties", {})
-
             # Check for unknown fields
+            properties = schema.get("properties", {})
             if schema.get("additionalProperties", True) is False:
                 for field in config:
                     if field not in properties:
@@ -786,9 +887,12 @@ class ConfigProcessor:
 
         return None
 
-
-class ConditionalConfigValidator:
-    """Handles validation of templates with conditional requirements (anyOf/oneOf)."""
+    # -------------------------------
+    # Conditional validation methods
+    # These were previously part of ConditionalConfigValidator. They are
+    # incorporated here to keep configuration processing and validation
+    # responsibilities in a single class.
+    # -------------------------------
 
     @staticmethod
     def validate_config_schema(
@@ -820,7 +924,7 @@ class ConditionalConfigValidator:
             conditional_errors = []
 
             for i, condition in enumerate(config_schema["anyOf"]):
-                condition_result = ConditionalConfigValidator._check_condition(
+                condition_result = ConfigProcessor._check_condition(
                     condition, config, properties
                 )
                 if condition_result["satisfied"]:
@@ -841,7 +945,7 @@ class ConditionalConfigValidator:
                 result["conditional_issues"] = conditional_errors
 
                 # Generate suggestions based on current config
-                suggestions = ConditionalConfigValidator._generate_config_suggestions(
+                suggestions = ConfigProcessor._generate_config_suggestions(
                     config_schema, config
                 )
                 result["suggestions"] = suggestions
@@ -851,7 +955,7 @@ class ConditionalConfigValidator:
             one_of_errors = []
 
             for i, condition in enumerate(config_schema["oneOf"]):
-                condition_result = ConditionalConfigValidator._check_condition(
+                condition_result = ConfigProcessor._check_condition(
                     condition, config, properties
                 )
                 if condition_result["satisfied"]:
@@ -877,6 +981,61 @@ class ConditionalConfigValidator:
                         }
                     )
 
+        # Support top-level if/then/else conditional blocks
+        if "if" in config_schema:
+            try:
+                if_condition = config_schema["if"]
+                if_result = ConfigProcessor._check_condition(
+                    if_condition, config, properties
+                )
+
+                # Decide which branch to validate
+                branch = "then" if if_result["satisfied"] else "else"
+                branch_schema = config_schema.get(branch, {})
+
+                branch_missing = []
+                branch_errors = []
+
+                # Check required in the branch, honoring schema defaults when the
+                # property is not present in the provided config.
+                for prop in branch_schema.get("required", []):
+                    prop_default = properties.get(prop, {}).get("default")
+                    current_value = config.get(prop, prop_default)
+                    if current_value is None:
+                        branch_missing.append(prop)
+
+                # Also check any property const/enum constraints inside branch.properties
+                for prop, constraint in branch_schema.get("properties", {}).items():
+                    prop_default = properties.get(prop, {}).get("default")
+                    current_value = config.get(prop, prop_default)
+                    if "const" in constraint and current_value != constraint["const"]:
+                        branch_errors.append(f"{prop} must be '{constraint['const']}'")
+                    if "enum" in constraint and current_value not in constraint["enum"]:
+                        branch_errors.append(
+                            f"{prop} must be one of {constraint['enum']}"
+                        )
+
+                if branch_missing or branch_errors:
+                    result["valid"] = False
+                    result["conditional_issues"].append(
+                        {
+                            "branch": branch,
+                            "missing": branch_missing,
+                            "errors": branch_errors,
+                        }
+                    )
+
+                    # Generate suggestions when possible
+                    suggestions = ConfigProcessor._generate_config_suggestions(
+                        config_schema, config
+                    )
+                    if suggestions:
+                        result["suggestions"].extend(suggestions)
+
+            except Exception as e:
+                result["valid"] = False
+                result["conditional_issues"].append({"error": str(e)})
+
         return result
 
     @staticmethod
@@ -889,14 +1048,18 @@ class ConditionalConfigValidator:
         # Check property constraints
         if "properties" in condition:
             for prop, constraint in condition["properties"].items():
+                # Use the property's default from schema if not present in config
+                prop_default = properties.get(prop, {}).get("default")
+                current_value = config.get(prop, prop_default)
+
                 if "const" in constraint:
-                    if config.get(prop) != constraint["const"]:
+                    if current_value != constraint["const"]:
                         result["satisfied"] = False
                         result["errors"].append(
                             f"{prop} must be '{constraint['const']}'"
                         )
                 elif "enum" in constraint:
-                    if config.get(prop) not in constraint["enum"]:
+                    if current_value not in constraint["enum"]:
                         result["satisfied"] = False
                         result["errors"].append(
                             f"{prop} must be one of {constraint['enum']}"
@@ -905,7 +1068,8 @@ class ConditionalConfigValidator:
         # Check required fields for this condition
         if "required" in condition:
             for prop in condition["required"]:
-                if prop not in config or config[prop] is None:
+                prop_default = properties.get(prop, {}).get("default")
+                if prop not in config and prop_default is None:
                     result["satisfied"] = False
                     result["missing"].append(prop)
 
@@ -913,7 +1077,7 @@ class ConditionalConfigValidator:
         if "oneOf" in condition:
             nested_satisfied = 0
             for nested_condition in condition["oneOf"]:
-                nested_result = ConditionalConfigValidator._check_condition(
+                nested_result = ConfigProcessor._check_condition(
                     nested_condition, config, properties
                 )
                 if nested_result["satisfied"]:
@@ -937,7 +1101,7 @@ class ConditionalConfigValidator:
         config_schema: Dict[str, Any], config: Dict[str, Any]
     ) -> List[str]:
         """Generate helpful suggestions based on conditional validation failures."""
-        suggestions = []
+        suggestions: List[str] = []
         properties = config_schema.get("properties", {})
 
         # Generic suggestions based on anyOf/oneOf structure
@@ -1016,7 +1180,7 @@ class ConditionalConfigValidator:
         # Check anyOf conditions
         if "anyOf" in config_schema:
             for condition in config_schema["anyOf"]:
-                if ConditionalConfigValidator._prop_required_in_condition(
+                if ConfigProcessor._prop_required_in_condition(
                     prop_name, condition, current_config
                 ):
                     return True
@@ -1024,7 +1188,7 @@ class ConditionalConfigValidator:
         # Check oneOf conditions
         if "oneOf" in config_schema:
             for condition in config_schema["oneOf"]:
-                if ConditionalConfigValidator._prop_required_in_condition(
+                if ConfigProcessor._prop_required_in_condition(
                     prop_name, condition, current_config
                 ):
                     return True
@@ -1050,33 +1214,75 @@ class ConditionalConfigValidator:
         # Check nested oneOf conditions
         if "oneOf" in condition:
             for nested_condition in condition["oneOf"]:
-                if ConditionalConfigValidator._prop_required_in_condition(
+                if ConfigProcessor._prop_required_in_condition(
                     prop_name, nested_condition, current_config
                 ):
                     return True
 
         return False
 
-    @staticmethod
     def check_missing_config(
-        template_info: Dict[str, Any], config: Dict[str, Any], env_vars: Dict[str, str]
-    ) -> List[str]:
-        """Check for missing required configuration with conditional requirements support."""
+        self,
+        template_info: Dict[str, Any],
+        config: Dict[str, Any],
+        env_vars: Dict[str, str],
+        config_file: Optional[str] = None,
+        config_values: Optional[Dict[str, str]] = None,
+        inline_config: Optional[List[str]] = None,
+        env_var_list: Optional[List[str]] = None,
+        override_values: Optional[Dict[str, str]] = None,
+    ) -> ValidationResult:
+        """Check for missing required configuration with conditional requirements support.
+
+        This method accepts alternate configuration inputs (config file, CLI
+        config values, inline config and env var lists, and override values).
+        It delegates normalization of these sources to :meth:`prepare_configuration`
+        so all inputs are converted into a single env-var-keyed mapping. The
+        conditional validator then maps those env-var keys back to property
+        names (using `env_mapping` from the template's config schema) and runs
+        conditional validation over the consolidated view.
+        """
         config_schema = template_info.get("config_schema", {})
 
-        # Combine config and env_vars for validation
-        effective_config = dict(config)
-        properties = config_schema.get("properties", {})
+        # The incoming `config` is property-keyed (e.g., {'api_key': 'x'}). The
+        # prepare_configuration expects session_config to be env-var keyed.
+        session_env_config: Dict[str, Any] = {}
+        if config:
+            try:
+                session_env_config = self._convert_config_values(config, template_info)
+            except Exception:
+                session_env_config = dict(config)
 
-        # Add env vars using their property mappings
+        prepared_env = self.prepare_configuration(
+            template_info,
+            env_vars=env_vars,
+            config_file=config_file,
+            config_values=config_values,
+            session_config=session_env_config,
+            inline_config=inline_config,
+            env_var_list=env_var_list,
+            override_values=override_values,
+        )
+
+        # Map prepared env-var keys back to property names for schema validation
+        properties = config_schema.get("properties", {})
+        effective_config: Dict[str, Any] = {}
         for prop_name, prop_info in properties.items():
             env_mapping = prop_info.get("env_mapping", prop_name.upper())
-            if env_mapping in env_vars and prop_name not in effective_config:
-                effective_config[prop_name] = env_vars[env_mapping]
+            if env_mapping in prepared_env:
+                effective_config[prop_name] = prepared_env[env_mapping]
 
-        # Check for validation errors using enhanced validation
-        validation_result = ConditionalConfigValidator.validate_config_schema(
+        # Run conditional validation on the property-keyed effective config
+        schema_result = ConfigProcessor.validate_config_schema(
             config_schema, effective_config
         )
 
-        return validation_result.get("missing_required", [])
+        # Build a ValidationResult to return richer information
+        return ValidationResult(
+            valid=schema_result.get("valid", True),
+            errors=schema_result.get("errors", []),
+            warnings=schema_result.get("warnings", []),
+            missing_required=schema_result.get("missing_required", []),
+            conditional_issues=schema_result.get("conditional_issues", []),
+            suggestions=schema_result.get("suggestions", []),
+        )

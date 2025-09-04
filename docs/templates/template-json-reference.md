@@ -229,6 +229,75 @@ class YourTemplateResponseFormatter:
 - **Tool-specific logic**: Different tools may need different formatting approaches
 - **Performance**: Keep formatting fast, avoid heavy processing
 
+## Conditional Validation (if/then/else, anyOf, oneOf)
+
+Templates can express complex conditional configuration requirements using JSON Schema constructs. MCP supports three common patterns:
+
+- if/then/else
+- anyOf
+- oneOf
+
+When to use each
+- if/then/else: Use when there is a single binary condition that changes which fields are required or constrained. Example: when `oauth_enabled` is false require `trino_password`, otherwise require `oauth_provider`. This is the clearest choice for feature flags or boolean-based branches.
+- anyOf: Use when at least one of multiple independent schemas must be satisfied. Useful when there are multiple valid configuration options and they are not mutually exclusive. Example: support either API key auth or OAuth; a config is valid if it matches any option.
+- oneOf: Use when exactly one of multiple mutually-exclusive schemas must be satisfied. Use this when options are exclusive and providing multiple at once should be rejected (e.g., you can select exactly one authentication backend).
+
+Examples
+
+1) if/then/else (binary choice)
+
+```json
+{
+  "config_schema": {
+    "properties": {
+      "oauth_enabled": { "type": "boolean", "title": "Enable OAuth" },
+      "trino_password": { "type": "string", "title": "Trino Password" },
+      "oauth_provider": { "type": "string", "title": "OAuth Provider" }
+    },
+    "required": ["trino_host", "trino_user"],
+    "if": { "properties": { "oauth_enabled": { "const": false } } },
+    "then": { "required": ["trino_password"] },
+    "else": { "required": ["oauth_provider"] }
+  }
+}
+```
+
+2) anyOf (one of many options is sufficient)
+
+```json
+{
+  "config_schema": {
+    "anyOf": [
+      { "required": ["api_key"] },
+      { "required": ["oauth_provider", "oidc_client_id"] }
+    ]
+  }
+}
+```
+
+3) oneOf (exactly one option must match)
+
+```json
+{
+  "config_schema": {
+    "oneOf": [
+      { "required": ["basic_user", "basic_password"] },
+      { "required": ["oauth_provider", "oidc_client_id"] }
+    ]
+  }
+}
+```
+
+Tips and recommendations
+- Prefer `if/then/else` when branching is based on a single property (e.g., a boolean). It is explicit and maps well to UI flows.
+- Use `anyOf` for flexible choices where multiple options may be valid concurrently.
+- Use `oneOf` to enforce mutual exclusion between configuration options.
+- Provide `title` and `description` for properties referenced in conditional blocks to improve generated suggestions and UI text.
+
+Documentation and validation
+- The MCP `ConfigProcessor` supports `anyOf`, `oneOf`, and top-level `if/then/else` constructs in `config_schema`. When conditional validation fails, MCP will report missing fields and provide suggestions where possible.
+- If you need more advanced validation (nested combinations), prefer expressing them clearly and add unit tests for your template to avoid surprises.
+
 ## Configuration Schema
 
 The `config_schema` defines how users configure your template. It follows JSON Schema specification with additional MCP-specific properties.

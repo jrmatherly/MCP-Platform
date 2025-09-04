@@ -44,6 +44,7 @@ Use appropriate pytest markers to categorize tests:
 - `@pytest.mark.integration` - Integration tests (slower, external dependencies)
 - `@pytest.mark.docker` - Tests requiring Docker
 - `@pytest.mark.kubernetes` - Tests requiring Kubernetes
+- `@pytest.mark.gateway` - Tests requiring Gateway
 - `@pytest.mark.slow` - Long-running tests
 - `@pytest.mark.template` - Template-specific tests
 - `@pytest.mark.e2e` - End-to-end tests
@@ -207,18 +208,18 @@ python tests/runner.py --all
 ```python
 def create_mcp_server(template_name: str, config: Dict[str, Any]) -> MCPServer:
     """Create and configure an MCP server from a template.
-    
+
     Args:
         template_name: Name of the template to use
         config: Configuration dictionary for the server
-        
+
     Returns:
         Configured MCPServer instance
-        
+
     Raises:
         TemplateNotFoundError: If template doesn't exist
         ConfigurationError: If config is invalid
-        
+
     Example:
         >>> server = create_mcp_server("file-server", {"base_path": "/data"})
         >>> server.start()

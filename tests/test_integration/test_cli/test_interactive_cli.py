@@ -152,7 +152,7 @@ class TestCommandWorkflows:
         mock_get_session.return_value = mock_session
 
         with (
-            patch("mcp_platform.cli.interactive_cli.console"),
+            patch("mcp_platform.cli.interactive_cli.console") as mock_console,
             patch("mcp_platform.cli.interactive_cli.show_config") as mock_show_config,
         ):
             # Configure template
@@ -978,7 +978,7 @@ class TestStopCommandEnhanced:
         """Test stop command with all parameters specified."""
         from mcp_platform.cli.interactive_cli import stop_server
 
-        with patch("mcp_platform.cli.interactive_cli.console"):
+        with patch("mcp_platform.cli.interactive_cli.console") as mock_console:
             stop_server(
                 target="test-deployment",
                 backend="kubernetes",
@@ -1005,7 +1005,7 @@ class TestStopCommandEnhanced:
         """Test that all parameters are correctly passed to CLI function."""
         from mcp_platform.cli.interactive_cli import stop_server
 
-        with patch("mcp_platform.cli.interactive_cli.console"):
+        with patch("mcp_platform.cli.interactive_cli.console") as mock_console:
             # Test with complex parameter combination
             stop_server(
                 target="complex-test",
@@ -1039,7 +1039,7 @@ class TestStopCommandEnhanced:
         mock_session.get_selected_template.return_value = None
         mock_get_session.return_value = mock_session
 
-        with patch("mcp_platform.cli.interactive_cli.console"):
+        with patch("mcp_platform.cli.interactive_cli.console") as mock_console:
             stop_server()
 
             # Should not call CLI stop
@@ -1055,7 +1055,7 @@ class TestStopCommandEnhanced:
         """Test that default parameter values are preserved in delegation."""
         from mcp_platform.cli.interactive_cli import stop_server
 
-        with patch("mcp_platform.cli.interactive_cli.console"):
+        with patch("mcp_platform.cli.interactive_cli.console") as mock_console:
             # Call with minimal parameters
             stop_server(target="minimal-test")
 

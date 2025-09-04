@@ -35,7 +35,6 @@ try:
     import trino
     from sqlalchemy import create_engine, text
     from sqlalchemy.engine import Engine
-    from sqlalchemy.exc import SQLAlchemyError
 except ImportError:
     # Check if we're in test mode
     if "pytest" in sys.modules or any("test" in module for module in sys.modules):
@@ -72,7 +71,6 @@ except ImportError:
             """Mock text function."""
             return query
 
-        SQLAlchemyError = Exception
         Engine = type
     else:
         logger.error(

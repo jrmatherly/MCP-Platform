@@ -178,23 +178,23 @@
       }
     },
     "required": ["trino_host", "trino_user"],
-    "anyOf": [
-      {
-        "title": "Basic Authentication",
-        "description": "Use basic authentication with username and optional password",
-        "properties": {
-          "oauth_enabled": {"const": false}
-        }
-      },
-      {
-        "title": "OAuth Authentication",
-        "description": "Use OAuth 2.1 authentication with specified provider",
-        "properties": {
-          "oauth_enabled": {"const": true}
-        },
-        "required": ["oauth_provider"]
+    "if": {
+      "properties": {
+        "oauth_enabled": {"const": false}
       }
-    ]
+    },
+    "then": {
+      "required": ["trino_password"],
+      "errorMessage": {
+        "required": "When OAuth is disabled, 'trino_password' is required for basic auth."
+      }
+    },
+    "else": {
+      "required": ["oauth_provider"],
+      "errorMessage": {
+        "required": "When OAuth is enabled, 'oauth_provider' must be set."
+      }
+    }
   },
   "capabilities": [
     {

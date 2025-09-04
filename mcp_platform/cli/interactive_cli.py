@@ -39,7 +39,7 @@ from typer.main import get_command as typer_get_command
 
 from mcp_platform.client import MCPClient
 from mcp_platform.core.cache import CacheManager
-from mcp_platform.core.config_processor import ConditionalConfigValidator
+from mcp_platform.core.config_processor import ConfigProcessor
 from mcp_platform.core.response_formatter import ResponseFormatter
 
 console = Console()
@@ -638,9 +638,8 @@ def show_config(
         table.add_column("Options", style="magenta", width=30)
 
         # Enhanced status determination with conditional requirements
-        # Use centralized validator
-        validator = ConditionalConfigValidator()
-        validation_result = validator.validate_config_schema(
+        # Use centralized validator (static schema-level helpers)
+        validation_result = ConfigProcessor.validate_config_schema(
             config_schema, current_config
         )
         conditional_issues = validation_result.get("conditional_issues", [])
@@ -652,8 +651,7 @@ def show_config(
             has_value = prop_name in current_config
 
             # Check if this property is conditionally required
-            validator = ConditionalConfigValidator()
-            is_conditionally_required = validator.is_conditionally_required(
+            is_conditionally_required = ConfigProcessor.is_conditionally_required(
                 prop_name, config_schema, current_config
             )
 
@@ -1172,14 +1170,14 @@ def _check_missing_config(
         if env_mapping in env_vars and prop_name not in effective_config:
             effective_config[prop_name] = env_vars[env_mapping]
 
-    # Check for validation errors using enhanced validation
-    # Use centralized validator
-    validator = ConditionalConfigValidator()
-    validation_result = validator.validate_config_schema(
-        config_schema, effective_config
+    # Check for validation errors using centralized ConfigProcessor
+    cp = ConfigProcessor()
+    validation_result = cp.check_missing_config(
+        template_info, effective_config, env_vars
     )
 
-    return validation_result.get("missing_required", [])
+    # Maintain backward-compatible return shape (list of missing props)
+    return validation_result.missing_required
 
 
 def _prompt_for_config(
@@ -1496,6 +1494,11 @@ Type [bold]help[/bold] for available commands or [bold]help COMMAND[/bold] for s
 
                             # Get the click.Command for this Typer app and let Click parse/validate
                             click_cmd = typer_get_command(app)
+
+                            # If the command isn't registered, show a friendly unknown-command message
+                            if cmd not in getattr(click_cmd, "commands", {}):
+                                console.print(f"[red]❌ Unknown command: {cmd}[/red]")
+                                continue
 
                             # Create a Click context which parses and validates argv
                             ctx = click_cmd.make_context(
