@@ -351,7 +351,7 @@ def call_tool(
         Optional[str], typer.Argument(help="JSON arguments for the tool")
     ] = "{}",
     config_file: Annotated[
-        Optional[Path], typer.Option("--config-file", "-c", help="Path to config file")
+        Optional[Path], typer.Option("--config-file", "-f", help="Path to config file")
     ] = None,
     env: Annotated[
         Optional[List[str]],
@@ -359,7 +359,7 @@ def call_tool(
     ] = None,
     config: Annotated[
         Optional[List[str]],
-        typer.Option("--config", "-C", help="Config overrides (KEY=VALUE)"),
+        typer.Option("--config", "-C", "-c", help="Config overrides (KEY=VALUE)"),
     ] = None,
     backend: Annotated[
         Optional[str],
@@ -1652,7 +1652,7 @@ Type [bold]help[/bold] for available commands or [bold]help COMMAND[/bold] for s
                         while i < len(cmd_args):
                             arg = cmd_args[i]
 
-                            if arg in ["-C", "--config"]:
+                            if arg in ["-C", "-c", "--config"]:
                                 # Next argument should be key=value
                                 if i + 1 < len(cmd_args):
                                     config_overrides.append(cmd_args[i + 1])

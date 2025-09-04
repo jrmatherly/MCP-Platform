@@ -521,10 +521,10 @@ class ConfigProcessor:
 
             # Load based on extension
             if config_path.suffix.lower() in [".yaml", ".yml"]:
-                with open(config_path, "r") as f:
+                with open(config_path, "r", encoding="utf-8") as f:
                     file_config = yaml.safe_load(f)
             else:
-                with open(config_path, "r") as f:
+                with open(config_path, "r", encoding="utf-8") as f:
                     file_config = json.load(f)
 
         except Exception as e:
