@@ -95,7 +95,10 @@ class BigQueryMCPServer:
 
         # Initialize BigQuery client
         self.client = None
-        self._initialize_bigquery_client()
+        try:
+            self._initialize_bigquery_client()
+        except:
+            logger.debug("Failed bigquery initialization")
 
         # Validate read-only mode warning
         if not self.config_data.get("read_only", True):

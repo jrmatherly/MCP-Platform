@@ -20,17 +20,33 @@ from fastapi.security import OAuth2PasswordRequestForm
 from mcp_platform.core.mcp_connection import MCPConnection
 from mcp_platform.core.multi_backend_manager import MultiBackendManager
 
-from .auth import (AuthManager, get_current_user_or_api_key, initialize_auth,
-                   require_gateway_read, require_gateway_write,
-                   require_tools_call)
+from .auth import (
+    AuthManager,
+    get_current_user_or_api_key,
+    initialize_auth,
+    require_gateway_read,
+    require_gateway_write,
+    require_tools_call,
+)
 from .database import DatabaseManager, close_database, initialize_database
 from .health_checker import HealthChecker
 from .load_balancer import LoadBalancer
-from .models import (APIKey, APIKeyCreate, APIKeyResponse, GatewayConfig,
-                     GatewayStatsResponse, HealthCheckResponse,
-                     LoadBalancingStrategy, ServerInstance,
-                     ServerInstanceCreate, TokenResponse, ToolCallRequest,
-                     ToolCallResponse, User, UserCreate)
+from .models import (
+    APIKey,
+    APIKeyCreate,
+    APIKeyResponse,
+    GatewayConfig,
+    GatewayStatsResponse,
+    HealthCheckResponse,
+    LoadBalancingStrategy,
+    ServerInstance,
+    ServerInstanceCreate,
+    TokenResponse,
+    ToolCallRequest,
+    ToolCallResponse,
+    User,
+    UserCreate,
+)
 from .registry import ServerRegistry
 
 logger = logging.getLogger(__name__)

@@ -7,12 +7,13 @@ authentication setup using the new Python FastMCP implementation.
 
 import json
 import os
-import pytest
-import tempfile
-from unittest.mock import patch, MagicMock
 
 # Import the configuration module
 import sys
+from unittest.mock import patch
+
+import pytest
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 try:
@@ -20,6 +21,7 @@ try:
 except ImportError:
     # Handle import in different environments
     import importlib.util
+
     config_path = os.path.join(os.path.dirname(__file__), "..", "config.py")
     spec = importlib.util.spec_from_file_location("config", config_path)
     config_module = importlib.util.module_from_spec(spec)
@@ -115,7 +117,12 @@ class TestTrinoTemplateConfiguration:
         assert "jwt_secret" in properties
         assert properties["jwt_secret"]["env_mapping"] == "TRINO_JWT_SECRET"
 
-        oidc_fields = ["oidc_issuer", "oidc_audience", "oidc_client_id", "oidc_client_secret"]
+        oidc_fields = [
+            "oidc_issuer",
+            "oidc_audience",
+            "oidc_client_id",
+            "oidc_client_secret",
+        ]
         for field in oidc_fields:
             assert field in properties
             expected_env = f"TRINO_{field.upper()}"
@@ -158,11 +165,10 @@ class TestTrinoTemplateConfiguration:
     def test_config_object_initialization(self):
         """Test TrinoServerConfig object initialization."""
         # Test with minimal config
-        config = TrinoServerConfig({
-            "trino_host": "localhost",
-            "trino_user": "admin"
-        }, skip_validation=True)
-        
+        config = TrinoServerConfig(
+            {"trino_host": "localhost", "trino_user": "admin"}, skip_validation=True
+        )
+
         assert config is not None
         template_config = config.get_template_config()
         assert template_config["trino_host"] == "localhost"
@@ -179,10 +185,7 @@ class TestTrinoTemplateConfiguration:
             TrinoServerConfig({"trino_host": "localhost"})
 
         # Valid minimal config should pass
-        config = TrinoServerConfig({
-            "trino_host": "localhost",
-            "trino_user": "admin"
-        })
+        config = TrinoServerConfig({"trino_host": "localhost", "trino_user": "admin"})
         assert config is not None
 
     def test_oauth_validation(self):
@@ -190,7 +193,7 @@ class TestTrinoTemplateConfiguration:
         base_config = {
             "trino_host": "localhost",
             "trino_user": "admin",
-            "oauth_enabled": True
+            "oauth_enabled": True,
         }
 
         # Missing oauth_provider should fail
@@ -199,85 +202,81 @@ class TestTrinoTemplateConfiguration:
 
         # Invalid oauth_provider should fail
         with pytest.raises(ValueError, match="oauth_provider must be one of"):
-            TrinoServerConfig({
-                **base_config,
-                "oauth_provider": "invalid"
-            })
+            TrinoServerConfig({**base_config, "oauth_provider": "invalid"})
 
         # HMAC provider without jwt_secret should fail
         with pytest.raises(ValueError, match="jwt_secret is required"):
-            TrinoServerConfig({
-                **base_config,
-                "oauth_provider": "hmac"
-            })
+            TrinoServerConfig({**base_config, "oauth_provider": "hmac"})
 
         # OIDC provider without required fields should fail
         with pytest.raises(ValueError, match="oidc_issuer is required"):
-            TrinoServerConfig({
-                **base_config,
-                "oauth_provider": "google"
-            })
+            TrinoServerConfig({**base_config, "oauth_provider": "google"})
 
         # Valid OAuth config should pass
-        config = TrinoServerConfig({
-            **base_config,
-            "oauth_provider": "google",
-            "oidc_issuer": "https://accounts.google.com",
-            "oidc_client_id": "client123"
-        })
+        config = TrinoServerConfig(
+            {
+                **base_config,
+                "oauth_provider": "google",
+                "oidc_issuer": "https://accounts.google.com",
+                "oidc_client_id": "client123",
+            }
+        )
         assert config is not None
 
-    @patch.dict(os.environ, {
-        "TRINO_HOST": "env-host",
-        "TRINO_USER": "env-user",
-        "TRINO_MAX_RESULTS": "2000"
-    })
+    @patch.dict(
+        os.environ,
+        {
+            "TRINO_HOST": "env-host",
+            "TRINO_USER": "env-user",
+            "TRINO_MAX_RESULTS": "2000",
+        },
+    )
     def test_environment_variable_precedence(self):
         """Test that config dict takes precedence over environment variables."""
-        config = TrinoServerConfig({
-            "trino_host": "config-host",
-            "trino_user": "config-user"
-        })
-        
+        config = TrinoServerConfig(
+            {"trino_host": "config-host", "trino_user": "config-user"}
+        )
+
         template_config = config.get_template_config()
-        
+
         # Config dict should take precedence
         assert template_config["trino_host"] == "config-host"
         assert template_config["trino_user"] == "config-user"
-        
+
         # Environment variable should be used when not in config dict
         assert template_config["trino_max_results"] == 2000
 
     def test_duration_parsing(self):
         """Test duration string parsing for timeouts."""
-        config = TrinoServerConfig({
-            "trino_host": "localhost",
-            "trino_user": "admin"
-        }, skip_validation=True)
-        
+        config = TrinoServerConfig(
+            {"trino_host": "localhost", "trino_user": "admin"}, skip_validation=True
+        )
+
         # Test various duration formats
         assert config._parse_duration("300") == 300
         assert config._parse_duration("300s") == 300
         assert config._parse_duration("5m") == 300
         assert config._parse_duration("1h") == 3600
-        
+
         # Test invalid format
         with pytest.raises(ValueError):
             config._parse_duration("invalid")
 
     def test_connection_config_generation(self):
         """Test connection configuration generation."""
-        config = TrinoServerConfig({
-            "trino_host": "localhost",
-            "trino_user": "admin",
-            "trino_port": 8080,
-            "trino_password": "secret",
-            "trino_catalog": "hive",
-            "trino_schema": "default"
-        })
-        
+        config = TrinoServerConfig(
+            {
+                "trino_host": "localhost",
+                "trino_user": "admin",
+                "trino_port": 8080,
+                "trino_password": "secret",
+                "trino_catalog": "hive",
+                "trino_schema": "default",
+            }
+        )
+
         conn_config = config.get_connection_config()
-        
+
         assert conn_config["host"] == "localhost"
         assert conn_config["port"] == 8080
         assert conn_config["user"] == "admin"
@@ -289,55 +288,58 @@ class TestTrinoTemplateConfiguration:
     def test_security_config(self):
         """Test security configuration."""
         # Default read-only mode
-        config = TrinoServerConfig({
-            "trino_host": "localhost",
-            "trino_user": "admin"
-        })
-        
+        config = TrinoServerConfig({"trino_host": "localhost", "trino_user": "admin"})
+
         security = config.get_security_config()
         assert security["read_only"] is True
         assert config.is_read_only() is True
-        
+
         # Write mode enabled
-        config_write = TrinoServerConfig({
-            "trino_host": "localhost",
-            "trino_user": "admin",
-            "trino_allow_write_queries": True
-        })
-        
+        config_write = TrinoServerConfig(
+            {
+                "trino_host": "localhost",
+                "trino_user": "admin",
+                "trino_allow_write_queries": True,
+            }
+        )
+
         security_write = config_write.get_security_config()
         assert security_write["read_only"] is False
         assert config_write.is_read_only() is False
 
     def test_query_limits(self):
         """Test query limits configuration."""
-        config = TrinoServerConfig({
-            "trino_host": "localhost",
-            "trino_user": "admin",
-            "trino_query_timeout": "10m",
-            "trino_max_results": 5000
-        })
-        
+        config = TrinoServerConfig(
+            {
+                "trino_host": "localhost",
+                "trino_user": "admin",
+                "trino_query_timeout": "10m",
+                "trino_max_results": 5000,
+            }
+        )
+
         limits = config.get_query_limits()
         assert limits["timeout"] == 600  # 10 minutes in seconds
         assert limits["max_results"] == 5000
 
     def test_config_summary_logging(self):
         """Test configuration summary logging without sensitive data."""
-        config = TrinoServerConfig({
-            "trino_host": "localhost",
-            "trino_user": "admin",
-            "trino_password": "secret123",
-            "jwt_secret": "supersecret"
-        })
-        
+        config = TrinoServerConfig(
+            {
+                "trino_host": "localhost",
+                "trino_user": "admin",
+                "trino_password": "secret123",
+                "jwt_secret": "supersecret",
+            }
+        )
+
         # Should not raise exception and not log sensitive data
-        with patch.object(config.logger, 'info') as mock_log:
+        with patch.object(config.logger, "info") as mock_log:
             config.log_config_summary()
-            
+
             # Check that logging was called
             assert mock_log.called
-            
+
             # Check that sensitive data is not in log calls
             log_calls = [str(call) for call in mock_log.call_args_list]
             log_content = " ".join(log_calls)
@@ -346,11 +348,8 @@ class TestTrinoTemplateConfiguration:
 
     def test_convenience_function(self):
         """Test convenience function for creating config."""
-        config = create_trino_config({
-            "trino_host": "localhost",
-            "trino_user": "admin"
-        })
-        
+        config = create_trino_config({"trino_host": "localhost", "trino_user": "admin"})
+
         assert isinstance(config, TrinoServerConfig)
         assert config.get_template_config()["trino_host"] == "localhost"
 
@@ -368,7 +367,7 @@ class TestTrinoTemplateConfiguration:
         capability_names = [cap["name"] for cap in capabilities]
         expected_capabilities = [
             "Catalog Discovery",
-            "Schema Inspection", 
+            "Schema Inspection",
             "Query Execution",
             "Access Control",
             "Multi-Source Support",
@@ -384,7 +383,7 @@ class TestTrinoTemplateConfiguration:
         tool_names = [tool["name"] for tool in tools]
         expected_tools = [
             "list_catalogs",
-            "list_schemas", 
+            "list_schemas",
             "list_tables",
             "describe_table",
             "execute_query",
@@ -405,7 +404,11 @@ class TestTrinoTemplateConfiguration:
         assert query_param["type"] == "string"
 
         # Check that catalog and schema parameters are optional for execute_query
-        optional_params = [p["name"] for p in execute_query_tool["parameters"] if not p.get("required", False)]
+        optional_params = [
+            p["name"]
+            for p in execute_query_tool["parameters"]
+            if not p.get("required", False)
+        ]
         assert "catalog" in optional_params
         assert "schema" in optional_params
 
@@ -417,16 +420,16 @@ class TestTrinoTemplateConfiguration:
             template_config = json.load(f)
 
         examples = template_config["examples"]
-        
+
         # Check HTTP endpoint
         assert "http_endpoint" in examples
         assert "7091" in examples["http_endpoint"]
-        
+
         # Check client integration examples
         client_integration = examples["client_integration"]
         assert "fastmcp" in client_integration
         assert "curl" in client_integration
-        
+
         # Verify examples use correct port and endpoints
         assert "7091" in client_integration["curl"]
         assert "list_catalogs" in client_integration["fastmcp"]

@@ -10,8 +10,7 @@ query execution capabilities using FastMCP and SQLAlchemy.
 import logging
 import os
 import sys
-from typing import Any, Dict, List, Optional
-import re
+from typing import Any, Dict, Optional
 
 import sqlparse
 from fastmcp import FastMCP
@@ -35,36 +34,44 @@ except ImportError:
 try:
     import trino
     from sqlalchemy import create_engine, text
-    from sqlalchemy.exc import SQLAlchemyError
     from sqlalchemy.engine import Engine
+    from sqlalchemy.exc import SQLAlchemyError
 except ImportError:
     # Check if we're in test mode
     if "pytest" in sys.modules or any("test" in module for module in sys.modules):
         # In test mode, create mock objects
         import types
-        
+
         trino = types.ModuleType("trino")
         trino.auth = types.ModuleType("auth")
         trino.auth.BasicAuthentication = type("MockBasicAuth", (), {})
         trino.auth.OAuth2Authentication = type("MockOAuth2Auth", (), {})
         trino.auth.JWTAuthentication = type("MockJWTAuth", (), {})
-        
+
         def create_engine(*args, **kwargs):
             """Mock create_engine for testing."""
-            return type("MockEngine", (), {
-                "execute": lambda self, query: type("MockResult", (), {
-                    "fetchall": lambda: [],
-                    "fetchone": lambda: None,
-                    "rowcount": 0,
-                })(),
-                "connect": lambda: type("MockConnection", (), {})(),
-                "dispose": lambda: None,
-            })()
-        
+            return type(
+                "MockEngine",
+                (),
+                {
+                    "execute": lambda self, query: type(
+                        "MockResult",
+                        (),
+                        {
+                            "fetchall": lambda: [],
+                            "fetchone": lambda: None,
+                            "rowcount": 0,
+                        },
+                    )(),
+                    "connect": lambda: type("MockConnection", (), {})(),
+                    "dispose": lambda: None,
+                },
+            )()
+
         def text(query):
             """Mock text function."""
             return query
-            
+
         SQLAlchemyError = Exception
         Engine = type
     else:
@@ -103,7 +110,11 @@ class TrinoMCPServer:
 
         # Initialize SQLAlchemy engine
         self.engine: Optional[Engine] = None
-        self._initialize_trino_engine()
+        self.client = None
+        try:
+            self._initialize_trino_engine()
+        except:
+            logger.debug("Failed trino initialization")
 
         # Validate read-only mode warning
         if self.config_data.get("trino_allow_write_queries", False):
@@ -135,28 +146,28 @@ class TrinoMCPServer:
     def _initialize_trino_engine(self):
         """Initialize the SQLAlchemy engine with Trino connection."""
         connection_config = self.config.get_connection_config()
-        
+
         # Build connection URL
         scheme = "trino"
         host = connection_config["host"]
         port = connection_config["port"]
         user = connection_config["user"]
-        
+
         # Base URL
         connection_url = f"{scheme}://{user}@{host}:{port}"
-        
+
         # Add catalog and schema if specified
         if connection_config.get("catalog"):
             connection_url += f"/{connection_config['catalog']}"
             if connection_config.get("schema"):
                 connection_url += f"/{connection_config['schema']}"
-        
+
         # Connection arguments
         connect_args = {
             "http_scheme": connection_config.get("http_scheme", "https"),
             "verify": connection_config.get("verify", False),
         }
-        
+
         # Add authentication
         auth_config = connection_config.get("auth")
         if auth_config:
@@ -164,10 +175,9 @@ class TrinoMCPServer:
         elif connection_config.get("password"):
             # Basic authentication
             connect_args["auth"] = trino.auth.BasicAuthentication(
-                connection_config["user"], 
-                connection_config["password"]
+                connection_config["user"], connection_config["password"]
             )
-        
+
         try:
             self.engine = create_engine(
                 connection_url,
@@ -175,15 +185,15 @@ class TrinoMCPServer:
                 pool_pre_ping=True,
                 pool_recycle=3600,  # Recycle connections every hour
             )
-            
+
             # Test connection
             if not self._skip_validation:
                 with self.engine.connect() as conn:
                     result = conn.execute(text("SELECT 1"))
                     result.fetchone()
-                    
+
             self.logger.info("Trino engine initialized successfully")
-            
+
         except Exception as e:
             self.logger.error("Failed to initialize Trino engine: %s", e)
             if not self._skip_validation:
@@ -192,7 +202,7 @@ class TrinoMCPServer:
     def _create_auth(self, auth_config: Dict[str, Any]):
         """Create Trino authentication object based on configuration."""
         auth_type = auth_config.get("type")
-        
+
         if auth_type == "jwt":
             return trino.auth.JWTAuthentication(auth_config.get("secret"))
         elif auth_type == "oidc":
@@ -212,7 +222,7 @@ class TrinoMCPServer:
                 for stmt in parsed:
                     if stmt.get_type() in [
                         "INSERT",
-                        "UPDATE", 
+                        "UPDATE",
                         "DELETE",
                         "DROP",
                         "CREATE",
@@ -222,20 +232,27 @@ class TrinoMCPServer:
                         "REPLACE",
                     ]:
                         return True
-                    
+
                     # Check for statements that start with write keywords
                     first_token = None
                     for token in stmt.flatten():
                         if token.ttype is None and token.value.strip():
                             first_token = token.value.upper().strip()
                             break
-                    
+
                     if first_token in [
-                        "INSERT", "UPDATE", "DELETE", "DROP", "CREATE", 
-                        "ALTER", "TRUNCATE", "MERGE", "REPLACE"
+                        "INSERT",
+                        "UPDATE",
+                        "DELETE",
+                        "DROP",
+                        "CREATE",
+                        "ALTER",
+                        "TRUNCATE",
+                        "MERGE",
+                        "REPLACE",
                     ]:
                         return True
-                        
+
             except Exception as e:
                 self.logger.warning("Failed to parse SQL query for write check: %s", e)
                 # If parsing fails, err on the side of caution
@@ -260,14 +277,14 @@ class TrinoMCPServer:
             with self.engine.connect() as conn:
                 result = conn.execute(text("SHOW CATALOGS"))
                 catalogs = [row[0] for row in result.fetchall()]
-                
+
             return {
                 "success": True,
                 "catalogs": catalogs,
                 "total_count": len(catalogs),
                 "message": f"Found {len(catalogs)} accessible catalogs",
             }
-            
+
         except Exception as e:
             self.logger.error("Error listing catalogs: %s", e)
             return {"success": False, "error": str(e), "catalogs": []}
@@ -278,7 +295,7 @@ class TrinoMCPServer:
             with self.engine.connect() as conn:
                 result = conn.execute(text(f"SHOW SCHEMAS FROM {catalog}"))
                 schemas = [row[0] for row in result.fetchall()]
-                
+
             return {
                 "success": True,
                 "catalog": catalog,
@@ -286,7 +303,7 @@ class TrinoMCPServer:
                 "total_count": len(schemas),
                 "message": f"Found {len(schemas)} schemas in catalog '{catalog}'",
             }
-            
+
         except Exception as e:
             self.logger.error("Error listing schemas in catalog '%s': %s", catalog, e)
             return {"success": False, "error": str(e), "schemas": []}
@@ -297,7 +314,7 @@ class TrinoMCPServer:
             with self.engine.connect() as conn:
                 result = conn.execute(text(f"SHOW TABLES FROM {catalog}.{schema}"))
                 tables = [row[0] for row in result.fetchall()]
-                
+
             return {
                 "success": True,
                 "catalog": catalog,
@@ -306,7 +323,7 @@ class TrinoMCPServer:
                 "total_count": len(tables),
                 "message": f"Found {len(tables)} tables in schema '{catalog}.{schema}'",
             }
-            
+
         except Exception as e:
             self.logger.error(
                 "Error listing tables in schema '%s.%s': %s", catalog, schema, e
@@ -318,18 +335,18 @@ class TrinoMCPServer:
         try:
             with self.engine.connect() as conn:
                 # Get column information
-                result = conn.execute(
-                    text(f"DESCRIBE {catalog}.{schema}.{table}")
-                )
+                result = conn.execute(text(f"DESCRIBE {catalog}.{schema}.{table}"))
                 columns = []
                 for row in result.fetchall():
-                    columns.append({
-                        "name": row[0],
-                        "type": row[1],
-                        "extra": row[2] if len(row) > 2 else "",
-                        "comment": row[3] if len(row) > 3 else "",
-                    })
-                
+                    columns.append(
+                        {
+                            "name": row[0],
+                            "type": row[1],
+                            "extra": row[2] if len(row) > 2 else "",
+                            "comment": row[3] if len(row) > 3 else "",
+                        }
+                    )
+
                 # Try to get table statistics
                 stats = {}
                 try:
@@ -347,7 +364,7 @@ class TrinoMCPServer:
                 except Exception:
                     # Stats might not be available for all table types
                     pass
-                
+
             return {
                 "success": True,
                 "catalog": catalog,
@@ -358,7 +375,7 @@ class TrinoMCPServer:
                 "column_count": len(columns),
                 "statistics": stats,
             }
-            
+
         except Exception as e:
             self.logger.error(
                 "Error describing table '%s.%s.%s': %s", catalog, schema, table, e
@@ -366,10 +383,7 @@ class TrinoMCPServer:
             return {"success": False, "error": str(e)}
 
     def execute_query(
-        self, 
-        query: str, 
-        catalog: Optional[str] = None, 
-        schema: Optional[str] = None
+        self, query: str, catalog: Optional[str] = None, schema: Optional[str] = None
     ) -> Dict[str, Any]:
         """Execute a SQL query against Trino."""
         # Check for write operations in read-only mode
@@ -383,24 +397,24 @@ class TrinoMCPServer:
         try:
             # Get query limits
             limits = self.config.get_query_limits()
-            timeout = limits.get("timeout", 300)
+            # timeout = limits.get("timeout", 300)
             max_results = limits.get("max_results", 1000)
-            
+
             # Set session properties if catalog/schema provided
             session_properties = {}
             if catalog:
                 session_properties["catalog"] = catalog
             if schema:
                 session_properties["schema"] = schema
-            
+
             with self.engine.connect() as conn:
                 # Set session properties if needed
                 for prop, value in session_properties.items():
                     conn.execute(text(f"SET SESSION {prop} = '{value}'"))
-                
+
                 # Execute the query with timeout
                 result = conn.execute(text(query))
-                
+
                 # Fetch results
                 rows = []
                 row_count = 0
@@ -409,14 +423,14 @@ class TrinoMCPServer:
                         break
                     rows.append(dict(row._mapping))
                     row_count += 1
-                
+
                 # Check if more rows are available
                 try:
                     next_row = next(iter(result), None)
                     truncated = next_row is not None
                 except:
                     truncated = False
-                
+
             return {
                 "success": True,
                 "query": query,
@@ -427,7 +441,7 @@ class TrinoMCPServer:
                 "catalog": catalog,
                 "schema": schema,
             }
-            
+
         except Exception as e:
             self.logger.error("Error executing query: %s", e)
             return {"success": False, "error": str(e), "query": query}
@@ -437,17 +451,21 @@ class TrinoMCPServer:
         try:
             with self.engine.connect() as conn:
                 result = conn.execute(
-                    text(f"SELECT * FROM system.runtime.queries WHERE query_id = '{query_id}'")
+                    text(
+                        f"SELECT * FROM system.runtime.queries WHERE query_id = '{query_id}'"
+                    )
                 )
                 query_info = result.fetchone()
-                
+
                 if query_info:
                     return {
                         "success": True,
                         "query_id": query_id,
                         "state": query_info[2],  # Assuming state is at index 2
-                        "query": query_info[1],   # Assuming query text is at index 1
-                        "created": query_info[3], # Assuming creation time is at index 3
+                        "query": query_info[1],  # Assuming query text is at index 1
+                        "created": query_info[
+                            3
+                        ],  # Assuming creation time is at index 3
                     }
                 else:
                     return {
@@ -455,7 +473,7 @@ class TrinoMCPServer:
                         "error": f"Query '{query_id}' not found",
                         "query_id": query_id,
                     }
-                    
+
         except Exception as e:
             self.logger.error("Error getting query status for '%s': %s", query_id, e)
             return {"success": False, "error": str(e), "query_id": query_id}
@@ -465,13 +483,13 @@ class TrinoMCPServer:
         try:
             with self.engine.connect() as conn:
                 conn.execute(text(f"KILL '{query_id}'"))
-                
+
             return {
                 "success": True,
                 "query_id": query_id,
                 "message": f"Query '{query_id}' cancelled successfully",
             }
-            
+
         except Exception as e:
             self.logger.error("Error cancelling query '%s': %s", query_id, e)
             return {"success": False, "error": str(e), "query_id": query_id}
@@ -482,7 +500,7 @@ class TrinoMCPServer:
             with self.engine.connect() as conn:
                 # Get cluster information
                 cluster_info = {}
-                
+
                 # Get node information
                 try:
                     result = conn.execute(text("SELECT * FROM system.runtime.nodes"))
@@ -492,7 +510,7 @@ class TrinoMCPServer:
                 except Exception:
                     cluster_info["nodes"] = []
                     cluster_info["node_count"] = 0
-                
+
                 # Get version information
                 try:
                     result = conn.execute(text("SELECT version()"))
@@ -500,7 +518,7 @@ class TrinoMCPServer:
                     cluster_info["version"] = version
                 except Exception:
                     cluster_info["version"] = "unknown"
-                
+
                 # Get current session info
                 try:
                     result = conn.execute(text("SHOW SESSION"))
@@ -510,12 +528,12 @@ class TrinoMCPServer:
                     cluster_info["session_properties"] = session_props
                 except Exception:
                     cluster_info["session_properties"] = {}
-                
+
             return {
                 "success": True,
                 "cluster_info": cluster_info,
             }
-            
+
         except Exception as e:
             self.logger.error("Error getting cluster info: %s", e)
             return {"success": False, "error": str(e)}

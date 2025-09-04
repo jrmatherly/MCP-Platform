@@ -118,13 +118,13 @@ class TrinoServerConfig(ServerConfig):
         """
         properties_dict = {}
         properties = self.template_data.get("config_schema", {}).get("properties", {})
-        
+
         for key, value in properties.items():
             # Load default values from environment or template
             env_var = value.get("env_mapping", key.upper())
             default_value = value.get("default", None)
             data_type = value.get("type", "string")
-            
+
             if data_type == "integer":
                 cast_to = int
             elif data_type == "number":
@@ -133,7 +133,7 @@ class TrinoServerConfig(ServerConfig):
                 cast_to = bool
             else:
                 cast_to = str
-                
+
             properties_dict[key] = self._get_config(
                 key, env_var, default_value, cast_to
             )
@@ -179,19 +179,15 @@ class TrinoServerConfig(ServerConfig):
                 raise ValueError(
                     "oauth_provider is required when oauth_enabled is true"
                 )
-            
+
             valid_providers = ["hmac", "okta", "google", "azure"]
             if oauth_provider not in valid_providers:
-                raise ValueError(
-                    f"oauth_provider must be one of: {valid_providers}"
-                )
+                raise ValueError(f"oauth_provider must be one of: {valid_providers}")
 
             # Provider-specific validation
             if oauth_provider == "hmac" and not config.get("jwt_secret"):
-                raise ValueError(
-                    "jwt_secret is required when oauth_provider is 'hmac'"
-                )
-            
+                raise ValueError("jwt_secret is required when oauth_provider is 'hmac'")
+
             if oauth_provider in ["okta", "google", "azure"]:
                 required_oidc_fields = ["oidc_issuer", "oidc_client_id"]
                 for field in required_oidc_fields:
@@ -235,31 +231,31 @@ class TrinoServerConfig(ServerConfig):
     def _parse_duration(self, duration_str: str) -> int:
         """
         Parse duration string to seconds.
-        
+
         Supports formats like: 300, 300s, 5m, 1h
         """
         if isinstance(duration_str, int):
             return duration_str
-            
+
         duration_str = duration_str.strip().lower()
-        
+
         # If it's just a number, assume seconds
         if duration_str.isdigit():
             return int(duration_str)
-        
+
         # Parse units
-        match = re.match(r'^(\d+)([smh])$', duration_str)
+        match = re.match(r"^(\d+)([smh])$", duration_str)
         if not match:
             raise ValueError(f"Invalid duration format: {duration_str}")
-        
+
         value, unit = match.groups()
         value = int(value)
-        
-        if unit == 's':
+
+        if unit == "s":
             return value
-        elif unit == 'm':
+        elif unit == "m":
             return value * 60
-        elif unit == 'h':
+        elif unit == "h":
             return value * 3600
         else:
             raise ValueError(f"Invalid duration unit: {unit}")
@@ -291,7 +287,7 @@ class TrinoServerConfig(ServerConfig):
     def get_connection_config(self) -> Dict[str, Any]:
         """Get Trino connection configuration."""
         config = self.get_template_config()
-        
+
         connection_config = {
             "host": config.get("trino_host"),
             "port": config.get("trino_port", 8080),
@@ -301,21 +297,21 @@ class TrinoServerConfig(ServerConfig):
             "http_scheme": config.get("trino_scheme", "https"),
             "verify": not config.get("trino_ssl_insecure", True),
         }
-        
+
         # Add password if provided
         if config.get("trino_password"):
             connection_config["password"] = config.get("trino_password")
-            
+
         # Add OAuth configuration if enabled
         if config.get("oauth_enabled", False):
             connection_config["auth"] = self._get_oauth_auth_config(config)
-            
+
         return connection_config
 
     def _get_oauth_auth_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Get OAuth authentication configuration."""
         oauth_provider = config.get("oauth_provider")
-        
+
         if oauth_provider == "hmac":
             return {
                 "type": "jwt",
@@ -336,10 +332,10 @@ class TrinoServerConfig(ServerConfig):
     def get_query_limits(self) -> Dict[str, int]:
         """Get query execution limits."""
         config = self.get_template_config()
-        
+
         timeout_str = config.get("trino_query_timeout", "300")
         timeout_seconds = self._parse_duration(timeout_str)
-        
+
         return {
             "timeout": timeout_seconds,
             "max_results": config.get("trino_max_results", 1000),
