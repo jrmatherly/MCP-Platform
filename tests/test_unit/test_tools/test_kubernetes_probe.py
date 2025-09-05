@@ -95,9 +95,11 @@ class TestKubernetesProbeConfiguration:
 
     def test_inherits_base_constants(self):
         """Test that Kubernetes probe inherits base probe constants."""
-        from mcp_platform.tools.kubernetes_probe import (DISCOVERY_RETRIES,
-                                                         DISCOVERY_RETRY_SLEEP,
-                                                         DISCOVERY_TIMEOUT)
+        from mcp_platform.tools.kubernetes_probe import (
+            DISCOVERY_RETRIES,
+            DISCOVERY_RETRY_SLEEP,
+            DISCOVERY_TIMEOUT,
+        )
 
         assert DISCOVERY_RETRIES == 3
         assert DISCOVERY_RETRY_SLEEP == 5

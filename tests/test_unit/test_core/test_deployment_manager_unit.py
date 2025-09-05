@@ -10,9 +10,11 @@ from unittest.mock import Mock, patch
 import pytest
 
 from mcp_platform.core.config_processor import ValidationResult
-from mcp_platform.core.deployment_manager import (DeploymentManager,
-                                                  DeploymentOptions,
-                                                  DeploymentResult)
+from mcp_platform.core.deployment_manager import (
+    DeploymentManager,
+    DeploymentOptions,
+    DeploymentResult,
+)
 
 pytestmark = pytest.mark.unit
 

@@ -12,8 +12,12 @@ from unittest.mock import Mock
 import pytest
 
 from mcp_platform.gateway.auth import AuthenticationError, AuthManager
-from mcp_platform.gateway.models import (AuthConfig, ServerInstance,
-                                         ServerStatus, TransportType)
+from mcp_platform.gateway.models import (
+    AuthConfig,
+    ServerInstance,
+    ServerStatus,
+    TransportType,
+)
 from mcp_platform.gateway.registry import ServerRegistry
 
 pytestmark = pytest.mark.integration

@@ -9,14 +9,25 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from mcp_platform.gateway.database import (APIKeyCRUD, DatabaseManager,
-                                           ServerInstanceCRUD,
-                                           ServerTemplateCRUD, UserCRUD)
-from mcp_platform.gateway.models import (APIKey, APIKeyCreate, DatabaseConfig,
-                                         GatewayConfig, ServerInstance,
-                                         ServerInstanceCreate, ServerTemplate,
-                                         ServerTemplateCreate, User,
-                                         UserCreate)
+from mcp_platform.gateway.database import (
+    APIKeyCRUD,
+    DatabaseManager,
+    ServerInstanceCRUD,
+    ServerTemplateCRUD,
+    UserCRUD,
+)
+from mcp_platform.gateway.models import (
+    APIKey,
+    APIKeyCreate,
+    DatabaseConfig,
+    GatewayConfig,
+    ServerInstance,
+    ServerInstanceCreate,
+    ServerTemplate,
+    ServerTemplateCreate,
+    User,
+    UserCreate,
+)
 
 pytestmark = pytest.mark.unit
 
