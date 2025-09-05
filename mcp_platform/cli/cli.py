@@ -27,7 +27,7 @@ from rich.table import Table
 from mcp_platform.backends import available_valid_backends
 from mcp_platform.cli.interactive_cli import run_interactive_shell
 from mcp_platform.client import MCPClient
-from mcp_platform.core.config_processor import ConditionalConfigValidator
+from mcp_platform.core.config_processor import ConfigProcessor
 from mcp_platform.core.multi_backend_manager import MultiBackendManager
 from mcp_platform.core.response_formatter import (
     ResponseFormatter,
@@ -401,32 +401,30 @@ def deploy(
         # Validate configuration if we have a config schema
         config_schema = template_info.get("config_schema", {})
         if config_schema:
-            # Combine all configuration for validation
-            effective_config = {}
-            effective_config.update(config_values)
-            effective_config.update(env_vars)
-            effective_config.update(override_values)
-
-            # Run conditional validation
-            validator = ConditionalConfigValidator()
-            validation_result = validator.validate_config_schema(
-                config_schema, effective_config
+            # Run full validation (includes conditional checks)
+            cp = ConfigProcessor()
+            validation_result = cp.validate_config(
+                template_info,
+                env_vars=env_vars or {},
+                config_file=str(config_file_path) if config_file_path else None,
+                config_values=config_values,
+                session_config={},
+                override_values=override_values,
             )
-
-            if not validation_result["valid"]:
+            if not validation_result.valid:
                 console.print("[red]❌ Configuration validation failed:[/red]")
 
                 # Show missing required fields
-                if validation_result.get("missing_required"):
+                if validation_result.missing_required:
                     console.print(
-                        f"[red]Missing required fields: {', '.join(validation_result['missing_required'])}[/red]"
+                        f"[red]Missing required fields: {', '.join(validation_result.missing_required)}[/red]"
                     )
 
                 # Show conditional issues
-                if validation_result.get("conditional_issues"):
+                if validation_result.conditional_issues:
                     console.print("[red]Conditional requirements not met:[/red]")
-                    for issue in validation_result["conditional_issues"]:
-                        if "error" in issue:
+                    for issue in validation_result.conditional_issues:
+                        if isinstance(issue, dict) and "error" in issue:
                             console.print(f"  • {issue['error']}")
                         else:
                             console.print(
@@ -437,9 +435,9 @@ def deploy(
                                     console.print(f"    - {error}")
 
                 # Show suggestions
-                if validation_result.get("suggestions"):
+                if validation_result.suggestions:
                     console.print("\n[yellow]💡 Suggestions:[/yellow]")
-                    for suggestion in validation_result["suggestions"]:
+                    for suggestion in validation_result.suggestions:
                         console.print(f"  • {suggestion}")
 
                 raise typer.Exit(1)
@@ -661,7 +659,7 @@ def list(
             output_format=output_format,
         )
         console.print(
-            "💡 [dim]Use `mcp list-deployments` for addtitional format options[/dim]"
+            "💡 [dim]Use `mcpp list-deployments` for additional format options[/dim]"
         )
         return
 

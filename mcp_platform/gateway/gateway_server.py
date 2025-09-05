@@ -96,7 +96,7 @@ async def lifespan(app: FastAPI):
                 is_superuser=True,
             )
     except Exception as e:
-        logger.warning(f"Could not create admin user: {e}")
+        logger.warning("Could not create admin user: %s", e)
 
     logger.info("MCP Gateway server started successfully")
 
@@ -172,8 +172,14 @@ class MCPGatewayServer:
 
     def _setup_routes(self):
         """Setup FastAPI routes with authentication and validation."""
+        self._setup_auth_routes()
+        self._setup_gateway_management_routes()
+        self._setup_template_routes()
+        self._setup_mcp_server_routes()
 
-        # Authentication routes
+    def _setup_auth_routes(self):
+        """Setup authentication-related routes."""
+
         @self.app.post("/auth/login", response_model=TokenResponse)
         async def login(form_data: OAuth2PasswordRequestForm = Depends()):
             """Authenticate user and return JWT token."""
@@ -231,7 +237,9 @@ class MCPGatewayServer:
             response = APIKeyResponse(**api_key_record.dict(), key=api_key)
             return response
 
-        # Gateway management routes
+    def _setup_gateway_management_routes(self):
+        """Setup gateway management routes."""
+
         @self.app.get("/gateway/health")
         async def gateway_health():
             """Check gateway health status."""
@@ -302,7 +310,9 @@ class MCPGatewayServer:
             # This would integrate with the deployment discovery system
             return {"message": "Registry sync initiated"}
 
-        # Template routes
+    def _setup_template_routes(self):
+        """Setup template-related routes."""
+
         @self.app.get("/gateway/templates")
         async def list_templates():
             """List available templates."""
@@ -334,7 +344,9 @@ class MCPGatewayServer:
                 raise HTTPException(status_code=404, detail="Instance not found")
             return {"message": "Instance deregistered successfully"}
 
-        # MCP server routes (with authentication)
+    def _setup_mcp_server_routes(self):
+        """Setup MCP server routes (with authentication)."""
+
         @self.app.get("/mcp/{template_name}/tools/list")
         async def list_tools(
             template_name: str,
@@ -439,7 +451,7 @@ class MCPGatewayServer:
         # Stdio fallback if no instances
         if not instances:
             logger.info(
-                f"No healthy instances for {template_name}, trying stdio fallback"
+                "No healthy instances for %s, trying stdio fallback", template_name
             )
             return await self._try_stdio_fallback(template_name, method, params)
 
@@ -463,7 +475,7 @@ class MCPGatewayServer:
             return result
 
         except Exception as e:
-            logger.error(f"Request failed for instance {instance.id}: {e}")
+            logger.error("Request failed for instance %s: %s", instance.id, e)
 
             # Record failure
             load_balancer.record_request_completion(instance, False)
@@ -483,7 +495,7 @@ class MCPGatewayServer:
         try:
             success = await connection.connect_http_smart(instance.endpoint)
             if not success:
-                raise Exception(f"Failed to connect to {instance.endpoint}")
+                raise ConnectionError(f"Failed to connect to {instance.endpoint}")
 
             if method == "tools/list":
                 result = await connection.list_tools()
@@ -533,7 +545,7 @@ class MCPGatewayServer:
                 env_vars=instance.env_vars or {},
             )
             if not success:
-                raise Exception("Failed to connect to stdio server")
+                raise ConnectionError("Failed to connect to stdio server")
 
             # Same logic as HTTP but through stdio
             if method == "tools/call":
@@ -586,11 +598,11 @@ class MCPGatewayServer:
             return result
 
         except Exception as e:
-            logger.error(f"Stdio fallback failed for {template_name}: {e}")
+            logger.error("Stdio fallback failed for %s: %s", template_name, e)
             raise HTTPException(
                 status_code=503,
-                detail=f"Service unavailable: {str(e)}",
-            )
+                detail=f"Service unavailable: {e}",
+            ) from e
 
     def run(self, **kwargs):
         """Run the gateway server."""
@@ -607,7 +619,7 @@ class MCPGatewayServer:
         run_config.update(kwargs)
 
         logger.info(
-            f"Starting MCP Gateway on {run_config['host']}:{run_config['port']}"
+            "Starting MCP Gateway on %s: %s", run_config["host"], run_config["port"]
         )
         uvicorn.run(self.app, **run_config)
 

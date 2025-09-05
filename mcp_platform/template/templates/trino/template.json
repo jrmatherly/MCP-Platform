@@ -1,0 +1,429 @@
+{
+  "id": "trino",
+  "name": "Trino MCP Server",
+  "description": "Production-ready Trino MCP server for secure querying of distributed data sources with configurable access controls, authentication, and read-only mode using FastMCP and SQLAlchemy",
+  "version": "1.0.0",
+  "author": "Data Everything",
+  "category": "Database",
+  "tags": [
+    "trino",
+    "sql",
+    "distributed",
+    "database",
+    "analytics",
+    "presto",
+    "fastmcp",
+    "sqlalchemy"
+  ],
+  "docker_image": "dataeverything/mcp-trino",
+  "docker_tag": "latest",
+  "ports": {
+    "7090": 7090
+  },
+  "command": [],
+  "transport": {
+    "default": "http",
+    "supported": ["http", "stdio"],
+    "port": 7090
+  },
+  "config_schema": {
+    "type": "object",
+    "properties": {
+      "trino_host": {
+        "type": "string",
+        "title": "Trino Host",
+        "description": "Trino server hostname or IP address",
+        "env_mapping": "TRINO_HOST"
+      },
+      "trino_port": {
+        "type": "integer",
+        "title": "Trino Port",
+        "description": "Trino server port number",
+        "default": 8080,
+        "minimum": 1,
+        "maximum": 65535,
+        "env_mapping": "TRINO_PORT"
+      },
+      "trino_user": {
+        "type": "string",
+        "title": "Trino User",
+        "description": "Username for Trino authentication",
+        "env_mapping": "TRINO_USER"
+      },
+      "trino_password": {
+        "type": "string",
+        "title": "Trino Password",
+        "description": "Password for Trino authentication (optional for basic auth)",
+        "env_mapping": "TRINO_PASSWORD"
+      },
+      "trino_catalog": {
+        "type": "string",
+        "title": "Default Catalog",
+        "description": "Default catalog to use for queries",
+        "env_mapping": "TRINO_CATALOG"
+      },
+      "trino_schema": {
+        "type": "string",
+        "title": "Default Schema",
+        "description": "Default schema to use for queries",
+        "env_mapping": "TRINO_SCHEMA"
+      },
+      "trino_scheme": {
+        "type": "string",
+        "title": "Connection Scheme",
+        "description": "Connection scheme (http or https)",
+        "enum": ["http", "https"],
+        "default": "https",
+        "env_mapping": "TRINO_SCHEME"
+      },
+      "trino_ssl": {
+        "type": "boolean",
+        "title": "Enable SSL",
+        "description": "Enable SSL/TLS connection",
+        "default": true,
+        "env_mapping": "TRINO_SSL"
+      },
+      "trino_ssl_insecure": {
+        "type": "boolean",
+        "title": "Allow Insecure SSL",
+        "description": "Allow insecure SSL connections (skip certificate verification)",
+        "default": true,
+        "env_mapping": "TRINO_SSL_INSECURE"
+      },
+      "trino_allow_write_queries": {
+        "type": "boolean",
+        "title": "Allow Write Queries",
+        "description": "Allow write operations (INSERT, UPDATE, DELETE, CREATE, DROP) - WARNING: This is potentially unsafe and should be used with caution",
+        "default": false,
+        "env_mapping": "TRINO_ALLOW_WRITE_QUERIES"
+      },
+      "trino_query_timeout": {
+        "type": "string",
+        "title": "Query Timeout",
+        "description": "Query execution timeout in seconds or duration format (e.g., '300', '5m')",
+        "default": "300",
+        "env_mapping": "TRINO_QUERY_TIMEOUT"
+      },
+      "trino_max_results": {
+        "type": "integer",
+        "title": "Maximum Query Results",
+        "description": "Maximum number of rows to return from queries",
+        "default": 1000,
+        "minimum": 1,
+        "maximum": 10000,
+        "env_mapping": "TRINO_MAX_RESULTS"
+      },
+      "oauth_enabled": {
+        "type": "boolean",
+        "title": "Enable OAuth",
+        "description": "Enable OAuth 2.1 authentication",
+        "default": false,
+        "env_mapping": "TRINO_OAUTH_ENABLED"
+      },
+      "oauth_provider": {
+        "type": "string",
+        "title": "OAuth Provider",
+        "description": "OAuth provider type",
+        "enum": ["hmac", "okta", "google", "azure"],
+        "env_mapping": "TRINO_OAUTH_PROVIDER"
+      },
+      "jwt_secret": {
+        "type": "string",
+        "title": "JWT Secret",
+        "description": "JWT signing secret for HMAC provider",
+        "env_mapping": "TRINO_JWT_SECRET"
+      },
+      "jwt_token": {
+        "type": "string",
+        "title": "JWT Token",
+        "description": "JWT token used by clients",
+        "env_mapping": "TRINO_JWT_TOKEN"
+      },
+      "oidc_issuer": {
+        "type": "string",
+        "title": "OIDC Issuer",
+        "description": "OIDC issuer URL",
+        "env_mapping": "TRINO_OIDC_ISSUER"
+      },
+      "oidc_audience": {
+        "type": "string",
+        "title": "OIDC Audience",
+        "description": "OIDC audience",
+        "env_mapping": "TRINO_OIDC_AUDIENCE"
+      },
+      "oidc_client_id": {
+        "type": "string",
+        "title": "OIDC Client ID",
+        "description": "OIDC client ID",
+        "env_mapping": "TRINO_OIDC_CLIENT_ID"
+      },
+      "oidc_client_secret": {
+        "type": "string",
+        "title": "OIDC Client Secret",
+        "description": "OIDC client secret",
+        "env_mapping": "TRINO_OIDC_CLIENT_SECRET"
+      },
+      "oauth_redirect_uri": {
+        "type": "string",
+        "title": "OAuth Redirect URI",
+        "description": "Fixed OAuth redirect URI (overrides dynamic callback)",
+        "env_mapping": "TRINO_OAUTH_REDIRECT_URI"
+      },
+      "oauth2_client_id": {
+        "type": "string",
+        "title": "OAuth2 Client ID",
+        "description": "OAuth2 client id alias",
+        "env_mapping": "TRINO_OAUTH2_CLIENT_ID"
+      },
+      "oauth2_client_secret": {
+        "type": "string",
+        "title": "OAuth2 Client Secret",
+        "description": "OAuth2 client secret alias",
+        "env_mapping": "TRINO_OAUTH2_CLIENT_SECRET"
+      },
+      "oauth2_token_url": {
+        "type": "string",
+        "title": "OAuth2 Token URL",
+        "description": "OAuth2 token endpoint URL",
+        "env_mapping": "TRINO_OAUTH2_TOKEN_URL"
+      },
+      "log_level": {
+        "type": "string",
+        "title": "Log Level",
+        "description": "Logging level for the server",
+        "enum": [
+          "debug",
+          "info",
+          "warning",
+          "error"
+        ],
+        "default": "info",
+        "env_mapping": "MCP_LOG_LEVEL"
+      },
+      "read_only": {
+        "type": "boolean",
+        "title": "Read Only",
+        "description": "Run the server in read-only mode (blocks write queries)",
+        "default": true,
+        "env_mapping": "TRINO_READ_ONLY"
+      },
+      "auth_method": {
+        "type": "string",
+        "title": "Authentication Method",
+        "description": "Preferred authentication method",
+        "enum": ["basic", "oauth2", "jwt"],
+        "default": "basic",
+        "env_mapping": "TRINO_AUTH_METHOD"
+      },
+      "allowed_catalogs": {
+        "type": "string",
+        "title": "Allowed Catalogs",
+        "description": "Comma-separated list or pattern of allowed catalogs",
+        "default": "*",
+        "env_mapping": "TRINO_ALLOWED_CATALOGS"
+      },
+      "catalog_regex": {
+        "type": "string",
+        "title": "Catalog Regex",
+        "description": "Regex pattern for allowed catalogs",
+        "env_mapping": "TRINO_CATALOG_REGEX"
+      },
+      "allowed_schemas": {
+        "type": "string",
+        "title": "Allowed Schemas",
+        "description": "Comma-separated list or pattern of allowed schemas",
+        "default": "*",
+        "env_mapping": "TRINO_ALLOWED_SCHEMAS"
+      },
+      "schema_regex": {
+        "type": "string",
+        "title": "Schema Regex",
+        "description": "Regex pattern for allowed schemas",
+        "env_mapping": "TRINO_SCHEMA_REGEX"
+      }
+    },
+    "required": ["trino_host", "trino_user"],
+    "anyOf": [
+      {
+        "properties": {"oauth_enabled": {"const": false}},
+        "required": ["trino_password"]
+      },
+      {
+        "properties": {"oauth_enabled": {"const": true}},
+        "required": ["oauth_provider"]
+      }
+    ]
+  },
+  "capabilities": [
+    {
+      "name": "Catalog Discovery",
+      "description": "List and explore Trino catalogs and schemas",
+      "example": "List all accessible catalogs, browse schema information, get catalog metadata"
+    },
+    {
+      "name": "Schema Inspection",
+      "description": "Inspect table schemas and column information",
+      "example": "Get detailed schema for tables, view column types and descriptions"
+    },
+    {
+      "name": "Query Execution",
+      "description": "Execute SQL queries against Trino data sources",
+      "example": "Run SELECT queries, analyze distributed data, generate reports (read-only by default)"
+    },
+    {
+      "name": "Access Control",
+      "description": "Configurable catalog and schema access controls with filter support",
+      "example": "Filter accessible catalogs/schemas, enforce read-only mode, pattern-based access"
+    },
+    {
+      "name": "Multi-Source Support",
+      "description": "Query across multiple data sources and connectors",
+      "example": "Join data from different catalogs, query Hive, Iceberg, PostgreSQL, and more"
+    }
+  ],
+  "tools": [
+    {
+      "name": "list_catalogs",
+      "description": "List all accessible Trino catalogs",
+      "parameters": []
+    },
+    {
+      "name": "list_schemas",
+      "description": "List schemas in a specific catalog",
+      "parameters": [
+        {
+          "name": "catalog",
+          "description": "Catalog name to list schemas from",
+          "type": "string",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "list_tables",
+      "description": "List tables in a specific schema",
+      "parameters": [
+        {
+          "name": "catalog",
+          "description": "Catalog name containing the schema",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "schema",
+          "description": "Schema name to list tables from",
+          "type": "string",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "describe_table",
+      "description": "Get detailed schema information for a table",
+      "parameters": [
+        {
+          "name": "catalog",
+          "description": "Catalog name containing the table",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "schema",
+          "description": "Schema name containing the table",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "table",
+          "description": "Table name to describe",
+          "type": "string",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "execute_query",
+      "description": "Execute a SQL query against Trino (subject to read-only restrictions)",
+      "parameters": [
+        {
+          "name": "query",
+          "description": "SQL query to execute",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "catalog",
+          "description": "Default catalog for the query (optional)",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "schema",
+          "description": "Default schema for the query (optional)",
+          "type": "string",
+          "required": false
+        }
+      ]
+    },
+    {
+      "name": "get_query_status",
+      "description": "Get status of a running query",
+      "parameters": [
+        {
+          "name": "query_id",
+          "description": "Trino query ID to check",
+          "type": "string",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "cancel_query",
+      "description": "Cancel a running query",
+      "parameters": [
+        {
+          "name": "query_id",
+          "description": "Trino query ID to cancel",
+          "type": "string",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "get_cluster_info",
+      "description": "Get information about the Trino cluster",
+      "parameters": []
+    }
+  ],
+  "tool_discovery": "static",
+  "response_formatter": {
+    "enabled": true,
+    "tools": [
+      "list_catalogs",
+      "list_schemas",
+      "list_tables",
+      "describe_table",
+      "execute_query",
+      "get_query_status",
+      "cancel_query",
+      "get_cluster_info"
+    ]
+  },
+  "tool_endpoint": "/tools",
+  "has_image": true,
+  "origin": "internal",
+  "examples": {
+  "http_endpoint": "http://localhost:7090",
+    "cli_usage": [
+      "python -m mcp_platform deploy trino --config trino_host='trino.example.com' --config trino_user='analyst'",
+  "python -m mcp_platform deploy trino --config trino_host='localhost' --config trino_user='admin' --config trino_password='secret' --config trino_catalog='hive'",
+  "python -m mcp_platform deploy trino --config trino_host='localhost' --config oauth_enabled=true --config oauth_provider='google' --config oidc_client_id='client123'",
+  "python -m mcp_platform deploy trino --config trino_host='trino.company.com' --config auth_method='jwt' --config auth_method='oauth2' --config trino_max_results=5000",
+  "python -m mcp_platform deploy trino --config trino_host='trino.company.com' --config trino_allow_write_queries=true --config trino_max_results=5000"
+    ],
+    "client_integration": {
+  "fastmcp": "from fastmcp.client import FastMCPClient\nclient = FastMCPClient(endpoint='http://localhost:7090')\nresult = client.call('list_catalogs')",
+  "curl": "curl -X POST http://localhost:7090/call -H 'Content-Type: application/json' -d '{\"method\": \"execute_query\", \"params\": {\"query\": \"SELECT COUNT(*) FROM catalog.schema.table\"}}'"
+    }
+  }
+}

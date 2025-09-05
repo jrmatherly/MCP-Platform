@@ -11,7 +11,7 @@ from unittest.mock import mock_open, patch
 import pytest
 import yaml
 
-from mcp_platform.core.config_processor import ConditionalConfigValidator
+from mcp_platform.core.config_processor import ConfigProcessor, ValidationResult
 
 
 @pytest.mark.unit
@@ -152,6 +152,155 @@ class TestConfigProcessorPrepareConfiguration:
                 config_processor.prepare_configuration(
                     template=template, config_file="nonexistent.json"
                 )
+
+
+@pytest.mark.unit
+class TestConfigProcessorConditionals:
+    """Tests for conditional validation (if/then/else, anyOf, oneOf)."""
+
+    def test_if_then_requires_password_when_oauth_disabled(self, config_processor):
+        """When oauth_enabled is false, trino_password should be required."""
+        template = {
+            "config_schema": {
+                "properties": {
+                    "oauth_enabled": {
+                        "type": "boolean",
+                        "env_mapping": "OAUTH_ENABLED",
+                    },
+                    "trino_password": {
+                        "type": "string",
+                        "env_mapping": "TRINO_PASSWORD",
+                    },
+                },
+                "required": ["trino_host", "trino_user"],
+                "if": {"properties": {"oauth_enabled": {"const": False}}},
+                "then": {"required": ["trino_password"]},
+                "else": {"required": ["oauth_provider"]},
+            }
+        }
+
+        # Simulate prepared effective config where oauth_enabled is false and password missing
+        effective_config = {
+            "trino_host": "h",
+            "trino_user": "u",
+            "oauth_enabled": False,
+        }
+
+        res = ConfigProcessor.validate_config_schema(
+            template["config_schema"], effective_config
+        )
+        assert res["valid"] is False
+        assert (
+            any(
+                "trino_password" in (issue.get("missing") or [])
+                for issue in res["conditional_issues"]
+            )
+            or "trino_password" in res["missing_required"]
+        )
+
+    def test_if_else_requires_oauth_provider_when_enabled(self, config_processor):
+        """When oauth_enabled is true, oauth_provider should be required."""
+        template = {
+            "config_schema": {
+                "properties": {
+                    "oauth_enabled": {
+                        "type": "boolean",
+                        "env_mapping": "OAUTH_ENABLED",
+                    },
+                    "oauth_provider": {
+                        "type": "string",
+                        "env_mapping": "OAUTH_PROVIDER",
+                    },
+                },
+                "required": ["trino_host", "trino_user"],
+                "if": {"properties": {"oauth_enabled": {"const": False}}},
+                "then": {"required": ["trino_password"]},
+                "else": {"required": ["oauth_provider"]},
+            }
+        }
+
+        effective_config = {"trino_host": "h", "trino_user": "u", "oauth_enabled": True}
+
+        res = ConfigProcessor.validate_config_schema(
+            template["config_schema"], effective_config
+        )
+        assert res["valid"] is False
+        assert (
+            any(
+                "oauth_provider" in (issue.get("missing") or [])
+                for issue in res["conditional_issues"]
+            )
+            or "oauth_provider" in res["missing_required"]
+        )
+
+
+@pytest.mark.unit
+class TestConfigProcessorNestedAndSuggestions:
+    """Tests for nested oneOf and suggestion generation."""
+
+    def test_nested_oneof_auth_methods_rejects_multiple(self):
+        """If nested oneOf lists multiple auth methods provided, validation should fail."""
+        schema = {
+            "properties": {
+                "basic_user": {"type": "string", "title": "Basic User"},
+                "basic_password": {"type": "string", "title": "Basic Password"},
+                "oauth_provider": {"type": "string", "title": "OAuth Provider"},
+                "jwt_secret": {"type": "string", "title": "JWT Secret"},
+            },
+            "oneOf": [
+                {"required": ["basic_user", "basic_password"]},
+                {"required": ["oauth_provider", "jwt_secret"]},
+            ],
+        }
+
+        # Provide both basic and oauth fields to simulate conflicting methods
+        config = {
+            "basic_user": "u",
+            "basic_password": "p",
+            "oauth_provider": "google",
+            "jwt_secret": "s",
+        }
+
+        res = ConfigProcessor.validate_config_schema(schema, config)
+        assert res["valid"] is False
+        # Should report multiple satisfied conditions in oneOf
+        assert any(
+            isinstance(issue, dict)
+            and "Multiple conditions satisfied" in issue.get("error", "")
+            for issue in res["conditional_issues"]
+        )
+
+    def test_anyof_suggestion_generation(self):
+        """When anyOf fails, generate helpful suggestions pointing to required settings."""
+        schema = {
+            "properties": {
+                "oauth_enabled": {"type": "boolean", "title": "Enable OAuth"},
+                "trino_password": {"type": "string", "title": "Trino Password"},
+                "oauth_provider": {"type": "string", "title": "OAuth Provider"},
+            },
+            "anyOf": [
+                {
+                    "properties": {"oauth_enabled": {"const": False}},
+                    "required": ["trino_password"],
+                },
+                {
+                    "properties": {"oauth_enabled": {"const": True}},
+                    "required": ["oauth_provider"],
+                },
+            ],
+        }
+
+        # Config that satisfies neither option (oauth_enabled is missing)
+        config = {"trino_host": "h", "trino_user": "u"}
+
+        res = ConfigProcessor.validate_config_schema(schema, config)
+        assert res["valid"] is False
+        # Suggestions should be non-empty and mention setting Enable OAuth or provider/password
+        assert res["suggestions"]
+        assert any(
+            "Enable OAuth" in s or "OAuth Provider" in s or "Trino Password" in s
+            for s in res["suggestions"]
+        )
 
 
 @pytest.mark.unit
@@ -898,7 +1047,7 @@ class TestConditionalConfigValidator:
 
     def setup_method(self):
         """Set up test fixtures."""
-        self.validator = ConditionalConfigValidator()
+        self.validator = ConfigProcessor()
 
     def test_basic_validation_no_conditionals(self):
         """Test basic validation without conditional requirements."""

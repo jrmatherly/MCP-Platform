@@ -950,25 +950,32 @@ EOF""",
             # Transport: if port is present, assume http, else stdio
             transport = "http" if ports_display else "stdio"
             state = container.get("State", "unknown")
-            status = "unknown"
+            raw_status = "unknown"
 
+            # Extract raw status from docker/podman output
             if isinstance(state, dict):
-                status = state.get("Status", "unknown")
+                raw_status = state.get("Status", "unknown")
             elif isinstance(state, str):
-                status = container.get("Status", None) or state
+                # Docker 'ps' output sometimes sets State as a string like 'running'
+                raw_status = container.get("Status", None) or state
 
-            running = (
-                status == "running" or (state.get("Running", False))
-                if isinstance(state, dict)
-                else False
-            )
+            # Determine running boolean robustly for both docker and podman formats
+            if isinstance(state, dict):
+                is_running = bool(state.get("Running", False))
+            else:
+                # For docker ps string formats, treat 'running' or 'up' as running
+                rs = (str(raw_status) or "").lower()
+                is_running = rs == "running" or rs.startswith("up")
+
+            # Normalize status to 'running' when running, otherwise keep raw_status
+            status = "running" if is_running else raw_status
             deployment = {
                 "id": container.get("ID", container.get("Id", "unknown")),
                 "name": name,
                 "template": template_name,
                 "state": state,
                 "status": status,
-                "running": running,
+                "running": is_running,
                 "created": container.get(
                     "CreatedAt", container.get("Created", "unknown")
                 ),
