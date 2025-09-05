@@ -12,7 +12,7 @@ import logging
 import os
 import re
 import sys
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import sqlparse
 from fastmcp import FastMCP
@@ -478,17 +478,29 @@ class TrinoMCPServer:
             timeout = limits.get("timeout", 300)
             max_results = limits.get("max_results", 1000)
 
-            # Set session properties if catalog/schema provided
-            session_properties = {}
-            if catalog:
-                session_properties["catalog"] = catalog
-            if schema:
-                session_properties["schema"] = schema
+            # If catalog/schema provided, prefer lightweight USE statements
+            # instead of attempting to set non-existent session properties.
+            # If not provided, rely on fully-qualified names in the query.
+            use_statements: List[str] = []
+            if catalog and schema:
+                # Use catalog.schema to set both
+                use_statements.append(f"USE {catalog}.{schema}")
+            elif catalog:
+                # Set catalog (use catalog alone will set the current catalog)
+                use_statements.append(f"USE {catalog}")
+            elif schema:
+                # Use schema within the current catalog
+                use_statements.append(f"USE {schema}")
 
             with self.engine.connect() as conn:
-                # Set session properties if needed
-                for prop, value in session_properties.items():
-                    conn.execute(text(f"SET SESSION {prop} = '{value}'"))
+                # Run USE statements if provided
+                for stmt in use_statements:
+                    try:
+                        conn.execute(text(stmt))
+                    except Exception:
+                        # If USE fails for any reason, continue and let the query run
+                        # (we don't want to blow up for optional parameters)
+                        self.logger.debug("Failed to run '%s' before query", stmt)
 
                 # Execute the query
                 # Note: SQLAlchemy/Trino dialects may not support an execution timeout

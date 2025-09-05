@@ -185,6 +185,9 @@ class ResponseFormatter:
         """
         self.console = Console()
         self.verbose = verbose
+        # Default maximum number of rows/items to display in tables/lists
+        # Increase from previous small defaults so UI shows more rows by default
+        self.max_display_rows = 100
 
     def _is_actual_error(self, stderr_text: str) -> bool:
         """Check if stderr contains actual errors vs informational messages."""
@@ -611,7 +614,7 @@ class ResponseFormatter:
             )
 
         # Add rows with intelligent value formatting
-        max_rows = 25  # Increased slightly for better data display
+        max_rows = getattr(self, "max_display_rows", 25)
         for i, item in enumerate(data[:max_rows]):
             if not isinstance(item, dict):
                 continue
@@ -691,6 +694,7 @@ class ResponseFormatter:
         self, data: list, title: str = "Items"
     ) -> Union[Table, Panel]:
         """Create display for simple lists."""
+        max_items = getattr(self, "max_display_rows", 20)
         if len(data) <= 10 and all(
             isinstance(item, (str, int, float)) for item in data
         ):
@@ -699,9 +703,9 @@ class ResponseFormatter:
             return Columns(items, equal=True, expand=True, title=title)
         else:
             # Larger or complex list - use panel
-            content = "\n".join(f"• {item}" for item in data[:20])
-            if len(data) > 20:
-                content += f"\n... and {len(data) - 20} more items"
+            content = "\n".join(f"• {item}" for item in data[:max_items])
+            if len(data) > max_items:
+                content += f"\n... and {len(data) - max_items} more items"
             return Panel(
                 content, title=f"{title} ({len(data)} items)", border_style="blue"
             )
@@ -1080,6 +1084,33 @@ class ResponseFormatter:
 
         return None
 
+    def _print_truncation_hint(self, data: Any) -> None:
+        """Print a small hint if a dataset/list was truncated by the display limit."""
+        try:
+            max_rows = getattr(self, "max_display_rows", 100)
+            # For dicts with lists under common keys
+            if isinstance(data, dict):
+                # Check common tabular keys
+                for key in ("rows", "results", "data", "items", "records", "datasets"):
+                    if key in data and isinstance(data[key], list):
+                        total = len(data[key])
+                        if total > max_rows:
+                            more = total - max_rows
+                            self.console.print(
+                                f"[dim]... and {more} more {key} (showing {max_rows})[/dim]"
+                            )
+                            return
+            # For top-level lists
+            if isinstance(data, list):
+                total = len(data)
+                if total > max_rows:
+                    more = total - max_rows
+                    self.console.print(
+                        f"[dim]... and {more} more items (showing {max_rows})[/dim]"
+                    )
+        except Exception:
+            return
+
     def beautify_tool_response(
         self, response: Dict[str, Any], template_name: str = None, tool_name: str = None
     ) -> None:
@@ -1132,6 +1163,11 @@ class ResponseFormatter:
                             )
                         else:
                             self.beautify_json(structured_data, TOOL_RESULT_TITLE)
+                        # After display, show truncation hint if applicable
+                        try:
+                            self._print_truncation_hint(structured_data)
+                        except Exception:
+                            pass
 
                     elif isinstance(result_data, dict) and "content" in result_data:
                         content_items = result_data["content"]
@@ -1158,6 +1194,10 @@ class ResponseFormatter:
                                                 parsed_content,
                                                 f"{TOOL_RESULT_TITLE} {i + 1}",
                                             )
+                                        try:
+                                            self._print_truncation_hint(parsed_content)
+                                        except Exception:
+                                            pass
                                     except json.JSONDecodeError:
                                         # Display as text if not JSON
                                         self.console.print(
@@ -1171,8 +1211,16 @@ class ResponseFormatter:
                                     self.beautify_json(content, f"Content {i + 1}")
                         else:
                             self.beautify_json(result_data, TOOL_RESULT_TITLE)
+                            try:
+                                self._print_truncation_hint(result_data)
+                            except Exception:
+                                pass
                     else:
                         self.beautify_json(result_data, TOOL_RESULT_TITLE)
+                        try:
+                            self._print_truncation_hint(result_data)
+                        except Exception:
+                            pass
 
                 elif "error" in response and response.get("error"):
                     error_info = response["error"]

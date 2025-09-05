@@ -500,7 +500,6 @@ def call_tool(
             pull_image=not no_pull,
             force_stdio=force_stdio,
         )
-
         # Display result
         if result and result.get("success"):
             if raw:
