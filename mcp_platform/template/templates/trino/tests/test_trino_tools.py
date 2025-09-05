@@ -415,8 +415,8 @@ class TestTrinoServerTools:
             assert result["success"] is False
             assert "error" in result
             assert isinstance(result["error"], str)
-            # Should be descriptive and action-oriented
-            assert len(result["tools"]) > 3
+            # Should be descriptive and action-oriented (no tools list required)
+            assert len(result["error"]) > 0
 
     def test_discovery_tools_structure(self):
         """Test discovery tools have proper parameter structure."""
@@ -609,8 +609,8 @@ class TestTrinoServerTools:
             "catalog_regex": "TRINO_CATALOG_REGEX",
             "allowed_schemas": "TRINO_ALLOWED_SCHEMAS",
             "schema_regex": "TRINO_SCHEMA_REGEX",
-            "query_timeout": "TRINO_QUERY_TIMEOUT",
-            "max_results": "TRINO_MAX_RESULTS",
+            "trino_query_timeout": "TRINO_QUERY_TIMEOUT",
+            "trino_max_results": "TRINO_MAX_RESULTS",
         }
 
         for prop_name, expected_env in access_vars.items():

@@ -18,13 +18,13 @@
   "docker_image": "dataeverything/mcp-trino",
   "docker_tag": "latest",
   "ports": {
-    "7091": 7091
+    "7090": 7090
   },
   "command": [],
   "transport": {
     "default": "http",
     "supported": ["http", "stdio"],
-    "port": 7091
+    "port": 7090
   },
   "config_schema": {
     "type": "object",
@@ -133,6 +133,12 @@
         "description": "JWT signing secret for HMAC provider",
         "env_mapping": "TRINO_JWT_SECRET"
       },
+      "jwt_token": {
+        "type": "string",
+        "title": "JWT Token",
+        "description": "JWT token used by clients",
+        "env_mapping": "TRINO_JWT_TOKEN"
+      },
       "oidc_issuer": {
         "type": "string",
         "title": "OIDC Issuer",
@@ -163,6 +169,24 @@
         "description": "Fixed OAuth redirect URI (overrides dynamic callback)",
         "env_mapping": "TRINO_OAUTH_REDIRECT_URI"
       },
+      "oauth2_client_id": {
+        "type": "string",
+        "title": "OAuth2 Client ID",
+        "description": "OAuth2 client id alias",
+        "env_mapping": "TRINO_OAUTH2_CLIENT_ID"
+      },
+      "oauth2_client_secret": {
+        "type": "string",
+        "title": "OAuth2 Client Secret",
+        "description": "OAuth2 client secret alias",
+        "env_mapping": "TRINO_OAUTH2_CLIENT_SECRET"
+      },
+      "oauth2_token_url": {
+        "type": "string",
+        "title": "OAuth2 Token URL",
+        "description": "OAuth2 token endpoint URL",
+        "env_mapping": "TRINO_OAUTH2_TOKEN_URL"
+      },
       "log_level": {
         "type": "string",
         "title": "Log Level",
@@ -175,26 +199,60 @@
         ],
         "default": "info",
         "env_mapping": "MCP_LOG_LEVEL"
+      },
+      "read_only": {
+        "type": "boolean",
+        "title": "Read Only",
+        "description": "Run the server in read-only mode (blocks write queries)",
+        "default": true,
+        "env_mapping": "TRINO_READ_ONLY"
+      },
+      "auth_method": {
+        "type": "string",
+        "title": "Authentication Method",
+        "description": "Preferred authentication method",
+        "enum": ["basic", "oauth2", "jwt"],
+        "default": "basic",
+        "env_mapping": "TRINO_AUTH_METHOD"
+      },
+      "allowed_catalogs": {
+        "type": "string",
+        "title": "Allowed Catalogs",
+        "description": "Comma-separated list or pattern of allowed catalogs",
+        "default": "*",
+        "env_mapping": "TRINO_ALLOWED_CATALOGS"
+      },
+      "catalog_regex": {
+        "type": "string",
+        "title": "Catalog Regex",
+        "description": "Regex pattern for allowed catalogs",
+        "env_mapping": "TRINO_CATALOG_REGEX"
+      },
+      "allowed_schemas": {
+        "type": "string",
+        "title": "Allowed Schemas",
+        "description": "Comma-separated list or pattern of allowed schemas",
+        "default": "*",
+        "env_mapping": "TRINO_ALLOWED_SCHEMAS"
+      },
+      "schema_regex": {
+        "type": "string",
+        "title": "Schema Regex",
+        "description": "Regex pattern for allowed schemas",
+        "env_mapping": "TRINO_SCHEMA_REGEX"
       }
     },
     "required": ["trino_host", "trino_user"],
-    "if": {
-      "properties": {
-        "oauth_enabled": {"const": false}
+    "anyOf": [
+      {
+        "properties": {"oauth_enabled": {"const": false}},
+        "required": ["trino_password"]
+      },
+      {
+        "properties": {"oauth_enabled": {"const": true}},
+        "required": ["oauth_provider"]
       }
-    },
-    "then": {
-      "required": ["trino_password"],
-      "errorMessage": {
-        "required": "When OAuth is disabled, 'trino_password' is required for basic auth."
-      }
-    },
-    "else": {
-      "required": ["oauth_provider"],
-      "errorMessage": {
-        "required": "When OAuth is enabled, 'oauth_provider' must be set."
-      }
-    }
+    ]
   },
   "capabilities": [
     {
@@ -338,20 +396,34 @@
     }
   ],
   "tool_discovery": "static",
+  "response_formatter": {
+    "enabled": true,
+    "tools": [
+      "list_catalogs",
+      "list_schemas",
+      "list_tables",
+      "describe_table",
+      "execute_query",
+      "get_query_status",
+      "cancel_query",
+      "get_cluster_info"
+    ]
+  },
   "tool_endpoint": "/tools",
   "has_image": true,
   "origin": "internal",
   "examples": {
-    "http_endpoint": "http://localhost:7091",
+  "http_endpoint": "http://localhost:7090",
     "cli_usage": [
       "python -m mcp_platform deploy trino --config trino_host='trino.example.com' --config trino_user='analyst'",
-      "python -m mcp_platform deploy trino --config trino_host='localhost' --config trino_user='admin' --config trino_password='secret' --config trino_catalog='hive'",
-      "python -m mcp_platform deploy trino --config trino_host='localhost' --config oauth_enabled=true --config oauth_provider='google' --config oidc_client_id='client123'",
-      "python -m mcp_platform deploy trino --config trino_host='trino.company.com' --config trino_allow_write_queries=true --config trino_max_results=5000"
+  "python -m mcp_platform deploy trino --config trino_host='localhost' --config trino_user='admin' --config trino_password='secret' --config trino_catalog='hive'",
+  "python -m mcp_platform deploy trino --config trino_host='localhost' --config oauth_enabled=true --config oauth_provider='google' --config oidc_client_id='client123'",
+  "python -m mcp_platform deploy trino --config trino_host='trino.company.com' --config auth_method='jwt' --config auth_method='oauth2' --config trino_max_results=5000",
+  "python -m mcp_platform deploy trino --config trino_host='trino.company.com' --config trino_allow_write_queries=true --config trino_max_results=5000"
     ],
     "client_integration": {
-      "fastmcp": "from fastmcp.client import FastMCPClient\nclient = FastMCPClient(endpoint='http://localhost:7091')\nresult = client.call('list_catalogs')",
-      "curl": "curl -X POST http://localhost:7091/call -H 'Content-Type: application/json' -d '{\"method\": \"execute_query\", \"params\": {\"query\": \"SELECT COUNT(*) FROM catalog.schema.table\"}}'"
+  "fastmcp": "from fastmcp.client import FastMCPClient\nclient = FastMCPClient(endpoint='http://localhost:7090')\nresult = client.call('list_catalogs')",
+  "curl": "curl -X POST http://localhost:7090/call -H 'Content-Type: application/json' -d '{\"method\": \"execute_query\", \"params\": {\"query\": \"SELECT COUNT(*) FROM catalog.schema.table\"}}'"
     }
   }
 }

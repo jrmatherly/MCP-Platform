@@ -7,8 +7,10 @@ data sources with configurable authentication, read-only mode, and comprehensive
 query execution capabilities using FastMCP and SQLAlchemy.
 """
 
+import fnmatch
 import logging
 import os
+import re
 import sys
 from typing import Any, Dict, Optional
 
@@ -111,8 +113,12 @@ class TrinoMCPServer:
         self.client = None
         try:
             self._initialize_trino_engine()
-        except:
-            logger.debug("Failed trino initialization")
+        except Exception as e:
+            # If validation is enabled, propagate the error so callers/tests can
+            # observe initialization failures. Otherwise log and continue.
+            if not self._skip_validation:
+                raise
+            logger.debug("Failed trino initialization: %s", e)
 
         # Validate read-only mode warning
         if self.config_data.get("trino_allow_write_queries", False):
@@ -129,7 +135,7 @@ class TrinoMCPServer:
                 int(
                     os.getenv(
                         "MCP_PORT",
-                        self.template_data.get("transport", {}).get("port", 7091),
+                        self.template_data.get("transport", {}).get("port", 7090),
                     )
                 )
                 if os.getenv("MCP_TRANSPORT") != "stdio"
@@ -269,12 +275,52 @@ class TrinoMCPServer:
         self.mcp.tool(self.cancel_query, tags=["query", "control"])
         self.mcp.tool(self.get_cluster_info, tags=["cluster", "metadata"])
 
+    def _is_catalog_allowed(self, catalog: str) -> bool:
+        """Check if a catalog is allowed by template config (regex or patterns)."""
+        cfg = self.config_data
+
+        # Regex takes precedence
+        catalog_regex = cfg.get("catalog_regex")
+        if catalog_regex:
+            try:
+                return bool(re.match(catalog_regex, catalog))
+            except re.error:
+                self.logger.warning("Invalid catalog_regex '%s'", catalog_regex)
+                return False
+
+        allowed = cfg.get("allowed_catalogs", "*")
+        if allowed == "*":
+            return True
+        patterns = [p.strip() for p in str(allowed).split(",") if p.strip()]
+        return any(fnmatch.fnmatch(catalog, p) for p in patterns)
+
+    def _is_schema_allowed(self, catalog: str, schema: str) -> bool:
+        """Check if a schema is allowed by template config (regex or patterns)."""
+        cfg = self.config_data
+
+        schema_regex = cfg.get("schema_regex")
+        if schema_regex:
+            try:
+                return bool(re.match(schema_regex, schema))
+            except re.error:
+                self.logger.warning("Invalid schema_regex '%s'", schema_regex)
+                return False
+
+        allowed = cfg.get("allowed_schemas", "*")
+        if allowed == "*":
+            return True
+        patterns = [p.strip() for p in str(allowed).split(",") if p.strip()]
+        return any(fnmatch.fnmatch(schema, p) for p in patterns)
+
     def list_catalogs(self) -> Dict[str, Any]:
         """List all accessible Trino catalogs."""
         try:
             with self.engine.connect() as conn:
                 result = conn.execute(text("SHOW CATALOGS"))
                 catalogs = [row[0] for row in result.fetchall()]
+
+            # Apply access control filtering
+            catalogs = [c for c in catalogs if self._is_catalog_allowed(c)]
 
             return {
                 "success": True,
@@ -289,10 +335,20 @@ class TrinoMCPServer:
 
     def list_schemas(self, catalog: str) -> Dict[str, Any]:
         """List schemas in a specific catalog."""
+        # Check catalog-level access
+        if not self._is_catalog_allowed(catalog):
+            return {
+                "success": False,
+                "error": f"Access to catalog '{catalog}' is not allowed",
+                "schemas": [],
+            }
         try:
             with self.engine.connect() as conn:
                 result = conn.execute(text(f"SHOW SCHEMAS FROM {catalog}"))
                 schemas = [row[0] for row in result.fetchall()]
+
+            # Apply schema-level access control
+            schemas = [s for s in schemas if self._is_schema_allowed(catalog, s)]
 
             return {
                 "success": True,
@@ -308,6 +364,19 @@ class TrinoMCPServer:
 
     def list_tables(self, catalog: str, schema: str) -> Dict[str, Any]:
         """List tables in a specific schema."""
+        # Enforce access control
+        if not self._is_catalog_allowed(catalog):
+            return {
+                "success": False,
+                "error": f"Access to catalog '{catalog}' is not allowed",
+                "tables": [],
+            }
+        if not self._is_schema_allowed(catalog, schema):
+            return {
+                "success": False,
+                "error": f"Access to schema '{catalog}.{schema}' is not allowed",
+                "tables": [],
+            }
         try:
             with self.engine.connect() as conn:
                 result = conn.execute(text(f"SHOW TABLES FROM {catalog}.{schema}"))
@@ -330,6 +399,17 @@ class TrinoMCPServer:
 
     def describe_table(self, catalog: str, schema: str, table: str) -> Dict[str, Any]:
         """Get detailed schema information for a table."""
+        # Enforce access control
+        if not self._is_catalog_allowed(catalog):
+            return {
+                "success": False,
+                "error": f"Access to catalog '{catalog}' is not allowed",
+            }
+        if not self._is_schema_allowed(catalog, schema):
+            return {
+                "success": False,
+                "error": f"Access to schema '{catalog}.{schema}' is not allowed",
+            }
         try:
             with self.engine.connect() as conn:
                 # Get column information
@@ -395,7 +475,7 @@ class TrinoMCPServer:
         try:
             # Get query limits
             limits = self.config.get_query_limits()
-            # timeout = limits.get("timeout", 300)
+            timeout = limits.get("timeout", 300)
             max_results = limits.get("max_results", 1000)
 
             # Set session properties if catalog/schema provided
@@ -410,7 +490,11 @@ class TrinoMCPServer:
                 for prop, value in session_properties.items():
                     conn.execute(text(f"SET SESSION {prop} = '{value}'"))
 
-                # Execute the query with timeout
+                # Execute the query
+                # Note: SQLAlchemy/Trino dialects may not support an execution timeout
+                # here; we expose the configured timeout in the response and rely on
+                # underlying drivers or session properties for enforcement where
+                # supported.
                 result = conn.execute(text(query))
 
                 # Fetch results
@@ -422,11 +506,11 @@ class TrinoMCPServer:
                     rows.append(dict(row._mapping))
                     row_count += 1
 
-                # Check if more rows are available
+                # Check if more rows are available (best-effort)
                 try:
                     next_row = next(iter(result), None)
                     truncated = next_row is not None
-                except:
+                except Exception:
                     truncated = False
 
             return {
@@ -436,6 +520,7 @@ class TrinoMCPServer:
                 "rows": rows,
                 "truncated": truncated,
                 "max_results": max_results,
+                "timeout": timeout,
                 "catalog": catalog,
                 "schema": schema,
             }
@@ -499,38 +584,42 @@ class TrinoMCPServer:
                 # Get cluster information
                 cluster_info = {}
 
-                # Get node information
-                try:
-                    result = conn.execute(text("SELECT * FROM system.runtime.nodes"))
-                    nodes = [dict(row._mapping) for row in result.fetchall()]
-                    cluster_info["nodes"] = nodes
-                    cluster_info["node_count"] = len(nodes)
-                except Exception:
-                    cluster_info["nodes"] = []
-                    cluster_info["node_count"] = 0
+                # Get node information (support row objects and plain tuples/dicts)
+                result = conn.execute(text("SELECT * FROM system.runtime.nodes"))
+                raw_nodes = result.fetchall()
+                nodes = []
+                for row in raw_nodes:
+                    if hasattr(row, "_mapping"):
+                        nodes.append(dict(row._mapping))
+                    elif isinstance(row, dict):
+                        nodes.append(row)
+                    else:
+                        try:
+                            nodes.append({str(i): v for i, v in enumerate(row)})
+                        except Exception:
+                            nodes.append({"raw": str(row)})
+
+                cluster_info["nodes"] = nodes
+                cluster_info["node_count"] = len(nodes)
 
                 # Get version information
-                try:
-                    result = conn.execute(text("SELECT version()"))
-                    version = result.fetchone()[0]
-                    cluster_info["version"] = version
-                except Exception:
-                    cluster_info["version"] = "unknown"
+                result = conn.execute(text("SELECT version()"))
+                ver_row = result.fetchone()
+                version = ver_row[0] if ver_row else "unknown"
+                cluster_info["version"] = version
 
                 # Get current session info
-                try:
-                    result = conn.execute(text("SHOW SESSION"))
-                    session_props = {}
-                    for row in result.fetchall():
+                result = conn.execute(text("SHOW SESSION"))
+                session_props = {}
+                for row in result.fetchall():
+                    # accept tuple or sequence-like rows
+                    try:
                         session_props[row[0]] = row[1]
-                    cluster_info["session_properties"] = session_props
-                except Exception:
-                    cluster_info["session_properties"] = {}
+                    except Exception:
+                        continue
+                cluster_info["session_properties"] = session_props
 
-            return {
-                "success": True,
-                "cluster_info": cluster_info,
-            }
+            return {"success": True, "cluster_info": cluster_info}
 
         except Exception as e:
             self.logger.error("Error getting cluster info: %s", e)

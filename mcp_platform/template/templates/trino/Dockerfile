@@ -34,10 +34,10 @@ ENV TRINO_HOST="trino" \
     TRINO_MAX_RESULTS="1000" \
     MCP_TRANSPORT="http" \
     MCP_HOST="0.0.0.0" \
-    MCP_PORT="7091"
+    MCP_PORT="7090"
 
 # Expose the port
-EXPOSE 7091
+EXPOSE 7090
 
 # Run the server
 CMD ["python", "-m", "server"]

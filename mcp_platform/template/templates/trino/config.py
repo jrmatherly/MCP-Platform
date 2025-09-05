@@ -404,7 +404,7 @@ class TrinoServerConfig(ServerConfig):
                 "name": "Trino MCP Server",
                 "version": "1.0.0",
                 "description": "Trino MCP Server",
-                "transport": {"port": 7091},
+                "transport": {"port": 7090},
             }
 
     def get_template_data(self) -> Dict[str, Any]:

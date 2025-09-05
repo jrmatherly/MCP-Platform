@@ -54,7 +54,7 @@ class TestTrinoTemplateConfiguration:
         assert template_config["transport"]["default"] == "http"
         assert "http" in template_config["transport"]["supported"]
         assert "stdio" in template_config["transport"]["supported"]
-        assert template_config["transport"]["port"] == 7091
+        assert template_config["transport"]["port"] == 7090
 
         # Verify tags include new ones
         assert "fastmcp" in template_config["tags"]
@@ -419,17 +419,15 @@ class TestTrinoTemplateConfiguration:
         with open(template_path, "r") as f:
             template_config = json.load(f)
 
-        examples = template_config["examples"]
+        examples = template_config.get("examples", {})
 
-        # Check HTTP endpoint
+        # Check HTTP endpoint example
         assert "http_endpoint" in examples
-        assert "7091" in examples["http_endpoint"]
+        assert "7090" in examples["http_endpoint"]
 
         # Check client integration examples
-        client_integration = examples["client_integration"]
+        client_integration = examples.get("client_integration", {})
         assert "fastmcp" in client_integration
         assert "curl" in client_integration
-
-        # Verify examples use correct port and endpoints
-        assert "7091" in client_integration["curl"]
+        assert "7090" in client_integration["curl"]
         assert "list_catalogs" in client_integration["fastmcp"]

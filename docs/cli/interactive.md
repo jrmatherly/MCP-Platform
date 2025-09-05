@@ -66,24 +66,20 @@ The interactive CLI includes built-in support for command history and tab comple
 - **History Persistence**: Command history is saved and restored between sessions
 - **Clean Prompt Display**: The prompt remains stable when using arrow keys
 
-## Template Selection Workflow
+mcpp(demo)> tools        # No need to specify template
+## Template Usage
 
-Use template selection to streamline repetitive operations:
+Commands that operate on a template now require the template name to be provided explicitly.
 
 ```bash
-# Traditional approach (repetitive)
+# Example: List tools for a template
 mcpp> tools demo
+
+# Call a tool for a specific template
 mcpp> call demo say_hello '{"name": "Alice"}'
-mcpp> config demo port=8080
 
-# Enhanced approach (with template selection)
-mcpp> select demo        # Select template once
-✅ Selected template: demo
-
-mcpp(demo)> tools        # No need to specify template
-mcpp(demo)> call say_hello '{"name": "Alice"}'
-mcpp(demo)> config port=8080
-mcpp(demo)> unselect     # Return to global mode
+# Configure a template
+mcpp> configure demo port=8080
 ```
 
 ## Example Session
@@ -96,29 +92,24 @@ mcpp interactive
 # List available templates
 mcpp> templates
 
-# Select a template for the session
-mcpp> select demo
-✅ Selected template: demo
+```bash
+# Start interactive session
+mcpp interactive
+✨ Command history and tab completion enabled
 
-# List tools (uses selected template automatically)
-mcpp(demo)> tools
+# List available templates
+mcpp> templates
 
-# Call a tool with force refresh
-mcpp(demo)> tools --force-refresh
+# Call a tool
+mcpp> call demo say_hello '{"name": "World"}'
 
-# Execute a tool
-mcpp(demo)> call say_hello '{"name": "World"}'
-
-# View servers
-mcpp(demo)> servers
-
-# Unselect template
-mcpp(demo)> unselect
-📤 Unselected template: demo
+# View servers for a template
+mcpp> servers --template demo
 
 # Exit session
 mcpp> exit
 Goodbye!
+```
 ```
 
 ## Available Commands
