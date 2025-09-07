@@ -163,28 +163,28 @@ output-format = "grouped"
 exclude = [
     # Build and distribution
     "build",
-    "dist", 
+    "dist",
     "*.egg-info",
     "__pycache__",
     ".pytest_cache",
-    
+
     # Virtual environments
     "venv",
     ".venv",
     "env",
     ".env",
-    
+
     # Version control and tools
     ".git",
     ".hg",
     ".mypy_cache",
     ".ruff_cache",
     ".tox",
-    
+
     # Template legacy and node modules
     "templates_old",
     "node_modules",
-    
+
     # Backend migrations (preserved from original .flake8)
     "backend/*/migrations/*.py",
     "backend/manage.py",
@@ -194,16 +194,16 @@ exclude = [
 # Start with core flake8 rules, can expand later
 select = [
     # Core flake8 equivalent rules (matching original behavior)
-    "E",    # pycodestyle errors
-    "W",    # pycodestyle warnings  
-    "F",    # pyflakes
-    
+    "E", # pycodestyle errors
+    "W", # pycodestyle warnings  
+    "F", # pyflakes
+
     # Essential additions that are low-noise
-    "I",    # isort (replaces standalone isort)
-    "B",    # flake8-bugbear (essential bug detection)
-    "C4",   # flake8-comprehensions (performance)
-    "UP",   # pyupgrade (modernization)
-    
+    "I",  # isort (replaces standalone isort)
+    "B",  # flake8-bugbear (essential bug detection)
+    "C4", # flake8-comprehensions (performance)
+    "UP", # pyupgrade (modernization)
+
     # Additional rules can be enabled incrementally:
     # "SIM",  # flake8-simplify 
     # "PIE",  # flake8-pie
@@ -226,14 +226,14 @@ select = [
 
 ignore = [
     # Essential ignores migrated from .flake8
-    "E203",   # whitespace before ':' (Black compatibility)
-    "E501",   # line too long (handled by Black/Ruff format)
-    "F811",   # redefined-while-unused
-    "F403",   # star imports (unavoidable in some contexts)
-    "E402",   # module-level import not at top
-    "W293",   # blank line contains whitespace (formatting tool compatibility)  
-    "E722",   # bare except clauses (allow for backward compatibility)
-    
+    "E203", # whitespace before ':' (Black compatibility)
+    "E501", # line too long (handled by Black/Ruff format)
+    "F811", # redefined-while-unused
+    "F403", # star imports (unavoidable in some contexts)
+    "E402", # module-level import not at top
+    "W293", # blank line contains whitespace (formatting tool compatibility)  
+    "E722", # bare except clauses (allow for backward compatibility)
+
     # Ruff/Black compatibility
     "B008",   # function call in argument defaults (common pattern)
     "C901",   # complex-structure (disable McCabe complexity for now)
@@ -244,8 +244,8 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 # Initialization files
 "__init__.py" = [
-    "F401",   # unused-import
-    "F403",   # undefined-local-with-import-star
+    "F401", # unused-import
+    "F403", # undefined-local-with-import-star
 ]
 
 # Migrated from .flake8
@@ -255,30 +255,30 @@ ignore = [
 
 # Test-specific ignores
 "tests/*.py" = [
-    "F401",   # unused-import
-    "F811",   # redefined-while-unused  
-    "S101",   # assert usage
-    "PT011",  # pytest-raises-too-broad
-    "B018",   # useless-expression (common in tests)
+    "F401",  # unused-import
+    "F811",  # redefined-while-unused  
+    "S101",  # assert usage
+    "PT011", # pytest-raises-too-broad
+    "B018",  # useless-expression (common in tests)
 ]
 
 # CLI and scripts
 "mcp_platform/cli/*.py" = [
-    "T201",   # print statements allowed in CLI
-    "B008",   # function-call-in-default-argument (Typer patterns)
+    "T201", # print statements allowed in CLI
+    "B008", # function-call-in-default-argument (Typer patterns)
 ]
 
 # Configuration files
 "**/settings.py" = [
-    "F401",   # unused-import
-    "F403",   # star-import
-    "E402",   # module-level-import-not-at-top-of-file
+    "F401", # unused-import
+    "F403", # star-import
+    "E402", # module-level-import-not-at-top-of-file
 ]
 
 # Template files
 "templates/*/src/*.py" = [
-    "T201",   # print statements
-    "S311",   # suspicious-non-cryptographic-random-usage
+    "T201", # print statements
+    "S311", # suspicious-non-cryptographic-random-usage
 ]
 
 [tool.ruff.lint.flake8-pytest-style]
@@ -293,7 +293,7 @@ known-first-party = ["mcp_platform"]
 combine-as-imports = true
 split-on-trailing-comma = false
 
-[tool.ruff.lint.pydocstyle] 
+[tool.ruff.lint.pydocstyle]
 convention = "google"
 
 [tool.ruff.lint.pylint]
@@ -305,7 +305,7 @@ max-statements = 60
 # Formatting (replaces Black)
 [tool.ruff.format]
 quote-style = "double"
-indent-style = "space" 
+indent-style = "space"
 line-ending = "auto"
 # Preserve Black's target-version behavior by matching our target-version
 # Black had: target-version = ['py310', 'py311', 'py312']
