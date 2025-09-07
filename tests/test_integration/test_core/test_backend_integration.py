@@ -212,9 +212,7 @@ class TestToolManagerBackendIntegration(unittest.TestCase):
             tool_manager = ToolManager(backend_type="docker")
 
             # Mock the entire discover_tools_from_image method to test integration
-            with patch.object(
-                tool_manager, "discover_tools_from_image"
-            ) as mock_discover:
+            with patch.object(tool_manager, "discover_tools_from_image") as mock_discover:
                 mock_discover.return_value = [{"name": "test_tool"}]
 
                 result = tool_manager.discover_tools_from_image(
@@ -232,9 +230,7 @@ class TestToolManagerBackendIntegration(unittest.TestCase):
             tool_manager = ToolManager(backend_type="kubernetes")
 
             # Mock the entire discover_tools_from_image method to test integration
-            with patch.object(
-                tool_manager, "discover_tools_from_image"
-            ) as mock_discover:
+            with patch.object(tool_manager, "discover_tools_from_image") as mock_discover:
                 mock_discover.return_value = [{"name": "test_tool"}]
 
                 result = tool_manager.discover_tools_from_image(
@@ -308,9 +304,7 @@ class TestToolManagerBackendIntegration(unittest.TestCase):
             image_name = "ghcr.io/github/github-mcp-server:0.9.1"
             env_vars = {"GITHUB_PERSONAL_ACCESS_TOKEN": "test_token"}
 
-            result = docker_probe.discover_tools_from_image(
-                image_name, env_vars=env_vars
-            )
+            result = docker_probe.discover_tools_from_image(image_name, env_vars=env_vars)
 
             # Verify Docker discovery was called with environment variables
             mock_discover.assert_called_once_with(image_name, env_vars=env_vars)
@@ -340,7 +334,7 @@ class TestToolManagerBackendIntegration(unittest.TestCase):
 
             # Test with GitHub image (should add stdio automatically)
             mcp_client = MCPClientProbe()
-            result = mcp_client.discover_tools_from_docker_sync(
+            _result = mcp_client.discover_tools_from_docker_sync(
                 "ghcr.io/github/github-mcp-server:0.9.1",
                 args=None,  # No args provided
                 env_vars={"GITHUB_PERSONAL_ACCESS_TOKEN": "test"},

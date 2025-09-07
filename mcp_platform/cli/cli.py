@@ -16,7 +16,7 @@ import logging
 import os
 import re
 from pathlib import Path
-from typing import Annotated, List, Optional
+from typing import Annotated
 
 import typer
 import yaml
@@ -209,18 +209,18 @@ def show_config(
 def deploy(
     template: Annotated[str, typer.Argument(help="Template name to deploy")],
     config_file: Annotated[
-        Optional[Path], typer.Option("--config-file", "-f", help="Path to config file")
+        Path | None, typer.Option("--config-file", "-f", help="Path to config file")
     ] = None,
     config: Annotated[
-        Optional[List[str]],
+        list[str] | None,
         typer.Option("--config", "-c", help="Configuration key=value pairs"),
     ] = None,
     env: Annotated[
-        Optional[List[str]],
+        list[str] | None,
         typer.Option("--env", "-e", help="Environment variables (KEY=VALUE)"),
     ] = None,
     override: Annotated[
-        Optional[List[str]],
+        list[str] | None,
         typer.Option(
             "--override",
             "-o",
@@ -228,31 +228,31 @@ def deploy(
         ),
     ] = None,
     backend_config: Annotated[
-        Optional[List[str]],
+        list[str] | None,
         typer.Option(
             "--backend-config", "-bc", help="Backend-specific configuration (KEY=VALUE)"
         ),
     ] = None,
     backend_config_file: Annotated[
-        Optional[str],
+        str | None,
         typer.Option(
             "--backend-config-file", "-bf", help="Backend-specific configuration file"
         ),
     ] = None,
     volumes: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--volumes", "-v", help="Volume mounts (JSON object or array)"),
     ] = None,
     host: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--host", "-h", help="Host. Defaults to 0.0.0.0"),
     ] = "0.0.0.0",
     transport: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--transport", "-t", help="Transport protocol (http, stdio)"),
     ] = None,
     port: Annotated[
-        Optional[int],
+        int | None,
         typer.Option("--port", "-p", help="Desired port to run http server on"),
     ] = None,
     no_pull: Annotated[
@@ -516,7 +516,7 @@ def deploy(
 def list_tools(
     template: Annotated[str, typer.Argument(help="Template name or deployment ID")],
     backend: Annotated[
-        Optional[str], typer.Option("--backend", help="Show specific backend only")
+        str | None, typer.Option("--backend", help="Show specific backend only")
     ] = None,
     force_refresh: Annotated[
         bool, typer.Option("--force-refresh", help="Force refresh cache")
@@ -640,7 +640,7 @@ def list(
         bool, typer.Option("--deployed", help="Show only deployed templates")
     ] = False,
     backend: Annotated[
-        Optional[str], typer.Option("--backend", help="Show specific backend only")
+        str | None, typer.Option("--backend", help="Show specific backend only")
     ] = None,
     output_format: Annotated[
         str, typer.Option("--format", help="Output format: table, json, yaml")
@@ -787,13 +787,13 @@ def list_templates():
 @app.command()
 def list_deployments(
     template: Annotated[
-        Optional[str], typer.Option("--template", help="Filter by template name")
+        str | None, typer.Option("--template", help="Filter by template name")
     ] = None,
     backend: Annotated[
-        Optional[str], typer.Option("--backend", help="Show specific backend only")
+        str | None, typer.Option("--backend", help="Show specific backend only")
     ] = None,
     status: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--status", help="Filter by status (running, stopped, etc.)"),
     ] = None,
     output_format: Annotated[
@@ -884,20 +884,20 @@ def list_deployments(
 @app.command()
 def stop(
     target: Annotated[
-        Optional[str],
+        str | None,
         typer.Argument(
             help="Deployment ID, template name, or 'all' to stop deployments"
         ),
     ] = None,
     backend: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--backend", help="Specify backend if auto-detection fails"),
     ] = None,
     all: Annotated[
         bool, typer.Option("--all", help="Stop all running deployments")
     ] = False,
     template: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--template", help="Stop all deployments for a specific template"),
     ] = None,
     dry_run: Annotated[
@@ -1145,7 +1145,7 @@ def logs(
         str, typer.Argument(help="Deployment or template ID to get logs from")
     ],
     backend: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--backend", help="Specify backend if auto-detection fails"),
     ] = None,
     lines: Annotated[

@@ -18,7 +18,26 @@ import pytest
 
 @pytest.fixture(scope="session")
 def integration_test_workspace():
-    """Create a dedicated workspace for integration tests."""
+    """
+    Create a dedicated workspace for integration tests.
+
+    Scope: session - Expensive filesystem operations shared across all tests.
+    Creates temporary directory structure with cleanup after all tests complete.
+    Session scope ensures single workspace creation for performance optimization.
+
+    Returns:
+        Path: Temporary workspace directory with predefined structure.
+
+    Directory Structure:
+        - templates/: Template storage for integration testing
+        - deployments/: Deployment artifacts and logs
+        - logs/: Test execution logging
+
+    Features:
+        - Automatic cleanup after session completion
+        - Isolated test environment per session
+        - Predictable directory structure for integration scenarios
+    """
     with tempfile.TemporaryDirectory(prefix="mcp_integration_test_") as temp_dir:
         workspace = Path(temp_dir)
 
@@ -32,7 +51,28 @@ def integration_test_workspace():
 
 @pytest.fixture
 def integration_templates_dir(integration_test_workspace):
-    """Create a templates directory with real template examples."""
+    """
+    Create a templates directory with real template examples.
+
+    Scope: function - Fresh template directory per test for isolation.
+    Creates demo and filesystem templates with complete configuration for
+    realistic integration testing scenarios.
+
+    Args:
+        integration_test_workspace: Session workspace fixture dependency.
+
+    Returns:
+        Path: Templates directory with demo and filesystem template examples.
+
+    Templates Created:
+        - demo/: Demo MCP server with Docker configuration
+        - filesystem/: Filesystem MCP server with volume mount support
+
+    Features:
+        - Complete template.json configurations
+        - Dockerfile examples for containerization
+        - Realistic config schemas for testing
+    """
     templates_dir = integration_test_workspace / "templates"
 
     # Create demo template
@@ -74,8 +114,9 @@ def integration_templates_dir(integration_test_workspace):
     demo_dockerfile.write_text(
         """FROM python:3.9-slim
 WORKDIR /app
+COPY pyproject.toml uv.lock ./
 COPY . .
-RUN pip install -r requirements.txt
+RUN pip install uv && uv sync --frozen --no-dev
 EXPOSE 8080
 CMD ["python", "server.py"]
 """
@@ -155,7 +196,25 @@ def multi_backend_config():
 
 @pytest.fixture
 def real_deployment_manager():
-    """Create a real DeploymentManager for integration tests."""
+    """
+    Create a real DeploymentManager for integration tests.
+
+    Scope: function - Fresh manager per test for isolation and safety.
+    Uses mock backend for integration testing to ensure safety while
+    maintaining realistic deployment manager behavior and API.
+
+    Returns:
+        DeploymentManager: Real deployment manager with mock backend.
+
+    Safety Features:
+        - Mock backend prevents actual Docker/K8s resource creation
+        - Real manager API for authentic integration testing
+        - Isolated per test to prevent cross-test contamination
+
+    Usage:
+        Ideal for testing deployment workflows, configuration processing,
+        and manager coordination without external infrastructure dependencies.
+    """
     from mcp_platform.core.deployment_manager import DeploymentManager
 
     return DeploymentManager("mock")  # Use mock backend for safety in tests

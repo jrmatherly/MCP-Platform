@@ -7,7 +7,7 @@ import json
 import logging
 import os
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -39,8 +39,8 @@ class MCPClientProbe:
         return network_name
 
     async def discover_tools_from_command(
-        self, command: List[str], working_dir: Optional[str] = None
-    ) -> Optional[Dict[str, Any]]:
+        self, command: list[str], working_dir: str | None = None
+    ) -> dict[str, Any] | None:
         """
         Discover tools from MCP server via command line.
 
@@ -102,9 +102,9 @@ class MCPClientProbe:
     async def discover_tools_from_docker_mcp(
         self,
         image_name: str,
-        args: Optional[List[str]] = None,
-        env_vars: Optional[Dict[str, str]] = None,
-    ) -> Optional[Dict[str, Any]]:
+        args: list[str] | None = None,
+        env_vars: dict[str, str] | None = None,
+    ) -> dict[str, Any] | None:
         """
         Discover tools from MCP server running in Docker.
 
@@ -166,7 +166,7 @@ class MCPClientProbe:
 
     async def _initialize_mcp_session(
         self, process: asyncio.subprocess.Process
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Initialize MCP session with the server using MCP protocol version 2025-03-26."""
         try:
             # Send initialize request with proper MCP 2025-03-26 protocol
@@ -218,7 +218,7 @@ class MCPClientProbe:
 
     async def _read_json_response(
         self, process: asyncio.subprocess.Process, operation: str
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Read JSON response from MCP server, skipping non-JSON lines."""
         max_attempts = 20  # Increased attempts to handle more startup output
 
@@ -258,7 +258,7 @@ class MCPClientProbe:
 
     async def _list_tools(
         self, process: asyncio.subprocess.Process
-    ) -> Optional[List[Dict[str, Any]]]:
+    ) -> list[dict[str, Any]] | None:
         """List tools from MCP server using correct protocol."""
         try:
             # Send tools/list request with proper params format
@@ -301,8 +301,8 @@ class MCPClientProbe:
             return None
 
     def _normalize_mcp_tools(
-        self, mcp_tools: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
+        self, mcp_tools: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
         """Normalize MCP tools to standard format."""
         normalized = []
 
@@ -347,8 +347,8 @@ class MCPClientProbe:
         return normalized
 
     def discover_tools_sync(
-        self, command: List[str], working_dir: Optional[str] = None
-    ) -> Optional[Dict[str, Any]]:
+        self, command: list[str], working_dir: str | None = None
+    ) -> dict[str, Any] | None:
         """Synchronous wrapper for discovering tools."""
         try:
             loop = asyncio.new_event_loop()
@@ -362,9 +362,9 @@ class MCPClientProbe:
     def discover_tools_from_docker_sync(
         self,
         image_name: str,
-        args: Optional[List[str]] = None,
-        env_vars: Optional[Dict[str, str]] = None,
-    ) -> Optional[Dict[str, Any]]:
+        args: list[str] | None = None,
+        env_vars: dict[str, str] | None = None,
+    ) -> dict[str, Any] | None:
         """Synchronous wrapper for discovering tools from Docker."""
         try:
             loop = asyncio.new_event_loop()

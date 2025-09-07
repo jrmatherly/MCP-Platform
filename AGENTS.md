@@ -25,7 +25,7 @@
 
 ### Code Style and Formatting
 ```bash
-# Required tools (configured in requirements-dev.txt)
+# Required tools (configured in pyproject.toml [tool.uv.dev-dependencies])
 black mcp_platform/ tests/           # Code formatting (line length: 90)
 isort mcp_platform/ tests/           # Import sorting (profile: black)
 flake8 mcp_platform/ tests/          # Linting (max-line-length: 90)
@@ -55,10 +55,10 @@ mcp_platform/
 
 ### Setup and Installation
 ```bash
-# Development environment setup
-make install          # Install dependencies
-make install-dev      # Install in development mode
-make dev-setup        # Complete development setup
+# Development environment setup with uv
+make install          # Install dependencies with uv sync
+make install-dev      # Install in development mode with uv
+make dev-setup        # Complete development setup using uv
 
 # Verify setup
 python tests/runner.py --unit

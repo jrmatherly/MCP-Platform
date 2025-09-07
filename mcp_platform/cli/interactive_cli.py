@@ -18,7 +18,7 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import Annotated, Any, Dict, List, Optional
+from typing import Annotated, Any
 
 try:
     import readline
@@ -150,10 +150,10 @@ class InteractiveSession:
         self.formatter = ResponseFormatter()
 
         # Session configuration storage
-        self.session_configs: Dict[str, Dict[str, Any]] = {}
+        self.session_configs: dict[str, dict[str, Any]] = {}
 
         # Template selection state
-        self.selected_template: Optional[str] = None
+        self.selected_template: str | None = None
 
         # Load cached configurations
         self._load_cached_configs()
@@ -175,11 +175,11 @@ class InteractiveSession:
             # Cache errors are non-fatal
             pass
 
-    def get_template_config(self, template_name: str) -> Dict[str, Any]:
+    def get_template_config(self, template_name: str) -> dict[str, Any]:
         """Get configuration for a template."""
         return self.session_configs.get(template_name, {})
 
-    def update_template_config(self, template_name: str, config: Dict[str, Any]):
+    def update_template_config(self, template_name: str, config: dict[str, Any]):
         """Update configuration for a template."""
         if template_name not in self.session_configs:
             self.session_configs[template_name] = {}
@@ -217,7 +217,7 @@ class InteractiveSession:
         else:
             console.print("[yellow]⚠️ No template currently selected[/yellow]")
 
-    def get_selected_template(self) -> Optional[str]:
+    def get_selected_template(self) -> str | None:
         """Get the currently selected template."""
         return self.selected_template
 
@@ -311,7 +311,7 @@ def list_templates(
 @app.command(name="tools")
 def list_tools(
     template: Annotated[
-        Optional[str],
+        str | None,
         typer.Argument(help="Template name (optional if template is selected)"),
     ],
     force_refresh: Annotated[
@@ -355,26 +355,26 @@ def list_tools(
 @app.command(name="call")
 def call_tool(
     template: Annotated[
-        Optional[str],
+        str | None,
         typer.Argument(help="Template name (optional if template is selected)"),
     ],
-    tool_name: Annotated[Optional[str], typer.Argument(help="Tool name")],
+    tool_name: Annotated[str | None, typer.Argument(help="Tool name")],
     args: Annotated[
-        Optional[str], typer.Argument(help="JSON arguments for the tool")
+        str | None, typer.Argument(help="JSON arguments for the tool")
     ] = "{}",
     config_file: Annotated[
-        Optional[Path], typer.Option("--config-file", "-f", help="Path to config file")
+        Path | None, typer.Option("--config-file", "-f", help="Path to config file")
     ] = None,
     env: Annotated[
-        Optional[List[str]],
+        list[str] | None,
         typer.Option("--env", "-e", help="Environment variables (KEY=VALUE)"),
     ] = None,
     config: Annotated[
-        Optional[List[str]],
+        list[str] | None,
         typer.Option("--config", "-C", "-c", help="Config overrides (KEY=VALUE)"),
     ] = None,
     backend: Annotated[
-        Optional[str],
+        str | None,
         typer.Option(
             "--backend", "-b", help="Specific backend to use (docker, kubernetes, mock)"
         ),
@@ -544,11 +544,11 @@ def call_tool(
 @app.command(name="configure")
 def configure_template(
     template: Annotated[
-        Optional[str],
+        str | None,
         typer.Argument(help="Template name (optional if template is selected)"),
     ],
     config_pairs: Annotated[
-        Optional[List[str]], typer.Argument(help="Configuration KEY=VALUE pairs")
+        list[str] | None, typer.Argument(help="Configuration KEY=VALUE pairs")
     ] = None,
 ):
     """Configure a template with key=value pairs."""
@@ -606,7 +606,7 @@ def configure_template(
 @app.command(name="show-config")
 def show_config(
     template: Annotated[
-        Optional[str],
+        str | None,
         typer.Argument(help="Template name (optional if template is selected)"),
     ],
 ):
@@ -760,7 +760,7 @@ def show_config(
 @app.command(name="clear-config")
 def clear_config(
     template: Annotated[
-        Optional[str],
+        str | None,
         typer.Argument(help="Template name (optional if template is selected)"),
     ],
 ):
@@ -789,7 +789,7 @@ def clear_config(
 @app.command(name="servers")
 def list_servers(
     template: Annotated[
-        Optional[str], typer.Option("--template", help="Filter by template")
+        str | None, typer.Option("--template", help="Filter by template")
     ],
     all_backends: Annotated[
         bool, typer.Option("--all-backends", help="Check all backends")
@@ -820,21 +820,21 @@ def list_servers(
 def deploy_template(
     template: Annotated[str, typer.Argument(help="Template name")],
     config_file: Annotated[
-        Optional[Path], typer.Option("--config-file", "-c", help="Path to config file")
+        Path | None, typer.Option("--config-file", "-c", help="Path to config file")
     ] = None,
     env: Annotated[
-        Optional[List[str]],
+        list[str] | None,
         typer.Option("--env", "-e", help="Environment variables (KEY=VALUE)"),
     ] = None,
     config: Annotated[
-        Optional[List[str]],
+        list[str] | None,
         typer.Option("--config", "-C", help="Config overrides (KEY=VALUE)"),
     ] = None,
     transport: Annotated[
-        Optional[str], typer.Option("--transport", "-t", help="Transport protocol")
+        str | None, typer.Option("--transport", "-t", help="Transport protocol")
     ] = "http",
     port: Annotated[
-        Optional[int], typer.Option("--port", "-p", help="Port for HTTP transport")
+        int | None, typer.Option("--port", "-p", help="Port for HTTP transport")
     ] = None,
     no_pull: Annotated[
         bool, typer.Option("--no-pull", help="Don't pull Docker images")
@@ -887,7 +887,7 @@ def deploy_template(
 @app.command(name="help")
 def show_help(
     command: Annotated[
-        Optional[str], typer.Argument(help="Show help for specific command")
+        str | None, typer.Argument(help="Show help for specific command")
     ] = None,
 ):
     """Show help information."""
@@ -979,7 +979,7 @@ def show_help(
 def get_logs(
     target: Annotated[str, typer.Argument(help="Deployment ID or template name")],
     backend: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--backend", help="Specify backend if auto-detection fails"),
     ] = None,
     lines: Annotated[
@@ -1001,20 +1001,20 @@ def get_logs(
 @app.command(name="stop")
 def stop_server(
     target: Annotated[
-        Optional[str],
+        str | None,
         typer.Argument(
             help="Deployment ID, template name, or 'all' to stop deployments"
         ),
     ] = None,
     backend: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--backend", help="Specify backend if auto-detection fails"),
     ] = None,
     all: Annotated[
         bool, typer.Option("--all", help="Stop all running deployments")
     ] = False,
     template: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--template", help="Stop all deployments for a specific template"),
     ] = None,
     dry_run: Annotated[
@@ -1075,16 +1075,16 @@ def show_status(
 @app.command(name="remove")
 def remove_server(
     target: Annotated[
-        Optional[str],
+        str | None,
         typer.Argument(help="Deployment ID or template name to remove"),
     ] = None,
     backend: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--backend", help="Specify backend if auto-detection fails"),
     ] = None,
     all: Annotated[bool, typer.Option("--all", help="Remove all deployments")] = False,
     template: Annotated[
-        Optional[str],
+        str | None,
         typer.Option(
             "--template", help="Remove all deployments for a specific template"
         ),
@@ -1146,11 +1146,11 @@ def cleanup_resources():
 
 
 def _check_missing_config(
-    template_info: Dict[str, Any],
-    config: Dict[str, Any],
-    env_vars: Dict[str, str],
-    config_file: Optional[str] = None,
-) -> List[str]:
+    template_info: dict[str, Any],
+    config: dict[str, Any],
+    env_vars: dict[str, str],
+    config_file: str | None = None,
+) -> list[str]:
     """Check for missing required configuration with conditional requirements support."""
     config_schema = template_info.get("config_schema", {})
 
@@ -1180,8 +1180,8 @@ def _check_missing_config(
 
 
 def _prompt_for_config(
-    template_info: Dict[str, Any], missing_props: List[str]
-) -> Dict[str, str]:
+    template_info: dict[str, Any], missing_props: list[str]
+) -> dict[str, str]:
     """Prompt user for missing configuration values with intelligent conditional handling."""
     config_schema = template_info.get("config_schema", {})
     properties = config_schema.get("properties", {})
@@ -1216,8 +1216,8 @@ def _prompt_for_config(
 
 
 def _prompt_for_conditional_config(
-    template_info: Dict[str, Any], missing_props: List[str]
-) -> Dict[str, str]:
+    template_info: dict[str, Any], missing_props: list[str]
+) -> dict[str, str]:
     """Handle intelligent prompting for templates with conditional requirements."""
     config_schema = template_info.get("config_schema", {})
     properties = config_schema.get("properties", {})
@@ -1257,8 +1257,8 @@ def _prompt_for_conditional_config(
 
 
 def _prompt_for_engine_config(
-    template_info: Dict[str, Any], missing_props: List[str]
-) -> Dict[str, str]:
+    template_info: dict[str, Any], missing_props: list[str]
+) -> dict[str, str]:
     """Handle smart prompting for search engine templates (Elasticsearch/OpenSearch)."""
     config_schema = template_info.get("config_schema", {})
     properties = config_schema.get("properties", {})
@@ -1361,7 +1361,7 @@ def _prompt_for_engine_config(
     return new_config
 
 
-def _show_template_help(template: str, tools: List[Dict[str, Any]]):
+def _show_template_help(template: str, tools: list[dict[str, Any]]):
     """Show detailed help for a template and its tools."""
     console.print(f"\n[cyan]📖 Detailed Help for Template: {template}[/cyan]")
 

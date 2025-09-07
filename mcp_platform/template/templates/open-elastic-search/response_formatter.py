@@ -8,7 +8,6 @@ to display data in beautiful, structured tables instead of raw text.
 
 import json
 import logging
-from typing import Optional
 
 from rich.console import Console
 from rich.panel import Panel
@@ -20,7 +19,7 @@ logger = logging.getLogger(__name__)
 class ElasticsearchResponseFormatter:
     """Custom response formatter for Elasticsearch tools."""
 
-    def __init__(self, console: Optional[Console] = None):
+    def __init__(self, console: Console | None = None):
         """Initialize the formatter."""
         self.console = console or Console()
 

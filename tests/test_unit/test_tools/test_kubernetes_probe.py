@@ -8,9 +8,9 @@ from unittest.mock import patch
 
 import pytest
 
-pytestmark = [pytest.mark.unit, pytest.mark.kubernetes]
-
 from mcp_platform.tools.kubernetes_probe import KubernetesProbe
+
+pytestmark = [pytest.mark.unit, pytest.mark.kubernetes]
 
 
 class TestKubernetesProbe:
@@ -42,7 +42,7 @@ class TestKubernetesProbe:
 
         # Mock the kubernetes client APIs to avoid actual initialization
         with patch("kubernetes.client.AppsV1Api"), patch("kubernetes.client.CoreV1Api"):
-            probe = KubernetesProbe()
+            KubernetesProbe()
 
         # The mock should be called once during __init__
         mock_incluster.assert_called_once()
@@ -58,7 +58,7 @@ class TestKubernetesProbe:
 
         # Mock the kubernetes client APIs to avoid actual initialization
         with patch("kubernetes.client.AppsV1Api"), patch("kubernetes.client.CoreV1Api"):
-            probe = KubernetesProbe()
+            KubernetesProbe()
 
         # Both methods should be called once during __init__
         mock_incluster.assert_called_once()

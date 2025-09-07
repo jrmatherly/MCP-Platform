@@ -43,8 +43,11 @@ Zero-configuration deployment of production-ready MCP servers with Docker contai
 ## 🚀 Quick Start
 
 ```bash
-# Install MCP Templates
-pip install mcp-platform
+# Install MCP Platform using uv
+uv add mcp-platform
+
+# Or install globally
+uv tool install mcp-platform
 
 # List available templates
 mcpp list
@@ -100,9 +103,11 @@ Ready-to-use templates for common use cases: filesystem, databases, APIs, and mo
 
 ## 📚 Installation
 
-### PyPI (Recommended)
+### PyPI with uv (Recommended)
 ```bash
-pip install mcp-platform
+uv add mcp-platform
+# Or install as a tool globally
+uv tool install mcp-platform
 ```
 
 ### Docker
@@ -112,9 +117,9 @@ docker run --privileged -it dataeverything/mcp-server-templates:latest deploy de
 
 ### From Source
 ```bash
-git clone https://github.com/DataEverything/mcp-server-templates.git
-cd mcp-server-templates
-pip install -r requirements.txt
+git clone https://github.com/Data-Everything/MCP-Platform.git
+cd MCP-Platform
+uv sync --all-extras
 ```
 
 ---
@@ -284,7 +289,7 @@ mcpp deploy filesystem --config-file myconfig.json
 1. **Install new package:**
    ```bash
    pip uninstall mcp-templates
-   pip install mcp-platform
+   uv add mcp-platform
    ```
 
 2. **Update commands:**

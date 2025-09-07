@@ -10,7 +10,7 @@
 
 ```bash
 # Install development dependencies
-pip install -r requirements-dev.txt
+uv sync
 
 # Development tools include:
 # - pytest (testing framework)
@@ -28,12 +28,12 @@ pip install -r requirements-dev.txt
 git clone https://github.com/Data-Everything/MCP-Platform.git
 cd MCP-Platform
 
-# Set up development environment
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# venv\Scripts\activate     # Windows
+# Set up development environment with uv
+uv venv
+source .venv/bin/activate  # Linux/Mac
+# .venv\Scripts\activate     # Windows
 
-pip install -e .
+uv sync
 ```
 
 #### Development Configuration
@@ -103,8 +103,8 @@ mcpp create my-new-template --dev-mode
 templates/my-new-template/
 ├── template.json           # Template configuration
 ├── Dockerfile             # Container definition
-├── requirements.txt       # Python dependencies
-├── requirements-dev.txt   # Development dependencies
+├── pyproject.toml         # Python dependencies and project config
+├── uv.lock               # Locked dependency versions
 ├── src/                   # Source code
 │   ├── __init__.py        # Package initialization
 │   ├── server.py          # Main server implementation
@@ -1035,8 +1035,7 @@ class TestErrorRecovery:
 
 # Development setup
 setup-dev:
-	pip install -e .
-	pip install -r requirements-dev.txt
+	uv sync
 	pre-commit install
 
 # Testing

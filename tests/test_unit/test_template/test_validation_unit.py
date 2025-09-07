@@ -57,7 +57,6 @@ class TestTemplateValidation:
         templates = self.discovery.discover_templates()
 
         assert "valid-template" in templates
-        template = templates["valid-template"]
 
         # Check that tool discovery fields are preserved
         # Note: These would be available in the original template_data
@@ -184,7 +183,7 @@ class TestTemplateValidation:
         creator._create_template_json()
 
         # Verify defaults are set
-        with open(creator.template_dir / "template.json", "r") as f:
+        with open(creator.template_dir / "template.json") as f:
             config = json.load(f)
 
         assert config["tool_discovery"] == "dynamic"

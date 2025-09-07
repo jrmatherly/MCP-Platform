@@ -5,7 +5,7 @@ Mock deployment service for testing.
 import logging
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from mcp_platform.backends import BaseDeploymentBackend
 
@@ -36,12 +36,12 @@ class MockDeploymentService(BaseDeploymentBackend):
     def deploy_template(
         self,
         template_id: str,
-        config: Dict[str, Any],
-        template_data: Dict[str, Any],
-        backend_config: Dict[str, Any],
+        config: dict[str, Any],
+        template_data: dict[str, Any],
+        backend_config: dict[str, Any],
         pull_image: bool = True,
         dry_run: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Mock template deployment."""
         # Validate template_data has required fields
         if not template_data.get("docker_image") and not template_data.get("image"):
@@ -92,7 +92,7 @@ class MockDeploymentService(BaseDeploymentBackend):
         logger.info("Mock deployment created: %s", deployment_name)
         return deployment_info
 
-    def list_deployments(self, template: str = None) -> List[Dict[str, Any]]:
+    def list_deployments(self, template: str = None) -> list[dict[str, Any]]:
         """List mock deployments."""
         deployments = []
         for name, info in self.deployments.items():
@@ -124,7 +124,7 @@ class MockDeploymentService(BaseDeploymentBackend):
 
     def get_deployment_info(
         self, deployment_name: str, include_logs: bool = False, lines: int = 10
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get detailed mock deployment info."""
         if deployment_name in self.deployments:
             info = self.deployments[deployment_name].copy()
@@ -156,9 +156,9 @@ class MockDeploymentService(BaseDeploymentBackend):
         deployment_name: str,
         lines: int = 100,
         follow: bool = False,
-        since: Optional[str] = None,
-        until: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        since: str | None = None,
+        until: str | None = None,
+    ) -> dict[str, Any]:
         """Get mock deployment logs."""
         if deployment_name in self.deployments:
             logs = f"Mock log line 1 for {deployment_name}\nMock log line 2 for {deployment_name}\nMock log line 3 for {deployment_name}"
@@ -181,7 +181,7 @@ class MockDeploymentService(BaseDeploymentBackend):
             if log_line:
                 yield log_line
 
-    def list_all_deployments(self) -> List[Dict[str, Any]]:
+    def list_all_deployments(self) -> list[dict[str, Any]]:
         """Alias for list_deployments for test compatibility."""
         return self.list_deployments()
 
@@ -199,14 +199,14 @@ class MockDeploymentService(BaseDeploymentBackend):
     def deploy(
         self,
         template_id: str,
-        config: Dict[str, Any],
-        template_data: Dict[str, Any],
+        config: dict[str, Any],
+        template_data: dict[str, Any],
         pull_image: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Alias for deploy_template for test compatibility."""
         return self.deploy_template(template_id, config, template_data, pull_image)
 
-    def cleanup_dangling_images(self) -> Dict[str, Any]:
+    def cleanup_dangling_images(self) -> dict[str, Any]:
         """Mock implementation for cleanup_dangling_images."""
         logger.info("Mock: Cleaning up dangling images")
         return {
@@ -216,7 +216,7 @@ class MockDeploymentService(BaseDeploymentBackend):
             "message": "Mock cleanup - no actual images to clean",
         }
 
-    def cleanup_stopped_containers(self) -> Dict[str, Any]:
+    def cleanup_stopped_containers(self) -> dict[str, Any]:
         """Mock implementation for cleanup_stopped_containers."""
         logger.info("Mock: Cleaning up stopped containers")
         return {
@@ -226,7 +226,7 @@ class MockDeploymentService(BaseDeploymentBackend):
             "message": "Mock cleanup - no actual containers to clean",
         }
 
-    def connect_to_deployment(self, deployment_id: str) -> Optional[str]:
+    def connect_to_deployment(self, deployment_id: str) -> str | None:
         """Mock implementation for connect_to_deployment."""
         logger.info("Mock: Connecting to deployment %s", deployment_id)
         if deployment_id in self.deployments:

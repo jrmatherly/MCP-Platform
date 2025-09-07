@@ -3,7 +3,7 @@ Deployment backend interface for managing deployments across different platforms
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 class BaseDeploymentBackend(ABC):
@@ -32,12 +32,12 @@ class BaseDeploymentBackend(ABC):
     def deploy_template(
         self,
         template_id: str,
-        config: Dict[str, Any],
-        template_data: Dict[str, Any],
-        backend_config: Dict[str, Any],
+        config: dict[str, Any],
+        template_data: dict[str, Any],
+        backend_config: dict[str, Any],
         pull_image: bool = True,
         dry_run: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Deploy a template using the backend.
 
         Args:
@@ -54,7 +54,7 @@ class BaseDeploymentBackend(ABC):
         pass
 
     @abstractmethod
-    def list_deployments(self, template: str = None) -> List[Dict[str, Any]]:
+    def list_deployments(self, template: str = None) -> list[dict[str, Any]]:
         """List all active deployments managed by this backend.
 
         Returns:
@@ -90,7 +90,7 @@ class BaseDeploymentBackend(ABC):
     @abstractmethod
     def get_deployment_info(
         self, deployment_name: str, include_logs: bool = False, lines: int = 10
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get detailed information about a specific deployment.
 
         Args:
@@ -117,8 +117,8 @@ class BaseDeploymentBackend(ABC):
 
     @abstractmethod
     def cleanup_stopped_containers(
-        self, template_name: Optional[str] = None
-    ) -> Dict[str, Any]:
+        self, template_name: str | None = None
+    ) -> dict[str, Any]:
         """
         Clean up stopped containers.
 
@@ -131,7 +131,7 @@ class BaseDeploymentBackend(ABC):
         pass
 
     @abstractmethod
-    def cleanup_dangling_images(self) -> Dict[str, Any]:
+    def cleanup_dangling_images(self) -> dict[str, Any]:
         """
         Clean up dangling images.
 
@@ -140,7 +140,7 @@ class BaseDeploymentBackend(ABC):
         """
         pass
 
-    def set_config(self, config: Dict[str, Any]) -> None:
+    def set_config(self, config: dict[str, Any]) -> None:
         """SSet backend config.
 
         All backend can configure this should they need to

@@ -198,7 +198,7 @@ docker run --name mcp-postgres \
   -e POSTGRES_USER=mcp_user \
   -e POSTGRES_PASSWORD=secure_password \
   -p 5432:5432 \
-  -d postgres:13
+  -d postgres:17-alpine
 ```
 
 **MySQL:**
@@ -321,7 +321,7 @@ services:
       - postgres
 
   postgres:
-    image: postgres:13
+    image: postgres:17-alpine
     environment:
       - POSTGRES_DB=mcp
       - POSTGRES_USER=mcp

@@ -45,9 +45,7 @@ class TestNameOverrideIntegration(unittest.TestCase):
         # Verify server would use the overridden name
 
         # Create server instance (without actually running FastMCP)
-        with patch(
-            "mcp_platform.template.templates.demo.server.FastMCP"
-        ) as mock_fastmcp:
+        with patch("mcp_platform.template.templates.demo.server.FastMCP") as mock_fastmcp:
             DemoMCPServer()
 
             # Verify FastMCP was initialized with the correct name

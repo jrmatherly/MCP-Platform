@@ -456,11 +456,8 @@ class TestHealthCheckerIntegration:
 
         # Mock both HTTP and stdio health checks
         with (
-            patch(
-                "mcp_platform.gateway.health_checker.MCPConnection"
-            ) as mock_mcp_class,
+            patch("mcp_platform.gateway.health_checker.MCPConnection") as mock_mcp_class,
         ):
-
             # Mock MCP connection for stdio
             mock_connection = AsyncMock()
             mock_connection.connect_stdio.return_value = True

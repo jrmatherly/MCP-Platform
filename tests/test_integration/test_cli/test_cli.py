@@ -612,9 +612,8 @@ class TestCLIIntegrationEdgeCases:
         mock_client_class.return_value = mock_client
 
         # Simulate network timeout
-        import socket
 
-        mock_client.list_servers.side_effect = socket.timeout("Connection timed out")
+        mock_client.list_servers.side_effect = TimeoutError("Connection timed out")
 
         result = self.runner.invoke(app, ["list-deployments"])
         assert result.exit_code != 0

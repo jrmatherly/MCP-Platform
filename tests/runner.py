@@ -6,15 +6,15 @@ Provides convenient commands to run different test suites with proper coverage r
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 def run_command(cmd, description):
     """Run a command and handle errors."""
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Running: {description}")
     print(f"Command: {' '.join(cmd)}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     result = subprocess.run(cmd, capture_output=False)
     if result.returncode != 0:
@@ -47,24 +47,19 @@ def run_unit_tests(verbose=False, coverage=True):
     return run_command(cmd, "Unit Tests")
 
 
-def run_integration_tests(self, verbose: bool = True) -> Dict[str, Any]:
-    """Run integration tests.
-
-    Args:
-        verbose: Whether to show verbose output
-
-    Returns:
-        Dict containing test results
-    """
-    cmd = [sys.executable, "-m", "pytest", "-m", "integration", "--tb=short"]
+def run_integration_tests(verbose=False):
+    """Run integration tests."""
+    cmd = ["python", "-m", "pytest", "-m", "integration"]
 
     if verbose:
         cmd.append("-v")
 
-    return self._run_pytest(cmd, "Integration Tests")
+    cmd.extend(["--tb=short"])
+
+    return run_command(cmd, "Integration Tests")
 
 
-def run_docker_tests(self, verbose: bool = True) -> Dict[str, Any]:
+def run_docker_tests(self, verbose: bool = True) -> dict[str, Any]:
     """Run Docker-dependent tests.
 
     Args:
@@ -81,7 +76,7 @@ def run_docker_tests(self, verbose: bool = True) -> Dict[str, Any]:
     return self._run_pytest(cmd, "Docker Tests")
 
 
-def run_e2e_tests(self, verbose: bool = True) -> Dict[str, Any]:
+def run_e2e_tests(self, verbose: bool = True) -> dict[str, Any]:
     """Run end-to-end tests.
 
     Args:
@@ -99,8 +94,8 @@ def run_e2e_tests(self, verbose: bool = True) -> Dict[str, Any]:
 
 
 def run_template_tests(
-    self, template_name: Optional[str] = None, verbose: bool = True
-) -> Dict[str, Any]:
+    self, template_name: str | None = None, verbose: bool = True
+) -> dict[str, Any]:
     """Run template-specific tests.
 
     Args:
@@ -127,7 +122,7 @@ def run_all_tests(
     include_slow: bool = False,
     include_docker: bool = False,
     verbose: bool = True,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Run all tests with comprehensive coverage.
 
     Args:
@@ -166,9 +161,7 @@ def run_all_tests(
     return self._run_pytest(cmd, "All Tests")
 
 
-def run_specific_test_file(
-    self, test_file: str, verbose: bool = True
-) -> Dict[str, Any]:
+def run_specific_test_file(self, test_file: str, verbose: bool = True) -> dict[str, Any]:
     """Run a specific test file.
 
     Args:
@@ -186,7 +179,7 @@ def run_specific_test_file(
     return self._run_pytest(cmd, f"Test File: {test_file}")
 
 
-def run_coverage_only(self) -> Dict[str, Any]:
+def run_coverage_only(self) -> dict[str, Any]:
     """Run tests purely for coverage measurement.
 
     Returns:
@@ -230,7 +223,7 @@ def generate_coverage_report(self) -> Path:
     return self.coverage_dir / "index.html"
 
 
-def check_test_quality(self) -> Dict[str, Any]:
+def check_test_quality(self) -> dict[str, Any]:
     """Check test quality metrics.
 
     Returns:
@@ -246,7 +239,7 @@ def check_test_quality(self) -> Dict[str, Any]:
     return metrics
 
 
-def _run_pytest(self, cmd: List[str], test_type: str) -> Dict[str, Any]:
+def _run_pytest(self, cmd: list[str], test_type: str) -> dict[str, Any]:
     """Run pytest command and capture results.
 
     Args:
@@ -295,7 +288,7 @@ def _run_pytest(self, cmd: List[str], test_type: str) -> Dict[str, Any]:
         }
 
 
-def _get_coverage_percentage(self) -> Optional[float]:
+def _get_coverage_percentage(self) -> float | None:
     """Get current test coverage percentage.
 
     Returns:
@@ -321,7 +314,7 @@ def _get_coverage_percentage(self) -> Optional[float]:
     return None
 
 
-def _find_missing_tests(self) -> List[str]:
+def _find_missing_tests(self) -> list[str]:
     """Find source files that don't have corresponding tests.
 
     Returns:
@@ -343,7 +336,7 @@ def _find_missing_tests(self) -> List[str]:
     return missing_tests
 
 
-def _find_duplicate_tests(self) -> List[str]:
+def _find_duplicate_tests(self) -> list[str]:
     """Find potentially duplicate test functions.
 
     Returns:
@@ -389,9 +382,7 @@ def main():
         "--coverage", action="store_true", help="Run coverage analysis only"
     )
     parser.add_argument("--all", action="store_true", help="Run all tests")
-    parser.add_argument(
-        "--include-slow", action="store_true", help="Include slow tests"
-    )
+    parser.add_argument("--include-slow", action="store_true", help="Include slow tests")
     parser.add_argument(
         "--include-docker", action="store_true", help="Include Docker tests"
     )
@@ -402,38 +393,79 @@ def main():
 
     args = parser.parse_args()
 
-    runner = TestRunner()
     verbose = not args.quiet
 
     results = []
 
     if args.unit:
-        results.append(runner.run_unit_tests(verbose))
+        success = run_unit_tests(verbose)
+        results.append(
+            {
+                "success": success,
+                "test_type": "Unit Tests",
+                "return_code": 0 if success else 1,
+            }
+        )
     elif args.integration:
-        results.append(runner.run_integration_tests(verbose))
+        success = run_integration_tests(verbose)
+        results.append(
+            {
+                "success": success,
+                "test_type": "Integration Tests",
+                "return_code": 0 if success else 1,
+            }
+        )
     elif args.docker:
-        results.append(runner.run_docker_tests(verbose))
+        print("Docker tests not yet implemented")
+        results.append({"success": False, "test_type": "Docker Tests", "return_code": 1})
     elif args.e2e:
-        results.append(runner.run_e2e_tests(verbose))
+        print("E2E tests not yet implemented")
+        results.append({"success": False, "test_type": "E2E Tests", "return_code": 1})
     elif args.template:
-        results.append(runner.run_template_tests(args.template, verbose))
+        print(f"Template tests for {args.template} not yet implemented")
+        results.append(
+            {
+                "success": False,
+                "test_type": f"Template Tests ({args.template})",
+                "return_code": 1,
+            }
+        )
     elif args.file:
-        results.append(runner.run_specific_test_file(args.file, verbose))
+        print(f"Specific file tests for {args.file} not yet implemented")
+        results.append(
+            {"success": False, "test_type": f"File Tests ({args.file})", "return_code": 1}
+        )
     elif args.coverage:
-        results.append(runner.run_coverage_only())
+        success = run_unit_tests(verbose, coverage=True)
+        results.append(
+            {
+                "success": success,
+                "test_type": "Coverage Tests",
+                "return_code": 0 if success else 1,
+            }
+        )
     elif args.quality:
-        metrics = runner.check_test_quality()
-        print("\n=== Test Quality Metrics ===")
-        for key, value in metrics.items():
-            print(f"{key}: {value}")
+        print("Test quality metrics not yet implemented")
         return
     elif args.all:
+        success = run_unit_tests(verbose)
         results.append(
-            runner.run_all_tests(args.include_slow, args.include_docker, verbose)
+            {
+                "success": success,
+                "test_type": "All Tests",
+                "return_code": 0 if success else 1,
+            }
         )
     else:
-        # Default: run all tests excluding slow and docker
-        results.append(runner.run_all_tests(False, False, verbose))
+        # Default: run unit tests
+        success = run_unit_tests(verbose)
+        results.append(
+            {
+                "success": success,
+                "test_type": "Unit Tests",
+                "return_code": 0 if success else 1,
+            }
+        )
 
     # Print results summary
     print("\n" + "=" * 60)

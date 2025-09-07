@@ -11,7 +11,7 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 class DemoServerConfig:
@@ -23,7 +23,7 @@ class DemoServerConfig:
     notation for nested configuration override.
     """
 
-    def __init__(self, config_dict: Optional[Dict[str, Any]] = None):
+    def __init__(self, config_dict: dict[str, Any] | None = None):
         """
         Initialize demo server configuration.
 
@@ -121,7 +121,7 @@ class DemoServerConfig:
 
     def _process_double_underscore_key(
         self, key: str, value: Any
-    ) -> tuple[Optional[str], Any]:
+    ) -> tuple[str | None, Any]:
         """
         Process a single double underscore key.
 
@@ -319,7 +319,7 @@ class DemoServerConfig:
             )
             return value
 
-    def _find_property_config(self, key: str) -> Optional[Dict[str, Any]]:
+    def _find_property_config(self, key: str) -> dict[str, Any] | None:
         """Find property configuration for a given key."""
         config_schema = self.template_data.get("config_schema", {})
         properties = config_schema.get("properties", {})
@@ -337,7 +337,7 @@ class DemoServerConfig:
         return None
 
     def _convert_value_by_type(
-        self, value: Any, prop_type: str, prop_config: Dict[str, Any]
+        self, value: Any, prop_type: str, prop_config: dict[str, Any]
     ) -> Any:
         """Convert value based on property type."""
         if prop_type == "boolean":
@@ -365,7 +365,7 @@ class DemoServerConfig:
                 raise ValueError(f"Invalid boolean value: {value}")
         return bool(value)
 
-    def _convert_to_array(self, value: Any, prop_config: Dict[str, Any]) -> List[Any]:
+    def _convert_to_array(self, value: Any, prop_config: dict[str, Any]) -> list[Any]:
         """Convert value to array."""
         if isinstance(value, str):
             # Handle JSON array strings
@@ -431,7 +431,7 @@ class DemoServerConfig:
         self.logger.debug("Using default value for '%s': %s", key, default)
         return default
 
-    def _load_template(self, template_path: str = None) -> Dict[str, Any]:
+    def _load_template(self, template_path: str = None) -> dict[str, Any]:
         """
         Load template data from a JSON file.
 
@@ -445,10 +445,10 @@ class DemoServerConfig:
         if not template_path:
             template_path = Path(__file__).parent / "template.json"
 
-        with open(template_path, mode="r", encoding="utf-8") as template_file:
+        with open(template_path, encoding="utf-8") as template_file:
             return json.load(template_file)
 
-    def get_template_config(self, template_path: str = None) -> Dict[str, Any]:
+    def get_template_config(self, template_path: str = None) -> dict[str, Any]:
         """
         Get configuration properties from the template.
 
@@ -474,7 +474,7 @@ class DemoServerConfig:
 
         return properties_dict
 
-    def get_template_data(self) -> Dict[str, Any]:
+    def get_template_data(self) -> dict[str, Any]:
         """
         Get the full template data, potentially modified by double underscore notation.
 
@@ -510,7 +510,7 @@ class DemoServerConfig:
         return template_data
 
     def _apply_nested_override(
-        self, data: Dict[str, Any], key: str, value: Any
+        self, data: dict[str, Any], key: str, value: Any
     ) -> None:
         """
         Apply a nested override using double underscore notation.

@@ -8,7 +8,6 @@ in the registry. Supports both HTTP and stdio health checking.
 import asyncio
 import logging
 import time
-from typing import Dict, Optional
 
 import aiohttp
 
@@ -50,14 +49,14 @@ class HealthChecker:
         self.max_concurrent_checks = max_concurrent_checks
 
         self._running = False
-        self._check_task: Optional[asyncio.Task] = None
+        self._check_task: asyncio.Task | None = None
         self._semaphore = asyncio.Semaphore(max_concurrent_checks)
 
         # Health check statistics
         self._total_checks = 0
         self._successful_checks = 0
         self._failed_checks = 0
-        self._last_check_time: Optional[float] = None
+        self._last_check_time: float | None = None
 
     async def start(self):
         """Start the health checking service."""
@@ -321,7 +320,7 @@ class HealthChecker:
 
     async def check_instance_now(
         self, template_name: str, instance_id: str
-    ) -> Optional[bool]:
+    ) -> bool | None:
         """
         Perform immediate health check on a specific instance.
 
@@ -338,7 +337,7 @@ class HealthChecker:
 
         return await self._check_instance_health(instance)
 
-    def get_health_stats(self) -> Dict[str, any]:
+    def get_health_stats(self) -> dict[str, any]:
         """Get health checker statistics."""
         uptime = (
             time.time() - (self._last_check_time or time.time())

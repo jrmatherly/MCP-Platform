@@ -151,7 +151,7 @@ class TestGatewayErrorHandling:
     def test_gateway_validation_error_handling(self):
         """Test gateway handles validation errors properly."""
         # Simulate validation error
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError):
             # This would test actual validation, but for now just test the pattern
             raise ValueError("Validation failed")
 

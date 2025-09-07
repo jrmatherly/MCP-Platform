@@ -44,9 +44,7 @@ class TestTemplateCreator(unittest.TestCase):
         custom_templates = Path("/custom/templates")
         custom_tests = Path("/custom/tests")
 
-        creator = TemplateCreator(
-            templates_dir=custom_templates, tests_dir=custom_tests
-        )
+        creator = TemplateCreator(templates_dir=custom_templates, tests_dir=custom_tests)
 
         assert creator.templates_dir == custom_templates
         assert creator.tests_dir == custom_tests
@@ -203,14 +201,10 @@ class TestTemplateCreator(unittest.TestCase):
         assert self.creator.template_data["description"] == expected_data["description"]
         assert self.creator.template_data["version"] == expected_data["version"]
         assert self.creator.template_data["author"] == expected_data["author"]
-        assert (
-            self.creator.template_data["docker_image"] == expected_data["docker_image"]
-        )
+        assert self.creator.template_data["docker_image"] == expected_data["docker_image"]
         assert self.creator.template_data["docker_tag"] == expected_data["docker_tag"]
         assert self.creator.template_data["origin"] == expected_data["origin"]
-        assert (
-            self.creator.template_data["capabilities"] == expected_data["capabilities"]
-        )
+        assert self.creator.template_data["capabilities"] == expected_data["capabilities"]
         assert len(self.creator.template_data["config_schema"]["properties"]) > 5
 
     @patch("mcp_platform.template.utils.creation.console")
@@ -386,7 +380,7 @@ class TestTemplateCreator(unittest.TestCase):
             json_path = self.creator.template_dir / "template.json"
             assert json_path.exists()
 
-            with open(json_path, "r") as f:
+            with open(json_path) as f:
                 template_config = json.load(f)
                 assert template_config["name"] == "Test Template"
                 assert template_config["description"] == "A test template"

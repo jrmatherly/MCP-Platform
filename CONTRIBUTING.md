@@ -43,7 +43,7 @@ templates/your-template/
 ├── template.json          # Configuration schema
 ├── Dockerfile            # Container definition
 ├── docker-compose.yml    # Local testing setup
-├── requirements.txt      # Python dependencies (if applicable)
+├── pyproject.toml        # Python dependencies (if applicable)
 ├── package.json          # Node.js dependencies (if applicable)
 ├── src/                  # Source code
 │   ├── server.py        # Main MCP server (Python)
@@ -310,8 +310,8 @@ Brief description of changes
 git clone https://github.com/your-username/MCP-Platform.git
 cd MCP-Platform
 
-# Make scripts executable
-chmod +x scripts/*.sh
+# Setup development environment with uv
+uv sync --all-extras
 
 # Build and test a template
 ./scripts/build-template.sh file-server

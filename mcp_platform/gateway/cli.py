@@ -11,7 +11,6 @@ import logging
 import os
 import secrets
 from pathlib import Path
-from typing import Optional
 
 import aiohttp
 import typer
@@ -41,13 +40,13 @@ def start_gateway(
         "0.0.0.0", "--host", "-h", help="Host to bind the gateway to"
     ),
     port: int = typer.Option(8080, "--port", "-p", help="Port to bind the gateway to"),
-    database_url: Optional[str] = typer.Option(
+    database_url: str | None = typer.Option(
         None, "--database", "-d", help="Database URL (defaults to SQLite)"
     ),
-    registry_file: Optional[str] = typer.Option(
+    registry_file: str | None = typer.Option(
         "registry.json", "--registry", "-r", help="Fallback registry file"
     ),
-    secret_key: Optional[str] = typer.Option(
+    secret_key: str | None = typer.Option(
         None, "--secret-key", help="JWT secret key (generates random if not provided)"
     ),
     cors_origins: str = typer.Option(
@@ -141,12 +140,12 @@ def start_gateway(
 @gateway_app.command("create-user")
 def create_user(
     username: str = typer.Argument(..., help="Username for the new user"),
-    email: Optional[str] = typer.Option(None, "--email", "-e", help="User email"),
-    password: Optional[str] = typer.Option(
+    email: str | None = typer.Option(None, "--email", "-e", help="User email"),
+    password: str | None = typer.Option(
         None, "--password", "-p", help="User password"
     ),
     superuser: bool = typer.Option(False, "--superuser", help="Create as superuser"),
-    database_url: Optional[str] = typer.Option(
+    database_url: str | None = typer.Option(
         None, "--database", "-d", help="Database URL"
     ),
 ):
@@ -202,7 +201,7 @@ def create_user(
 def create_api_key(
     username: str = typer.Argument(..., help="Username to create API key for"),
     name: str = typer.Option(..., "--name", "-n", help="API key name"),
-    description: Optional[str] = typer.Option(
+    description: str | None = typer.Option(
         None, "--description", help="API key description"
     ),
     scopes: str = typer.Option(
@@ -211,7 +210,7 @@ def create_api_key(
         help="Comma-separated list of scopes",
     ),
     expires_days: int = typer.Option(30, "--expires", help="Expiration in days"),
-    database_url: Optional[str] = typer.Option(
+    database_url: str | None = typer.Option(
         None, "--database", "-d", help="Database URL"
     ),
 ):
@@ -297,7 +296,7 @@ def create_api_key(
 
 @gateway_app.command("list-users")
 def list_users(
-    database_url: Optional[str] = typer.Option(
+    database_url: str | None = typer.Option(
         None, "--database", "-d", help="Database URL"
     ),
 ):
@@ -366,7 +365,7 @@ def list_users(
 
 @gateway_app.command("db-init")
 def initialize_database_cmd(
-    database_url: Optional[str] = typer.Option(
+    database_url: str | None = typer.Option(
         None, "--database", "-d", help="Database URL"
     ),
     force: bool = typer.Option(False, "--force", help="Force re-initialization"),
@@ -405,7 +404,7 @@ def initialize_database_cmd(
 def gateway_status(
     host: str = typer.Option("localhost", "--host", help="Gateway host"),
     port: int = typer.Option(8080, "--port", help="Gateway port"),
-    api_key: Optional[str] = typer.Option(
+    api_key: str | None = typer.Option(
         None, "--api-key", help="API key for authentication"
     ),
 ):
@@ -474,7 +473,7 @@ def gateway_status(
 @gateway_app.command("test-auth")
 def test_authentication(
     username: str = typer.Argument(..., help="Username to test"),
-    password: Optional[str] = typer.Option(None, "--password", help="Password"),
+    password: str | None = typer.Option(None, "--password", help="Password"),
     host: str = typer.Option("localhost", "--host", help="Gateway host"),
     port: int = typer.Option(8080, "--port", help="Gateway port"),
 ):

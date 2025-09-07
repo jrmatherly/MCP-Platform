@@ -1,15 +1,13 @@
 [build-system]
-requires = ["setuptools>=61.0", "setuptools_scm"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
 
 [project]
 name = "mcp-platform"
 dynamic = ["version"]
 description = "MCP Platform: Production-ready Model Context Protocol server deployment and management platform"
 readme = "README.md"
-authors = [
-    { name = "Sam Arora", email = "tooling@dataeverything.com" },
-]
+authors = [{ name = "Sam Arora", email = "tooling@dataeverything.com" }]
 license = "Elastic-2.0"
 requires-python = ">=3.10"
 dependencies = [
@@ -21,6 +19,8 @@ dependencies = [
     "setuptools_scm>=8.3.1",
     "typer>=0.16.0",
     "kubernetes>=33.1.0",
+    "fastmcp>=2.10.0",
+    "tenacity>=9.1.2",
     "fastapi>=0.116.1",
     "uvicorn>=0.35.0",
     "pydantic>=2.0.0",
@@ -32,7 +32,16 @@ dependencies = [
     # Default SQLite support for gateway
     "aiosqlite>=0.21.0",
 ]
-keywords = ["MCP", "Model Context Protocol", "AI Platform", "Server Deployment", "Docker", "Kubernetes", "MCP Platform", "Unified Gateway"]
+keywords = [
+    "MCP",
+    "Model Context Protocol",
+    "AI Platform",
+    "Server Deployment",
+    "Docker",
+    "Kubernetes",
+    "MCP Platform",
+    "Unified Gateway",
+]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -47,24 +56,43 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
+# Development dependencies
+dev = [
+    # Testing framework
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-timeout>=2.1.0",
+    "pytest-cov>=4.0.0",
+    "pytest-mock>=3.10.0",
+    "responses>=0.23.0",
+    # Documentation
+    "mkdocs>=1.5.0",
+    "mkdocs-material>=9.0.0",
+    "mkdocs-awesome-pages-plugin>=2.9.0",
+    # Code quality tools
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "flake8>=6.0.0",
+    "bandit>=1.7.0",
+    "mypy>=1.0.0",
+    "ruff>=0.1.0",
+    "pre-commit>=3.0.0",
+    # Build tools
+    "build>=0.10.0",
+    "wheel>=0.40.0",
+    # Docker
+    "docker",
+]
 # Database drivers for gateway (SQLite included by default)
-postgresql = [
-    "asyncpg>=0.29.0",
-]
-mysql = [
-    "aiomysql>=0.2.0",
-]
-oracle = [
-    "cx_Oracle_async>=0.4.0",
-]
-mssql = [
-    "aioodbc>=0.4.0",
-]
+postgresql = ["asyncpg>=0.29.0"]
+mysql = ["aiomysql>=0.2.0"]
+oracle = ["cx_Oracle_async>=0.3.0,<=0.3.3"]
+mssql = ["aioodbc>=0.4.0"]
 # All database drivers
 all-databases = [
     "asyncpg>=0.29.0",
     "aiomysql>=0.2.0",
-    "cx_Oracle_async>=0.4.0",
+    "cx_Oracle_async>=0.3.0,<=0.3.3",
     "aioodbc>=0.4.0",
 ]
 
@@ -78,29 +106,149 @@ Issue-Tracker = "https://github.com/Data-Everything/MCP-Platform/issues"
 mcp-platform = "mcp_platform:main"
 mcpp = "mcp_platform:main"
 
-[tool.setuptools]
-include-package-data = true
+[tool.hatch]
+# Hatch configuration for versioning and building
 
+[tool.hatch.version]
+source = "vcs"
+fallback-version = "0.3.0"
 
-[tool.setuptools.packages.find]
-where = ["."]
-exclude = [
-    "test",
-    "tests",
-    "test_*",
-    "*/test",
-    "*/tests",
-    "*/test_*",
+[tool.hatch.build.targets.sdist]
+include = [
+    "/mcp_platform",
+    "/templates",
+    "/README.md",
+    "/LICENSE",
+    "/pyproject.toml",
 ]
 
-[tool.setuptools.package-data]
-# Include all .yaml, .yml, .json, .py files from mcp_platform/template/templates and subdirectories
-"mcp_platform.template.templates" = ["**/*.yaml", "**/*.yml", "**/*.json", "**/*.py"]
+[tool.hatch.build.targets.wheel]
+packages = ["mcp_platform"]
 
-[tool.setuptools.dynamic]
+# UV-specific configuration
+[tool.uv]
+# Package sources configuration
+package = true
 
-[tool.setuptools_scm]
-version_scheme = "release-branch-semver"
-fallback_version = "0.3.0"
-local_scheme = "no-local-version"
-tag_regex = "^release-pypi-(?P<version>[0-9]+\\.[0-9]+\\.[0-9]+)$"
+# Development dependencies can be installed with: uv sync --extra dev
+# Or for all extras: uv sync --all-extras
+
+[tool.uv.pip]
+# Use the same index as pip by default
+index-url = "https://pypi.org/simple"
+
+[tool.uv.workspace]
+# Exclude directories from workspace discovery
+exclude = ["templates_old"]
+
+[tool.uv.sources]
+# Use development dependencies from pyproject.toml
+
+# Tool-specific configurations remain the same
+[tool.black]
+line-length = 90
+target-version = ['py310', 'py311', 'py312']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+    # directories
+    \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+  | templates_old
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 90
+skip_gitignore = true
+known_first_party = ["mcp_platform"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 90
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+]
+ignore = [
+    "E501", # line too long, handled by black
+    "B008", # do not perform function calls in argument defaults
+    "C901", # too complex
+    "W191", # indentation contains tabs
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["mcp_platform"]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = ["-v", "--tb=short", "--strict-markers", "--disable-warnings"]
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "docker: Tests requiring Docker",
+    "kubernetes: Tests requiring Kubernetes",
+    "slow: Slow running tests",
+    "template: Template-specific tests",
+    "e2e: End-to-end tests",
+]
+timeout = 300
+
+[tool.coverage.run]
+source = ["mcp_platform"]
+omit = [
+    "tests/*",
+    "*/tests/*",
+    "*/venv/*",
+    "*/env/*",
+    "*/__pycache__/*",
+    "setup.py",
+    "conftest.py",
+    "*/conftest.py",
+    "templates_old/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "def __str__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]
+skip_covered = true
+precision = 2
+
+[tool.coverage.html]
+directory = "htmlcov"

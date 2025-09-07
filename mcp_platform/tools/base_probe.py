@@ -10,7 +10,7 @@ import json
 import logging
 import os
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import aiohttp
 
@@ -39,10 +39,10 @@ class BaseProbe(ABC):
     def discover_tools_from_image(
         self,
         image_name: str,
-        server_args: Optional[List[str]] = None,
-        env_vars: Optional[Dict[str, str]] = None,
+        server_args: list[str] | None = None,
+        env_vars: dict[str, str] | None = None,
         timeout: int = DISCOVERY_TIMEOUT,
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         Discover tools from MCP server image.
 
@@ -57,7 +57,7 @@ class BaseProbe(ABC):
         """
         pass
 
-    def _get_default_endpoints(self) -> List[str]:
+    def _get_default_endpoints(self) -> list[str]:
         """Get default endpoints to probe for MCP tools."""
         return [
             "/mcp",
@@ -69,8 +69,8 @@ class BaseProbe(ABC):
         ]
 
     def _normalize_mcp_tools(
-        self, mcp_tools: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
+        self, mcp_tools: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
         """Normalize MCP tools to standard format."""
         normalized = []
 
@@ -125,8 +125,8 @@ class BaseProbe(ABC):
         return f"{prefix}-{safe_name}-{timestamp}"
 
     def _prepare_environment_variables(
-        self, env_vars: Optional[Dict[str, str]]
-    ) -> Dict[str, str]:
+        self, env_vars: dict[str, str] | None
+    ) -> dict[str, str]:
         """Prepare environment variables for container execution."""
         final_env = env_vars.copy() if env_vars else {}
 
@@ -151,7 +151,7 @@ class BaseProbe(ABC):
         # Attempt HTTP discovery as fallback for all images
         return True
 
-    async def _async_discover_via_http(self, endpoint: str, timeout: int) -> List[Dict]:
+    async def _async_discover_via_http(self, endpoint: str, timeout: int) -> list[dict]:
         """
         Async MCP JSON-RPC discovery using unified MCPConnection.
 
@@ -190,7 +190,7 @@ class BaseProbe(ABC):
             logger.debug(f"Async MCP discovery failed for {endpoint}: {e}")
             return []
 
-    async def _try_direct_tools_list(self, endpoint: str, timeout: int) -> List[Dict]:
+    async def _try_direct_tools_list(self, endpoint: str, timeout: int) -> list[dict]:
         """Try direct tools/list MCP call."""
         try:
             async with aiohttp.ClientSession(
@@ -228,7 +228,7 @@ class BaseProbe(ABC):
 
     async def _try_mcp_connection_smart(
         self, base_url: str, timeout: int
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """Try MCP connection with smart endpoint discovery using MCPConnection."""
         try:
             logger.debug(f"Trying smart MCP connection to {base_url}")
@@ -258,7 +258,7 @@ class BaseProbe(ABC):
             logger.debug(f"Smart MCP connection failed for {base_url}: {e}")
             return []
 
-    async def _try_mcp_handshake(self, endpoint: str, timeout: int) -> List[Dict]:
+    async def _try_mcp_handshake(self, endpoint: str, timeout: int) -> list[dict]:
         """Try full MCP handshake using unified MCPConnection."""
         try:
             # Parse URL to get base URL and path
@@ -297,7 +297,7 @@ class BaseProbe(ABC):
 
     async def _parse_mcp_response(
         self, response: aiohttp.ClientResponse
-    ) -> Optional[Dict]:
+    ) -> dict | None:
         """Parse MCP response handling both JSON and SSE formats."""
         try:
             content_type = response.headers.get("content-type", "")
@@ -311,7 +311,7 @@ class BaseProbe(ABC):
                 lines = text.strip().split("\n")
 
                 # Parse SSE format: event: message\ndata: {...}
-                for i, line in enumerate(lines):
+                for line in lines:
                     if line.startswith("data: "):
                         json_data = line[6:]  # Remove 'data: ' prefix
                         if json_data.strip():
@@ -333,7 +333,7 @@ class BaseProbe(ABC):
 
     async def _try_websocket_connection(
         self, ws_endpoint: str, timeout: int
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """Try WebSocket connection for MCP (some servers prefer this)."""
         try:
             async with aiohttp.ClientSession(
@@ -389,7 +389,7 @@ class BaseProbe(ABC):
 
     def discover_tools_from_endpoint(
         self, endpoint: str, timeout: int = 30
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """
         Discover tools from an existing MCP endpoint.
 
@@ -406,8 +406,8 @@ class BaseProbe(ABC):
         return asyncio.run(self._async_discover_via_http(endpoint, timeout))
 
     def discover_tools_from_deployment(
-        self, deployment_info: Dict, timeout: int = 30
-    ) -> List[Dict]:
+        self, deployment_info: dict, timeout: int = 30
+    ) -> list[dict]:
         """
         Discover tools from a running deployment via HTTP.
 
@@ -447,7 +447,7 @@ class BaseProbe(ABC):
             logger.error(f"Failed to discover tools from deployment: {e}")
             return []
 
-    def _resolve_candidate_endpoints(self, deployment_info: Dict) -> List[str]:
+    def _resolve_candidate_endpoints(self, deployment_info: dict) -> list[str]:
         """
         Resolve candidate endpoints from deployment information.
 
@@ -477,8 +477,8 @@ class BaseProbe(ABC):
         return endpoints
 
     def _resolve_kubernetes_cluster_ip(
-        self, service_endpoint: str, deployment_info: Dict
-    ) -> Optional[str]:
+        self, service_endpoint: str, deployment_info: dict
+    ) -> str | None:
         """
         Resolve Kubernetes service endpoint to accessible ClusterIP.
 
@@ -524,7 +524,7 @@ class BaseProbe(ABC):
             logger.debug(f"Failed to resolve Kubernetes ClusterIP: {e}")
             return None
 
-    def _construct_endpoints_from_ports(self, deployment_info: Dict) -> List[str]:
+    def _construct_endpoints_from_ports(self, deployment_info: dict) -> list[str]:
         """
         Construct endpoints from port information in deployment info.
         """
@@ -578,7 +578,7 @@ class BaseProbe(ABC):
 
     def _try_endpoint_with_patterns(
         self, base_endpoint: str, timeout: int
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """
         Try an endpoint with smart MCPConnection discovery.
 
@@ -606,7 +606,7 @@ class BaseProbe(ABC):
             logger.debug(f"Smart MCP discovery failed for {base_endpoint}: {e}")
             return []
 
-    def _is_kubernetes_cluster_ip_endpoint(self, deployment_info: Dict) -> bool:
+    def _is_kubernetes_cluster_ip_endpoint(self, deployment_info: dict) -> bool:
         """
         Check if this is a Kubernetes ClusterIP endpoint that might need port-forwarding.
         """
@@ -616,8 +616,8 @@ class BaseProbe(ABC):
         )  # Common ClusterIP range
 
     def _try_kubernetes_port_forward(
-        self, deployment_info: Dict, timeout: int
-    ) -> List[Dict]:
+        self, deployment_info: dict, timeout: int
+    ) -> list[dict]:
         """
         Try Kubernetes port-forwarding as a last resort for ClusterIP services.
 

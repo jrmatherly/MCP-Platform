@@ -8,12 +8,11 @@ and optional database persistence capabilities.
 import os
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from pydantic import field_validator
-from sqlmodel import JSON, Column
+from sqlmodel import JSON, Column, Relationship, SQLModel
 from sqlmodel import Field as SQLField
-from sqlmodel import Relationship, SQLModel
 
 
 class TransportType(str, Enum):
@@ -54,28 +53,28 @@ class ServerInstanceBase(SQLModel):
     """Base model for server instances."""
 
     id: str = SQLField(primary_key=True)
-    endpoint: Optional[str] = None
-    command: Optional[List[str]] = SQLField(default=None, sa_column=Column(JSON))
+    endpoint: str | None = None
+    command: list[str] | None = SQLField(default=None, sa_column=Column(JSON))
     transport: TransportType = TransportType.HTTP
     status: ServerStatus = ServerStatus.UNKNOWN
     backend: BackendType = BackendType.DOCKER
 
     # Container/deployment metadata
-    container_id: Optional[str] = None
-    deployment_id: Optional[str] = None
-    namespace: Optional[str] = None
+    container_id: str | None = None
+    deployment_id: str | None = None
+    namespace: str | None = None
 
     # Runtime configuration
-    working_dir: Optional[str] = None
-    env_vars: Optional[Dict[str, str]] = SQLField(default=None, sa_column=Column(JSON))
+    working_dir: str | None = None
+    env_vars: dict[str, str] | None = SQLField(default=None, sa_column=Column(JSON))
 
     # Health tracking
-    last_health_check: Optional[datetime] = None
+    last_health_check: datetime | None = None
     consecutive_failures: int = 0
     is_active: bool = True  # Whether the instance is active/enabled
 
     # Metadata
-    instance_metadata: Optional[Dict[str, Any]] = SQLField(
+    instance_metadata: dict[str, Any] | None = SQLField(
         default=None, sa_column=Column(JSON)
     )
 
@@ -133,18 +132,18 @@ class ServerInstanceCreate(ServerInstanceBase):
 class ServerInstanceUpdate(SQLModel):
     """Model for updating server instances."""
 
-    endpoint: Optional[str] = None
-    command: Optional[List[str]] = None
-    transport: Optional[TransportType] = None
-    status: Optional[ServerStatus] = None
-    backend: Optional[BackendType] = None
-    container_id: Optional[str] = None
-    deployment_id: Optional[str] = None
-    namespace: Optional[str] = None
-    working_dir: Optional[str] = None
-    env_vars: Optional[Dict[str, str]] = None
-    consecutive_failures: Optional[int] = None
-    instance_metadata: Optional[Dict[str, Any]] = None
+    endpoint: str | None = None
+    command: list[str] | None = None
+    transport: TransportType | None = None
+    status: ServerStatus | None = None
+    backend: BackendType | None = None
+    container_id: str | None = None
+    deployment_id: str | None = None
+    namespace: str | None = None
+    working_dir: str | None = None
+    env_vars: dict[str, str] | None = None
+    consecutive_failures: int | None = None
+    instance_metadata: dict[str, Any] | None = None
 
 
 class ServerInstanceRead(ServerInstanceBase):
@@ -168,7 +167,7 @@ class LoadBalancerConfig(LoadBalancerConfigBase, table=True):
 
     __tablename__ = "load_balancer_configs"
 
-    id: Optional[int] = SQLField(default=None, primary_key=True)
+    id: int | None = SQLField(default=None, primary_key=True)
     template_name: str = SQLField(foreign_key="server_templates.name", unique=True)
 
     # Relationship to template
@@ -184,11 +183,11 @@ class LoadBalancerConfigCreate(LoadBalancerConfigBase):
 class LoadBalancerConfigUpdate(SQLModel):
     """Model for updating load balancer configurations."""
 
-    strategy: Optional[LoadBalancingStrategy] = None
-    health_check_interval: Optional[int] = SQLField(default=None, ge=5, le=300)
-    max_retries: Optional[int] = SQLField(default=None, ge=1, le=10)
-    pool_size: Optional[int] = SQLField(default=None, ge=1, le=20)
-    timeout: Optional[int] = SQLField(default=None, ge=5, le=300)
+    strategy: LoadBalancingStrategy | None = None
+    health_check_interval: int | None = SQLField(default=None, ge=5, le=300)
+    max_retries: int | None = SQLField(default=None, ge=1, le=10)
+    pool_size: int | None = SQLField(default=None, ge=1, le=20)
+    timeout: int | None = SQLField(default=None, ge=5, le=300)
 
 
 class LoadBalancerConfigRead(LoadBalancerConfigBase):
@@ -202,7 +201,7 @@ class ServerTemplateBase(SQLModel):
     """Base model for server templates."""
 
     name: str = SQLField(primary_key=True)
-    description: Optional[str] = None
+    description: str | None = None
     created_at: datetime = SQLField(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = SQLField(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -213,12 +212,12 @@ class ServerTemplate(ServerTemplateBase, table=True):
     __tablename__ = "server_templates"
 
     # Relationships
-    instances: List[ServerInstance] = Relationship(back_populates="template")
-    load_balancer: Optional[LoadBalancerConfig] = Relationship(
+    instances: list[ServerInstance] = Relationship(back_populates="template")
+    load_balancer: LoadBalancerConfig | None = Relationship(
         back_populates="template"
     )
 
-    def get_healthy_instances(self) -> List[ServerInstance]:
+    def get_healthy_instances(self) -> list[ServerInstance]:
         """Get all healthy instances for this template."""
         return [instance for instance in self.instances if instance.is_healthy()]
 
@@ -232,14 +231,14 @@ class ServerTemplateCreate(ServerTemplateBase):
 class ServerTemplateUpdate(SQLModel):
     """Model for updating server templates."""
 
-    description: Optional[str] = None
+    description: str | None = None
 
 
 class ServerTemplateRead(ServerTemplateBase):
     """Model for reading server templates."""
 
-    instances: List[ServerInstanceRead] = []
-    load_balancer: Optional[LoadBalancerConfigRead] = None
+    instances: list[ServerInstanceRead] = []
+    load_balancer: LoadBalancerConfigRead | None = None
 
 
 # Authentication Models
@@ -249,8 +248,8 @@ class UserBase(SQLModel):
     """Base model for users."""
 
     username: str = SQLField(index=True, unique=True)
-    email: Optional[str] = SQLField(default=None, index=True)
-    full_name: Optional[str] = None
+    email: str | None = SQLField(default=None, index=True)
+    full_name: str | None = None
     is_active: bool = True
     is_superuser: bool = False
 
@@ -260,13 +259,13 @@ class User(UserBase, table=True):
 
     __tablename__ = "users"
 
-    id: Optional[int] = SQLField(default=None, primary_key=True)
+    id: int | None = SQLField(default=None, primary_key=True)
     hashed_password: str
     created_at: datetime = SQLField(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = SQLField(default_factory=lambda: datetime.now(timezone.utc))
 
     # Relationships
-    api_keys: List["APIKey"] = Relationship(back_populates="user")
+    api_keys: list["APIKey"] = Relationship(back_populates="user")
 
 
 class UserCreate(UserBase):
@@ -278,11 +277,11 @@ class UserCreate(UserBase):
 class UserUpdate(SQLModel):
     """Model for updating users."""
 
-    email: Optional[str] = None
-    full_name: Optional[str] = None
-    password: Optional[str] = None
-    is_active: Optional[bool] = None
-    is_superuser: Optional[bool] = None
+    email: str | None = None
+    full_name: str | None = None
+    password: str | None = None
+    is_active: bool | None = None
+    is_superuser: bool | None = None
 
 
 class UserRead(UserBase):
@@ -297,10 +296,10 @@ class APIKeyBase(SQLModel):
     """Base model for API keys."""
 
     name: str
-    description: Optional[str] = None
-    scopes: List[str] = SQLField(default=[], sa_column=Column(JSON))
+    description: str | None = None
+    scopes: list[str] = SQLField(default=[], sa_column=Column(JSON))
     is_active: bool = True
-    expires_at: Optional[datetime] = None
+    expires_at: datetime | None = None
 
 
 class APIKey(APIKeyBase, table=True):
@@ -308,14 +307,14 @@ class APIKey(APIKeyBase, table=True):
 
     __tablename__ = "api_keys"
 
-    id: Optional[int] = SQLField(default=None, primary_key=True)
+    id: int | None = SQLField(default=None, primary_key=True)
     key_hash: str = SQLField(index=True)
     user_id: int = SQLField(foreign_key="users.id")
     created_at: datetime = SQLField(default_factory=lambda: datetime.now(timezone.utc))
-    last_used: Optional[datetime] = None
+    last_used: datetime | None = None
 
     # Relationships
-    user: Optional[User] = Relationship(back_populates="api_keys")
+    user: User | None = Relationship(back_populates="api_keys")
 
     def is_expired(self) -> bool:
         """Check if API key is expired."""
@@ -333,11 +332,11 @@ class APIKeyCreate(APIKeyBase):
 class APIKeyUpdate(SQLModel):
     """Model for updating API keys."""
 
-    name: Optional[str] = None
-    description: Optional[str] = None
-    scopes: Optional[List[str]] = None
-    is_active: Optional[bool] = None
-    expires_at: Optional[datetime] = None
+    name: str | None = None
+    description: str | None = None
+    scopes: list[str] | None = None
+    is_active: bool | None = None
+    expires_at: datetime | None = None
 
 
 class APIKeyRead(APIKeyBase):
@@ -346,7 +345,7 @@ class APIKeyRead(APIKeyBase):
     id: int
     user_id: int
     created_at: datetime
-    last_used: Optional[datetime] = None
+    last_used: datetime | None = None
 
 
 class APIKeyResponse(APIKeyRead):
@@ -362,15 +361,15 @@ class ToolCallRequest(SQLModel):
     """Request model for tool calls."""
 
     name: str
-    arguments: Dict[str, Any] = {}
+    arguments: dict[str, Any] = {}
 
 
 class ToolCallResponse(SQLModel):
     """Response model for tool calls."""
 
-    content: List[Dict[str, Any]]
+    content: list[dict[str, Any]]
     isError: bool = False
-    _gateway_info: Optional[Dict[str, Any]] = None
+    _gateway_info: dict[str, Any] | None = None
 
 
 class HealthCheckResponse(SQLModel):
@@ -379,7 +378,7 @@ class HealthCheckResponse(SQLModel):
     status: str
     healthy_instances: int
     total_instances: int
-    instances: List[Dict[str, Any]]
+    instances: list[dict[str, Any]]
 
 
 class GatewayStatsResponse(SQLModel):
@@ -387,9 +386,9 @@ class GatewayStatsResponse(SQLModel):
 
     total_requests: int
     active_connections: int
-    templates: Dict[str, Any]
-    load_balancer: Dict[str, Any]
-    health_checker: Dict[str, Any]
+    templates: dict[str, Any]
+    load_balancer: dict[str, Any]
+    health_checker: dict[str, Any]
 
 
 class TokenResponse(SQLModel):
@@ -431,6 +430,6 @@ class GatewayConfig(SQLModel):
     reload: bool = False
     workers: int = 1
     log_level: str = "info"
-    cors_origins: List[str] = ["*"]
+    cors_origins: list[str] = ["*"]
     database: DatabaseConfig = DatabaseConfig()
-    auth: Optional[AuthConfig] = None
+    auth: AuthConfig | None = None

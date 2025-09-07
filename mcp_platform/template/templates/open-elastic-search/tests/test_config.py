@@ -24,14 +24,14 @@ class TestOpenElasticSearchConfig:
         template_path = os.path.join(
             os.path.dirname(os.path.dirname(__file__)), "template.json"
         )
-        with open(template_path, "r") as f:
+        with open(template_path) as f:
             return json.load(f)
 
     def _load_tools(self):
         tools_path = os.path.join(
             os.path.dirname(os.path.dirname(__file__)), "tools.json"
         )
-        with open(tools_path, "r") as f:
+        with open(tools_path) as f:
             return json.load(f)
 
     def test_template_json_structure(self):

@@ -85,9 +85,7 @@ class TestVolumeMountingIntegration:
                 # Test template with placeholder substitution
                 config = {
                     "data_dir": "/custom/data",
-                    "volumes": {
-                        "${data_dir}": {"bind": "/container/data", "mode": "rw"}
-                    },
+                    "volumes": {"${data_dir}": {"bind": "/container/data", "mode": "rw"}},
                 }
 
                 result = client.deploy_template("demo", config=config)
@@ -154,9 +152,7 @@ class TestVolumeMountingIntegration:
                 }
 
                 config = {
-                    "volume_mount": {
-                        "/host/files": {"bind": "/mnt/files", "mode": "rw"}
-                    },
+                    "volume_mount": {"/host/files": {"bind": "/mnt/files", "mode": "rw"}},
                     "command_arg": "--watch",
                 }
 

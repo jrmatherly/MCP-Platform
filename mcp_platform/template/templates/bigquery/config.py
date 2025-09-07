@@ -13,7 +13,7 @@ import os
 import re
 import sys
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 # Import base configuration from MCP Platform
 try:
@@ -37,7 +37,7 @@ except ImportError:
                 # Try to load template.json for fallback
                 try:
                     template_path = Path(__file__).parent / "template.json"
-                    with open(template_path, mode="r", encoding="utf-8") as f:
+                    with open(template_path, encoding="utf-8") as f:
                         template_data = json.load(f)
                     # Merge with config overrides
                     template_data.update(self.config_dict)
@@ -70,7 +70,7 @@ class BigQueryServerConfig(ServerConfig):
         self._setup_logging()
 
     def _get_config(
-        self, key: str, env_var: str, default: Any, cast_to: Optional[type] = str
+        self, key: str, env_var: str, default: Any, cast_to: type | None = str
     ) -> Any:
         """
         Get configuration value with precedence handling.
@@ -108,7 +108,7 @@ class BigQueryServerConfig(ServerConfig):
 
         return default
 
-    def get_template_config(self) -> Dict[str, Any]:
+    def get_template_config(self) -> dict[str, Any]:
         """
         Get configuration properties from the template.
 
@@ -272,7 +272,7 @@ class BigQueryServerConfig(ServerConfig):
         # Update our logger level
         self.logger.setLevel(logging_level)
 
-    def get_bigquery_config(self) -> Dict[str, Any]:
+    def get_bigquery_config(self) -> dict[str, Any]:
         """Get BigQuery-specific configuration values."""
         config = self.get_template_config()
 
@@ -299,7 +299,7 @@ class BigQueryServerConfig(ServerConfig):
             return ["*"]
         return [pattern.strip() for pattern in allowed_datasets.split(",")]
 
-    def get_auth_config(self) -> Dict[str, Any]:
+    def get_auth_config(self) -> dict[str, Any]:
         """Get authentication configuration."""
         config = self.get_template_config()
         return {
@@ -308,7 +308,7 @@ class BigQueryServerConfig(ServerConfig):
             "service_account_path": config.get("service_account_path"),
         }
 
-    def get_query_limits(self) -> Dict[str, int]:
+    def get_query_limits(self) -> dict[str, int]:
         """Get query execution limits."""
         config = self.get_template_config()
         return {
@@ -316,7 +316,7 @@ class BigQueryServerConfig(ServerConfig):
             "max_results": config.get("max_results", 1000),
         }
 
-    def get_security_config(self) -> Dict[str, Any]:
+    def get_security_config(self) -> dict[str, Any]:
         """Get security-related configuration."""
         config = self.get_template_config()
         return {
@@ -382,7 +382,7 @@ class BigQueryServerConfig(ServerConfig):
         for key, value in safe_config.items():
             self.logger.info("  %s: %s", key, value)
 
-    def _load_template(self, template_path: str = None) -> Dict[str, Any]:
+    def _load_template(self, template_path: str = None) -> dict[str, Any]:
         """
         Load template data from template.json file.
 
@@ -396,7 +396,7 @@ class BigQueryServerConfig(ServerConfig):
             template_path = Path(__file__).parent / "template.json"
 
         try:
-            with open(template_path, mode="r", encoding="utf-8") as template_file:
+            with open(template_path, encoding="utf-8") as template_file:
                 return json.load(template_file)
         except (FileNotFoundError, json.JSONDecodeError) as e:
             self.logger.warning(
@@ -410,7 +410,7 @@ class BigQueryServerConfig(ServerConfig):
                 "transport": {"port": 7090},
             }
 
-    def get_template_data(self) -> Dict[str, Any]:
+    def get_template_data(self) -> dict[str, Any]:
         """
         Get the full template data, potentially modified by configuration overrides.
 
@@ -450,7 +450,7 @@ class BigQueryServerConfig(ServerConfig):
 
 # Convenience function for creating configuration
 def create_bigquery_config(
-    config_dict: Optional[Dict[str, Any]] = None,
+    config_dict: dict[str, Any] | None = None,
     skip_validation: bool = False,
 ) -> BigQueryServerConfig:
     """

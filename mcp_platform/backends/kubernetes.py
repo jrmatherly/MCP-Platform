@@ -8,7 +8,7 @@ import uuid
 from contextlib import suppress
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
@@ -27,7 +27,7 @@ class KubernetesDeploymentService(BaseDeploymentBackend):
     """
 
     def __init__(
-        self, namespace: str = "mcp-servers", kubeconfig_path: Optional[str] = None
+        self, namespace: str = "mcp-servers", kubeconfig_path: str | None = None
     ):
         """Initialize Kubernetes service.
 
@@ -122,10 +122,10 @@ class KubernetesDeploymentService(BaseDeploymentBackend):
     def _create_helm_values(
         self,
         template_id: str,
-        config: Dict[str, Any],
-        template_data: Dict[str, Any],
-        k8s_config: Dict[str, Any] = None,
-    ) -> Dict[str, Any]:
+        config: dict[str, Any],
+        template_data: dict[str, Any],
+        k8s_config: dict[str, Any] = None,
+    ) -> dict[str, Any]:
         """Create Helm values from template configuration and Kubernetes configuration."""
         # Extract image information
         if not k8s_config:
@@ -202,8 +202,8 @@ class KubernetesDeploymentService(BaseDeploymentBackend):
         return values
 
     def _render_helm_template(
-        self, deployment_name: str, values: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
+        self, deployment_name: str, values: dict[str, Any]
+    ) -> list[dict[str, Any]]:
         """Render Helm chart templates with values."""
         # Get chart directory
         chart_dir = Path(__file__).parent.parent.parent / "charts" / "mcp-server"
@@ -240,7 +240,7 @@ class KubernetesDeploymentService(BaseDeploymentBackend):
 
         return manifests
 
-    def _render_deployment(self, context: Dict[str, Any]) -> Dict[str, Any]:
+    def _render_deployment(self, context: dict[str, Any]) -> dict[str, Any]:
         """Render Deployment manifest."""
         values = context["Values"]
         name = context["Release"]["Name"]
@@ -321,7 +321,7 @@ class KubernetesDeploymentService(BaseDeploymentBackend):
 
         return deployment
 
-    def _render_service(self, context: Dict[str, Any]) -> Dict[str, Any]:
+    def _render_service(self, context: dict[str, Any]) -> dict[str, Any]:
         """Render Service manifest."""
         values = context["Values"]
         name = context["Release"]["Name"]
@@ -356,7 +356,7 @@ class KubernetesDeploymentService(BaseDeploymentBackend):
             },
         }
 
-    def _render_configmap(self, context: Dict[str, Any]) -> Dict[str, Any]:
+    def _render_configmap(self, context: dict[str, Any]) -> dict[str, Any]:
         """Render ConfigMap manifest."""
         values = context["Values"]
         name = context["Release"]["Name"]
@@ -380,12 +380,12 @@ class KubernetesDeploymentService(BaseDeploymentBackend):
     def deploy_template(
         self,
         template_id: str,
-        config: Dict[str, Any],
-        template_data: Dict[str, Any],
-        backend_config: Dict[str, Any],
+        config: dict[str, Any],
+        template_data: dict[str, Any],
+        backend_config: dict[str, Any],
         pull_image: bool = True,
         dry_run: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Deploy a template to Kubernetes.
 
         Args:
@@ -603,7 +603,7 @@ class KubernetesDeploymentService(BaseDeploymentBackend):
             f"Deployment {deployment_name} did not become ready within {timeout} seconds"
         )
 
-    def _cleanup_resources(self, resources: List[tuple]):
+    def _cleanup_resources(self, resources: list[tuple]):
         """Cleanup created resources on failure."""
         for resource_type, resource_name in resources:
             try:
@@ -625,7 +625,7 @@ class KubernetesDeploymentService(BaseDeploymentBackend):
                     f"Failed to cleanup {resource_type} {resource_name}: {e}"
                 )
 
-    def _get_deployment_details(self, deployment_name: str) -> Dict[str, Any]:
+    def _get_deployment_details(self, deployment_name: str) -> dict[str, Any]:
         """Get detailed deployment information."""
         try:
             deployment = self.apps_v1.read_namespaced_deployment(
@@ -685,7 +685,7 @@ class KubernetesDeploymentService(BaseDeploymentBackend):
         except ApiException as e:
             return {"error": str(e)}
 
-    def list_deployments(self, template: str = None) -> List[Dict[str, Any]]:
+    def list_deployments(self, template: str = None) -> list[dict[str, Any]]:
         """List Kubernetes deployments."""
         try:
             label_selector = "app.kubernetes.io/managed-by=mcp-platform"
@@ -769,7 +769,7 @@ class KubernetesDeploymentService(BaseDeploymentBackend):
 
     def get_deployment_info(
         self, deployment_name: str, include_logs: bool = False, lines: int = 10
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get detailed Kubernetes deployment information."""
         try:
             details = self._get_deployment_details(deployment_name)
@@ -837,8 +837,8 @@ class KubernetesDeploymentService(BaseDeploymentBackend):
         )
 
     def cleanup_stopped_containers(
-        self, template_name: Optional[str] = None
-    ) -> Dict[str, Any]:
+        self, template_name: str | None = None
+    ) -> dict[str, Any]:
         """Clean up stopped containers (scale 0 deployments)."""
         try:
             label_selector = "app.kubernetes.io/managed-by=mcp-platform"
@@ -864,6 +864,6 @@ class KubernetesDeploymentService(BaseDeploymentBackend):
         except Exception as e:
             return {"success": False, "error": str(e)}
 
-    def cleanup_dangling_images(self) -> Dict[str, Any]:
+    def cleanup_dangling_images(self) -> dict[str, Any]:
         """Clean up dangling images (not applicable for Kubernetes)."""
         return {"message": "Image cleanup not applicable for Kubernetes deployments"}

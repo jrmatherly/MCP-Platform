@@ -5,7 +5,7 @@ Template discovery module for MCP Platform server templates.
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from mcp_platform.utils import TEMPLATES_DIR, get_all_template_directories
 
@@ -22,8 +22,8 @@ class TemplateDiscovery:
 
     def __init__(
         self,
-        templates_dir: Optional[Path] = None,
-        templates_dirs: Optional[List[Path]] = None,
+        templates_dir: Path | None = None,
+        templates_dirs: list[Path] | None = None,
     ):
         """Initialize template discovery.
 
@@ -46,7 +46,7 @@ class TemplateDiscovery:
             self.templates_dirs[0] if self.templates_dirs else TEMPLATES_DIR
         )
 
-    def discover_templates(self) -> Dict[str, Dict[str, Any]]:
+    def discover_templates(self) -> dict[str, dict[str, Any]]:
         """Discover all valid templates in all template directories."""
         templates = {}
 
@@ -80,7 +80,7 @@ class TemplateDiscovery:
 
         return templates
 
-    def _load_template_config(self, template_dir: Path) -> Optional[Dict[str, Any]]:
+    def _load_template_config(self, template_dir: Path) -> dict[str, Any] | None:
         """Load and validate a template configuration."""
         template_json = template_dir / "template.json"
 
@@ -104,8 +104,8 @@ class TemplateDiscovery:
             return None
 
     def _generate_template_config(
-        self, template_data: Dict[str, Any], template_dir: Path
-    ) -> Dict[str, Any]:
+        self, template_data: dict[str, Any], template_dir: Path
+    ) -> dict[str, Any]:
         """Generate deployment configuration from template metadata."""
 
         # Extract basic info
@@ -160,7 +160,7 @@ class TemplateDiscovery:
 
         return config
 
-    def get_template_config(self, template_name: str) -> Optional[Dict[str, Any]]:
+    def get_template_config(self, template_name: str) -> dict[str, Any] | None:
         """Get configuration for a specific template."""
         # Search in all template directories, first match wins
         # (custom overrides built-in)
@@ -170,7 +170,7 @@ class TemplateDiscovery:
                 return self._load_template_config(template_dir)
         return None
 
-    def get_template_path(self, template_name: str) -> Optional[Path]:
+    def get_template_path(self, template_name: str) -> Path | None:
         """Get the path to a specific template."""
         # Search in all template directories, first match wins
         # (custom overrides built-in)
@@ -181,7 +181,7 @@ class TemplateDiscovery:
         return None
 
     def _get_docker_image(
-        self, template_data: Dict[str, Any], template_name: str
+        self, template_data: dict[str, Any], template_name: str
     ) -> str:
         """Get Docker image name for template."""
         if "docker_image" in template_data:
@@ -191,7 +191,7 @@ class TemplateDiscovery:
             # Fallback to standard naming
             return f"dataeverything/mcp-{template_name}:latest"
 
-    def _extract_env_vars(self, template_data: Dict[str, Any]) -> Dict[str, str]:
+    def _extract_env_vars(self, template_data: dict[str, Any]) -> dict[str, str]:
         """Extract default environment variables from config schema."""
         env_vars = {}
 
@@ -219,7 +219,7 @@ class TemplateDiscovery:
 
         return env_vars
 
-    def _extract_volumes(self, template_data: Dict[str, Any]) -> Dict[str, str]:
+    def _extract_volumes(self, template_data: dict[str, Any]) -> dict[str, str]:
         """Extract volume mounts from template configuration."""
         volumes = {
             "~/mcp-data": DEFAULT_DATA_PATH,
@@ -248,7 +248,7 @@ class TemplateDiscovery:
 
         return volumes
 
-    def _extract_ports(self, template_data: Dict[str, Any]) -> Dict[str, int]:
+    def _extract_ports(self, template_data: dict[str, Any]) -> dict[str, int]:
         """Extract port mappings from template configuration."""
         ports = {}
 
@@ -259,7 +259,7 @@ class TemplateDiscovery:
         # Most MCP servers don't need exposed ports by default
         return ports
 
-    def _extract_requirements(self, template_data: Dict[str, Any]) -> Dict[str, Any]:
+    def _extract_requirements(self, template_data: dict[str, Any]) -> dict[str, Any]:
         """Extract requirements like tokens from template configuration."""
         requirements = {}
 
@@ -279,7 +279,7 @@ class TemplateDiscovery:
         return requirements
 
     def _generate_mcp_config(
-        self, template_data: Dict[str, Any], template_name: str
+        self, template_data: dict[str, Any], template_name: str
     ) -> str:
         """Generate MCP client configuration JSON."""
         config = {
@@ -317,7 +317,7 @@ class TemplateDiscovery:
 
         return json.dumps(config, indent=2)
 
-    def validate_template_config(self, template_config: Dict[str, Any]) -> bool:
+    def validate_template_config(self, template_config: dict[str, Any]) -> bool:
         """Validate template configuration."""
         required_fields = ["name", "description", "image"]
 

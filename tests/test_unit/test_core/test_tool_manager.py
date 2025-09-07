@@ -116,9 +116,6 @@ class TestGitHubToolDiscovery:
         assert isinstance(tools, list)
         assert len(tools) == 77, f"Expected exactly 77 tools, got {len(tools)}"
 
-        # Check for specific categories (the MCP server returns "mcp" category)
-        categories = {tool.get("category", "uncategorized") for tool in tools}
-
         # The dynamic discovery from Docker container returns tools with "mcp" category
         # So let's check for the presence of tools from different functional areas instead
         tool_names = {tool["name"] for tool in tools}
@@ -131,9 +128,7 @@ class TestGitHubToolDiscovery:
         ]
         issue_tools = [name for name in tool_names if "issue" in name.lower()]
         pr_tools = [
-            name
-            for name in tool_names
-            if "pull" in name.lower() or "_pr" in name.lower()
+            name for name in tool_names if "pull" in name.lower() or "_pr" in name.lower()
         ]
         workflow_tools = [
             name
@@ -144,13 +139,13 @@ class TestGitHubToolDiscovery:
 
         # Should have tools covering major GitHub functionality areas
         assert len(repo_tools) >= 2, f"Expected repository tools, found: {repo_tools}"
-        assert (
-            len(issue_tools) >= 3
-        ), f"Expected issue management tools, found: {issue_tools}"
+        assert len(issue_tools) >= 3, (
+            f"Expected issue management tools, found: {issue_tools}"
+        )
         assert len(pr_tools) >= 5, f"Expected pull request tools, found: {pr_tools}"
-        assert (
-            len(workflow_tools) >= 3
-        ), f"Expected workflow/actions tools, found: {workflow_tools}"
+        assert len(workflow_tools) >= 3, (
+            f"Expected workflow/actions tools, found: {workflow_tools}"
+        )
         assert len(search_tools) >= 2, f"Expected search tools, found: {search_tools}"
 
         # Check for specific important tools
@@ -164,9 +159,9 @@ class TestGitHubToolDiscovery:
             "get_me",
         }
         missing_important = important_tools - tool_names
-        assert (
-            not missing_important
-        ), f"Missing important GitHub tools: {missing_important}"
+        assert not missing_important, (
+            f"Missing important GitHub tools: {missing_important}"
+        )
 
     def test_github_tool_normalization(self):
         """Test that GitHub tools are properly normalized."""
@@ -193,17 +188,17 @@ class TestGitHubToolDiscovery:
             assert "parameters" in tool, f"Tool {i} missing 'parameters' field"
 
             # Check that parameters have proper schema structure
-            assert isinstance(
-                tool["parameters"], dict
-            ), f"Tool {i} parameters should be dict"
+            assert isinstance(tool["parameters"], dict), (
+                f"Tool {i} parameters should be dict"
+            )
 
             # Verify name and description are non-empty strings
-            assert (
-                isinstance(tool["name"], str) and tool["name"]
-            ), f"Tool {i} name should be non-empty string"
-            assert (
-                isinstance(tool["description"], str) and tool["description"]
-            ), f"Tool {i} description should be non-empty string"
+            assert isinstance(tool["name"], str) and tool["name"], (
+                f"Tool {i} name should be non-empty string"
+            )
+            assert isinstance(tool["description"], str) and tool["description"], (
+                f"Tool {i} description should be non-empty string"
+            )
 
     def test_github_caching_behavior(self):
         """Test caching behavior for GitHub tool discovery."""
@@ -233,9 +228,9 @@ class TestGitHubToolDiscovery:
         # Should return empty result when template not found
         assert isinstance(result, dict)
         assert "tools" in result
-        assert (
-            result["tools"] is None or result["tools"] == []
-        ), "Non-existent template should return empty tools"
+        assert result["tools"] is None or result["tools"] == [], (
+            "Non-existent template should return empty tools"
+        )
 
         # Test with valid template but bad config should still work (fallback to static)
         config = {

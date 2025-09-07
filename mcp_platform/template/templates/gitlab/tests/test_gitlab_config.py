@@ -18,7 +18,7 @@ class TestGitLabTemplateConfiguration:
 
         template_path = os.path.join(os.path.dirname(__file__), "..", "template.json")
 
-        with open(template_path, "r") as f:
+        with open(template_path) as f:
             template_config = json.load(f)
 
         # Verify required template fields
@@ -48,7 +48,7 @@ class TestGitLabTemplateConfiguration:
 
         template_path = os.path.join(os.path.dirname(__file__), "..", "template.json")
 
-        with open(template_path, "r") as f:
+        with open(template_path) as f:
             template_config = json.load(f)
 
         config_schema = template_config["config_schema"]
@@ -79,7 +79,7 @@ class TestGitLabTemplateConfiguration:
 
         template_path = os.path.join(os.path.dirname(__file__), "..", "template.json")
 
-        with open(template_path, "r") as f:
+        with open(template_path) as f:
             template_config = json.load(f)
 
         config_schema = template_config["config_schema"]
@@ -104,7 +104,7 @@ class TestGitLabTemplateConfiguration:
 
         template_path = os.path.join(os.path.dirname(__file__), "..", "template.json")
 
-        with open(template_path, "r") as f:
+        with open(template_path) as f:
             template_config = json.load(f)
 
         config_schema = template_config["config_schema"]
@@ -125,7 +125,7 @@ class TestGitLabTemplateConfiguration:
 
         template_path = os.path.join(os.path.dirname(__file__), "..", "template.json")
 
-        with open(template_path, "r") as f:
+        with open(template_path) as f:
             template_config = json.load(f)
 
         config_schema = template_config["config_schema"]
@@ -148,7 +148,7 @@ class TestGitLabTemplateConfiguration:
 
         template_path = os.path.join(os.path.dirname(__file__), "..", "template.json")
 
-        with open(template_path, "r") as f:
+        with open(template_path) as f:
             template_config = json.load(f)
 
         config_schema = template_config["config_schema"]
@@ -182,7 +182,7 @@ class TestGitLabTemplateConfiguration:
 
         template_path = os.path.join(os.path.dirname(__file__), "..", "template.json")
 
-        with open(template_path, "r") as f:
+        with open(template_path) as f:
             template_config = json.load(f)
 
         capabilities = template_config["capabilities"]

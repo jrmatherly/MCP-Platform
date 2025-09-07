@@ -6,7 +6,7 @@ enabling CLI commands to show aggregate views and auto-detect backend contexts.
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from mcp_platform.backends import VALID_BACKENDS, BaseDeploymentBackend, get_backend
 from mcp_platform.core.deployment_manager import DeploymentManager
@@ -25,7 +25,7 @@ class MultiBackendManager:
     such as listing all deployments or discovering tools from all active servers.
     """
 
-    def __init__(self, enabled_backends: List[str] = None):
+    def __init__(self, enabled_backends: list[str] = None):
         """
         Initialize multi-backend manager.
 
@@ -39,9 +39,9 @@ class MultiBackendManager:
         if isinstance(self.enabled_backends, str):
             self.enabled_backends = [self.enabled_backends]
 
-        self.backends: Dict[str, BaseDeploymentBackend] = {}
-        self.deployment_managers: Dict[str, Any] = {}
-        self.tool_managers: Dict[str, Any] = {}
+        self.backends: dict[str, BaseDeploymentBackend] = {}
+        self.deployment_managers: dict[str, Any] = {}
+        self.tool_managers: dict[str, Any] = {}
 
         # Initialize available backends
         for backend_type in self.enabled_backends:
@@ -55,13 +55,13 @@ class MultiBackendManager:
                 logger.warning(f"Failed to initialize {backend_type} backend: {e}")
                 # Continue with other backends
 
-    def get_available_backends(self) -> List[str]:
+    def get_available_backends(self) -> list[str]:
         """Get list of successfully initialized backends."""
         return list(self.backends.keys())
 
     def get_all_deployments(
-        self, template_name: Optional[str] = None, status: str = None
-    ) -> List[Dict[str, Any]]:
+        self, template_name: str | None = None, status: str = None
+    ) -> list[dict[str, Any]]:
         """
         Get deployments from all backends with backend information.
 
@@ -92,7 +92,7 @@ class MultiBackendManager:
 
         return all_deployments
 
-    def detect_backend_for_deployment(self, deployment_id: str) -> Optional[str]:
+    def detect_backend_for_deployment(self, deployment_id: str) -> str | None:
         """
         Auto-detect which backend owns a deployment ID.
 
@@ -117,7 +117,7 @@ class MultiBackendManager:
 
         return None
 
-    def get_deployment_by_id(self, deployment_id: str) -> Optional[Dict[str, Any]]:
+    def get_deployment_by_id(self, deployment_id: str) -> dict[str, Any] | None:
         """
         Find a deployment by ID across all backends.
 
@@ -185,12 +185,12 @@ class MultiBackendManager:
 
     def get_all_tools(
         self,
-        template_name: Optional[str] = None,
+        template_name: str | None = None,
         discovery_method: str = "auto",
         force_refresh: bool = False,
         include_static: bool = True,
         include_dynamic: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Get tools from all backends and templates.
 
@@ -349,12 +349,12 @@ class MultiBackendManager:
         self,
         template_name: str,
         tool_name: str,
-        arguments: Dict[str, Any],
-        config_values: Optional[Dict[str, Any]] = None,
+        arguments: dict[str, Any],
+        config_values: dict[str, Any] | None = None,
         timeout: int = 30,
         pull_image: bool = True,
         force_stdio: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Call a tool using multi-backend discovery and priority.
 
@@ -507,7 +507,7 @@ class MultiBackendManager:
                 "error": f"Failed to get template info: {e}",
             }
 
-    def stop_deployment(self, deployment_id: str, timeout: int = 30) -> Dict[str, Any]:
+    def stop_deployment(self, deployment_id: str, timeout: int = 30) -> dict[str, Any]:
         """
         Stop a deployment by auto-detecting its backend.
 
@@ -539,7 +539,7 @@ class MultiBackendManager:
 
     def get_deployment_logs(
         self, deployment_id: str, lines: int = 100, follow: bool = False
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Get logs from a deployment by auto-detecting its backend.
 
@@ -572,7 +572,7 @@ class MultiBackendManager:
                 "backend_type": backend_type,
             }
 
-    def cleanup_all_backends(self, force: bool = False) -> Dict[str, Any]:
+    def cleanup_all_backends(self, force: bool = False) -> dict[str, Any]:
         """
         Run cleanup operations on all backends.
 
@@ -601,7 +601,7 @@ class MultiBackendManager:
 
         return results
 
-    def get_backend_health(self) -> Dict[str, Any]:
+    def get_backend_health(self) -> dict[str, Any]:
         """
         Check health status of all backends.
 

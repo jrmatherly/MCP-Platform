@@ -12,8 +12,6 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-pytestmark = pytest.mark.integration
-
 from mcp_platform.tools.docker_probe import DockerProbe
 from mcp_platform.tools.kubernetes_probe import KubernetesProbe
 from mcp_platform.tools.mcp_client_probe import MCPClientProbe
@@ -71,9 +69,7 @@ class TestToolsIntegrationWorkflows:
             mock_docker.return_value = self.mock_tools_response
 
             docker_probe = DockerProbe()
-            docker_result = docker_probe.discover_tools_from_image(
-                "github-server:latest"
-            )
+            docker_result = docker_probe.discover_tools_from_image("github-server:latest")
 
             assert docker_result is not None
             assert len(docker_result["tools"]) == 2

@@ -12,7 +12,7 @@ import logging
 import os
 import re
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 class ZendeskServerConfig:
@@ -24,7 +24,7 @@ class ZendeskServerConfig:
     notation for nested configuration override.
     """
 
-    def __init__(self, config_dict: Optional[Dict[str, Any]] = None):
+    def __init__(self, config_dict: dict[str, Any] | None = None):
         """
         Initialize Zendesk server configuration.
 
@@ -70,11 +70,11 @@ class ZendeskServerConfig:
 
         return logger
 
-    def _load_template(self) -> Dict[str, Any]:
+    def _load_template(self) -> dict[str, Any]:
         """Load the template.json file."""
         template_path = Path(__file__).parent / "template.json"
         try:
-            with open(template_path, "r", encoding="utf-8") as f:
+            with open(template_path, encoding="utf-8") as f:
                 template_data = json.load(f)
             self.logger.debug("Template loaded from %s", template_path)
             return template_data
@@ -159,7 +159,7 @@ class ZendeskServerConfig:
             self._deep_update(self.template_data, nested_updates)
             self.logger.debug("Applied nested configuration updates")
 
-    def _deep_update(self, base_dict: Dict, update_dict: Dict):
+    def _deep_update(self, base_dict: dict, update_dict: dict):
         """Recursively update a dictionary with another dictionary."""
         for key, value in update_dict.items():
             if (
@@ -192,7 +192,7 @@ class ZendeskServerConfig:
         # Validate Zendesk-specific requirements
         self._validate_zendesk_config()
 
-    def _validate_field(self, key: str, value: Any, schema: Dict):
+    def _validate_field(self, key: str, value: Any, schema: dict):
         """Validate a single configuration field."""
         expected_type = schema.get("type", "string")
 
@@ -261,7 +261,7 @@ class ZendeskServerConfig:
         if timeout < 1 or timeout > 300:
             raise ValueError("timeout_seconds must be between 1 and 300")
 
-    def get_template_config(self) -> Dict[str, Any]:
+    def get_template_config(self) -> dict[str, Any]:
         """
         Get configuration values from the config_schema.
 
@@ -282,7 +282,7 @@ class ZendeskServerConfig:
 
         return config
 
-    def get_template_data(self) -> Dict[str, Any]:
+    def get_template_data(self) -> dict[str, Any]:
         """
         Get the full template data, potentially modified by double underscore notation.
 
@@ -298,7 +298,7 @@ class ZendeskServerConfig:
             raise ValueError("zendesk_subdomain is required")
         return f"https://{subdomain}.zendesk.com"
 
-    def get_auth_headers(self) -> Dict[str, str]:
+    def get_auth_headers(self) -> dict[str, str]:
         """Get authentication headers for Zendesk API requests."""
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
 
@@ -326,21 +326,21 @@ class ZendeskServerConfig:
 
         return headers
 
-    def get_rate_limit_config(self) -> Dict[str, int]:
+    def get_rate_limit_config(self) -> dict[str, int]:
         """Get rate limiting configuration."""
         return {
             "requests_per_minute": self.config_dict.get("rate_limit_requests", 200),
             "timeout_seconds": self.config_dict.get("timeout_seconds", 30),
         }
 
-    def get_cache_config(self) -> Dict[str, Any]:
+    def get_cache_config(self) -> dict[str, Any]:
         """Get caching configuration."""
         return {
             "enabled": self.config_dict.get("enable_cache", True),
             "ttl_seconds": self.config_dict.get("cache_ttl_seconds", 300),
         }
 
-    def get_default_ticket_config(self) -> Dict[str, str]:
+    def get_default_ticket_config(self) -> dict[str, str]:
         """Get default ticket configuration."""
         return {
             "priority": self.config_dict.get("default_ticket_priority", "normal"),
@@ -354,7 +354,7 @@ class ZendeskServerConfig:
         field_schema = properties.get(field_name, {})
         return field_schema.get("sensitive", False)
 
-    def get_sanitized_config(self) -> Dict[str, Any]:
+    def get_sanitized_config(self) -> dict[str, Any]:
         """Get configuration with sensitive fields masked."""
         config = self.get_template_config()
         sanitized = {}

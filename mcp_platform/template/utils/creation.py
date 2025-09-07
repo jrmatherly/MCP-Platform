@@ -9,7 +9,6 @@ configuration files, tests, and documentation.
 import json
 import re
 from pathlib import Path
-from typing import Optional
 
 import yaml
 from rich.console import Console
@@ -28,7 +27,7 @@ class TemplateCreator:
     """Create new MCP server templates with complete structure."""
 
     def __init__(
-        self, templates_dir: Optional[Path] = None, tests_dir: Optional[Path] = None
+        self, templates_dir: Path | None = None, tests_dir: Path | None = None
     ):
         self.template_data = {}
         self.template_dir = None
@@ -82,7 +81,7 @@ class TemplateCreator:
         """Create config.py for the template by loading demo config and adapting it."""
         # Load the demo config.py as a template
         demo_config_path = self.templates_dir.parent / "utils" / "config.py"
-        with open(demo_config_path, "r", encoding="utf-8") as f:
+        with open(demo_config_path, encoding="utf-8") as f:
             config_content = f.read()
 
         # Generate template-specific names
@@ -146,7 +145,7 @@ class TemplateCreator:
                 )
                 return False
 
-            with open(config_path, "r", encoding="utf-8") as f:
+            with open(config_path, encoding="utf-8") as f:
                 if (
                     config_path.suffix.lower() == ".yaml"
                     or config_path.suffix.lower() == ".yml"
@@ -466,10 +465,10 @@ This template supports the following configuration parameters:
 
 ```bash
 # Install dependencies
-pip install -r requirements.txt
+uv sync
 
 # Run the server
-python -m server
+uv run python -m server
 ```
 
 ### Running Tests
@@ -516,9 +515,9 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy dependencies and install Python packages
+COPY pyproject.toml uv.lock ./
+RUN pip install uv && uv sync --frozen --no-dev
 
 # Copy demo template source code
 COPY . .
@@ -888,10 +887,10 @@ git clone <repository-url>
 cd {self.template_data["id"]}
 
 # Install dependencies
-pip install -r requirements.txt
+uv sync
 
 # Run the server
-python -m server
+uv run python -m server
 ```
 
 ### Testing

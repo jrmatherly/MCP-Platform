@@ -12,7 +12,6 @@ import time
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from enum import Enum
-from typing import Dict, List, Optional
 
 from .registry import ServerInstance
 
@@ -38,8 +37,8 @@ class BaseBalancingStrategy(ABC):
 
     @abstractmethod
     def select_instance(
-        self, instances: List[ServerInstance]
-    ) -> Optional[ServerInstance]:
+        self, instances: list[ServerInstance]
+    ) -> ServerInstance | None:
         """
         Select a server instance from the available instances.
 
@@ -67,11 +66,11 @@ class RoundRobinStrategy(BaseBalancingStrategy):
 
     def __init__(self):
         super().__init__("round_robin")
-        self._counters: Dict[str, int] = defaultdict(int)  # template_name -> counter
+        self._counters: dict[str, int] = defaultdict(int)  # template_name -> counter
 
     def select_instance(
-        self, instances: List[ServerInstance]
-    ) -> Optional[ServerInstance]:
+        self, instances: list[ServerInstance]
+    ) -> ServerInstance | None:
         if not instances:
             return None
 
@@ -97,13 +96,13 @@ class LeastConnectionsStrategy(BaseBalancingStrategy):
 
     def __init__(self):
         super().__init__("least_connections")
-        self._active_connections: Dict[str, int] = defaultdict(
+        self._active_connections: dict[str, int] = defaultdict(
             int
         )  # instance_id -> count
 
     def select_instance(
-        self, instances: List[ServerInstance]
-    ) -> Optional[ServerInstance]:
+        self, instances: list[ServerInstance]
+    ) -> ServerInstance | None:
         if not instances:
             return None
 
@@ -135,7 +134,7 @@ class WeightedRoundRobinStrategy(BaseBalancingStrategy):
 
     def __init__(self):
         super().__init__("weighted")
-        self._current_weights: Dict[str, int] = defaultdict(
+        self._current_weights: dict[str, int] = defaultdict(
             int
         )  # template_name -> counter
 
@@ -146,8 +145,8 @@ class WeightedRoundRobinStrategy(BaseBalancingStrategy):
         return instance.instance_metadata.get("weight", 1)
 
     def select_instance(
-        self, instances: List[ServerInstance]
-    ) -> Optional[ServerInstance]:
+        self, instances: list[ServerInstance]
+    ) -> ServerInstance | None:
         if not instances:
             return None
 
@@ -190,14 +189,14 @@ class HealthBasedStrategy(BaseBalancingStrategy):
 
     def __init__(self):
         super().__init__("health_based")
-        self._failure_counts: Dict[str, int] = defaultdict(
+        self._failure_counts: dict[str, int] = defaultdict(
             int
         )  # instance_id -> recent_failures
         self._last_cleanup = time.time()
 
     def select_instance(
-        self, instances: List[ServerInstance]
-    ) -> Optional[ServerInstance]:
+        self, instances: list[ServerInstance]
+    ) -> ServerInstance | None:
         if not instances:
             return None
 
@@ -240,8 +239,8 @@ class RandomStrategy(BaseBalancingStrategy):
         super().__init__("random")
 
     def select_instance(
-        self, instances: List[ServerInstance]
-    ) -> Optional[ServerInstance]:
+        self, instances: list[ServerInstance]
+    ) -> ServerInstance | None:
         if not instances:
             return None
         return random.choice(instances)
@@ -274,7 +273,7 @@ class LoadBalancer:
             default_strategy: Default load balancing strategy to use
         """
         self.default_strategy = default_strategy
-        self._strategies: Dict[LoadBalancingStrategy, BaseBalancingStrategy] = {
+        self._strategies: dict[LoadBalancingStrategy, BaseBalancingStrategy] = {
             LoadBalancingStrategy.ROUND_ROBIN: RoundRobinStrategy(),
             LoadBalancingStrategy.LEAST_CONNECTIONS: LeastConnectionsStrategy(),
             LoadBalancingStrategy.WEIGHTED_ROUND_ROBIN: WeightedRoundRobinStrategy(),
@@ -283,16 +282,16 @@ class LoadBalancer:
         }
 
         # Request tracking
-        self._request_count: Dict[str, int] = defaultdict(
+        self._request_count: dict[str, int] = defaultdict(
             int
         )  # instance_id -> request_count
         self._lock = threading.RLock()
 
     def select_instance(
         self,
-        instances: List[ServerInstance],
-        strategy: Optional[LoadBalancingStrategy] = None,
-    ) -> Optional[ServerInstance]:
+        instances: list[ServerInstance],
+        strategy: LoadBalancingStrategy | None = None,
+    ) -> ServerInstance | None:
         """
         Select an instance using the specified strategy.
 
@@ -336,7 +335,7 @@ class LoadBalancer:
         return selected
 
     def record_request_start(
-        self, instance: ServerInstance, strategy: Optional[LoadBalancingStrategy] = None
+        self, instance: ServerInstance, strategy: LoadBalancingStrategy | None = None
     ):
         """
         Record that a request is starting for an instance.
@@ -360,7 +359,7 @@ class LoadBalancer:
         self,
         instance: ServerInstance,
         success: bool,
-        strategy: Optional[LoadBalancingStrategy] = None,
+        strategy: LoadBalancingStrategy | None = None,
     ):
         """
         Record that a request completed for an instance.
@@ -380,7 +379,7 @@ class LoadBalancer:
             f"Request completed for instance {instance.id}, success: {success}"
         )
 
-    def get_load_balancer_stats(self) -> Dict[str, any]:
+    def get_load_balancer_stats(self) -> dict[str, any]:
         """Get load balancer statistics."""
         with self._lock:
             total_requests = sum(self._request_count.values())

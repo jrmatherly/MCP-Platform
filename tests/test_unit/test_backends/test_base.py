@@ -202,9 +202,7 @@ class TestBaseDeploymentBackendInheritance:
             def stop_deployment(self, deployment_name, force=False):
                 return True
 
-            def get_deployment_info(
-                self, deployment_name, include_logs=False, lines=10
-            ):
+            def get_deployment_info(self, deployment_name, include_logs=False, lines=10):
                 return {"deployment_id": deployment_name}
 
             def connect_to_deployment(self, deployment_id):
@@ -244,9 +242,7 @@ class TestBaseDeploymentBackendInheritance:
             def stop_deployment(self, deployment_name, force=False):
                 return True
 
-            def get_deployment_info(
-                self, deployment_name, include_logs=False, lines=10
-            ):
+            def get_deployment_info(self, deployment_name, include_logs=False, lines=10):
                 return {"deployment_id": deployment_name}
 
             def connect_to_deployment(self, deployment_id):
@@ -292,9 +288,7 @@ class TestBaseDeploymentBackendInheritance:
             def stop_deployment(self, deployment_name, force=False):
                 return True
 
-            def get_deployment_info(
-                self, deployment_name, include_logs=False, lines=10
-            ):
+            def get_deployment_info(self, deployment_name, include_logs=False, lines=10):
                 return {"deployment_id": deployment_name}
 
             def connect_to_deployment(self, deployment_id):
@@ -318,8 +312,7 @@ class TestBaseDeploymentBackendDocumentation:
         """Test that BaseDeploymentBackend has proper documentation."""
         assert BaseDeploymentBackend.__doc__ is not None
         assert (
-            "Abstract base class for deployment backends"
-            in BaseDeploymentBackend.__doc__
+            "Abstract base class for deployment backends" in BaseDeploymentBackend.__doc__
         )
 
     def test_deploy_template_docstring(self):
@@ -412,9 +405,7 @@ class TestBaseDeploymentBackendErrorHandling:
             def stop_deployment(self, deployment_name, force=False):
                 return True
 
-            def get_deployment_info(
-                self, deployment_name, include_logs=False, lines=10
-            ):
+            def get_deployment_info(self, deployment_name, include_logs=False, lines=10):
                 return {"deployment_id": deployment_name}
 
             def connect_to_deployment(self, deployment_id):

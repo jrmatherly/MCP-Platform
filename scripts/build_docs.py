@@ -18,7 +18,6 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from typing import Dict, List
 
 import yaml
 
@@ -59,16 +58,17 @@ except ImportError as e:
             return templates
 
 
-# Try to import MCPClient for dynamic tool discovery
-try:
-    from mcp_platform.client import MCPClient
-    from mcp_platform.core.tool_manager import ToolManager
+# Check if MCPClient is available for dynamic tool discovery
+import importlib.util
 
-    MCP_CLIENT_AVAILABLE = True
-except ImportError as e:
-    print(f"Warning: Could not import MCPClient: {e}")
+MCP_CLIENT_AVAILABLE = (
+    importlib.util.find_spec("mcp_platform.client") is not None and
+    importlib.util.find_spec("mcp_platform.core.tool_manager") is not None
+)
+
+if not MCP_CLIENT_AVAILABLE:
+    print("Warning: MCP modules not available")
     print("Falling back to static tool discovery...")
-    MCP_CLIENT_AVAILABLE = False
 
 try:
     from mcp_platform.utils import ROOT_DIR, TEMPLATES_DIR
@@ -92,7 +92,7 @@ def cleanup_old_docs(docs_dir: Path):
         print("  🗑️  Cleaned up old server-templates docs")
 
 
-async def discover_tools_dynamically(template_id: str) -> List[Dict]:
+async def discover_tools_dynamically(template_id: str) -> list[dict]:
     """
     Discover tools dynamically using MCPClient if available.
     Falls back to static discovery if MCPClient is not available.
@@ -167,9 +167,7 @@ except Exception as e:
                     error = data.get("error")
 
                     if error:
-                        print(
-                            f"  ⚠️  Dynamic discovery error for {template_id}: {error}"
-                        )
+                        print(f"  ⚠️  Dynamic discovery error for {template_id}: {error}")
                         return []
                     elif tools:
                         print(
@@ -177,20 +175,14 @@ except Exception as e:
                         )
                         return tools
                     else:
-                        print(
-                            f"  ⚠️  Dynamic discovery found no tools for {template_id}"
-                        )
+                        print(f"  ⚠️  Dynamic discovery found no tools for {template_id}")
                         return []
 
                 except (json.JSONDecodeError, IndexError) as e:
-                    print(
-                        f"  ⚠️  Failed to parse discovery output for {template_id}: {e}"
-                    )
+                    print(f"  ⚠️  Failed to parse discovery output for {template_id}: {e}")
                     return []
             else:
-                print(
-                    f"  ⚠️  Discovery process failed for {template_id}: {result.stderr}"
-                )
+                print(f"  ⚠️  Discovery process failed for {template_id}: {result.stderr}")
                 return []
 
         finally:
@@ -202,12 +194,12 @@ except Exception as e:
         return []
 
 
-def discover_tools_static(template_config: Dict) -> List[Dict]:
+def discover_tools_static(template_config: dict) -> list[dict]:
     """Fallback to static tool discovery from template config."""
     return template_config.get("tools", [])
 
 
-def scan_template_docs(templates_dir: Path) -> Dict[str, Dict]:
+def scan_template_docs(templates_dir: Path) -> dict[str, dict]:
     """Scan template directories for documentation using TemplateDiscovery."""
     print("🔍 Using TemplateDiscovery to find usable templates...")
 
@@ -241,7 +233,7 @@ def scan_template_docs(templates_dir: Path) -> Dict[str, Dict]:
     return template_docs
 
 
-async def generate_usage_md(template_id: str, template_info: Dict) -> str:
+async def generate_usage_md(template_id: str, template_info: dict) -> str:
     """Generate standardized usage.md content for a template using dynamic tool discovery."""
     template_config = template_info["config"]
     template_name = template_config.get("name", template_id.title())
@@ -322,9 +314,7 @@ This guide shows how to use the {template_name} with different MCP clients and i
                         param_obj = {
                             "name": param_name,
                             "type": param_def.get("type", "string"),
-                            "description": param_def.get(
-                                "description", "No description"
-                            ),
+                            "description": param_def.get("description", "No description"),
                             "required": param_name in required,
                         }
                         tool_params.append(param_obj)
@@ -343,14 +333,16 @@ This guide shows how to use the {template_name} with different MCP clients and i
                     param_required = (
                         " (required)" if param.get("required", False) else " (optional)"
                     )
-                    usage_content += f"- `{param_name}` ({param_type}){param_required}: {param_desc}\n"
+                    usage_content += (
+                        f"- `{param_name}` ({param_type}){param_required}: {param_desc}\n"
+                    )
             else:
                 usage_content += "- No parameters required\n"
 
             usage_content += "\n"
     else:
         # Handle templates without defined tools (like GitHub MCP Server)
-        usage_content += f"""This template uses an external MCP server implementation. Tools are dynamically discovered at runtime.
+        usage_content += """This template uses an external MCP server implementation. Tools are dynamically discovered at runtime.
 
 Use the tool discovery methods above to see the full list of available tools for this template.
 
@@ -458,7 +450,7 @@ Use the tool discovery methods above to see the full list of available tools for
     import asyncio
     from mcp_platform.client import MCPClient
 
-    async def use_{template_id.replace('-', '_')}():
+    async def use_{template_id.replace("-", "_")}():
         client = MCPClient()
 
         # Start the server
@@ -536,7 +528,7 @@ Use the tool discovery methods above to see the full list of available tools for
             print("Failed to start server")
 
     # Run the example
-    asyncio.run(use_{template_id.replace('-', '_')}())
+    asyncio.run(use_{template_id.replace("-", "_")}())
     ```
 
 ## Integration Examples
@@ -660,7 +652,7 @@ For more help, see the [main documentation](../../) or open an issue in the repo
 
 
 def generate_api_reference(
-    template_id: str, template_info: Dict, tools: List[Dict]
+    template_id: str, template_info: dict, tools: list[dict]
 ) -> str:
     """Generate API reference documentation for a template."""
     template_name = template_info["name"]
@@ -780,7 +772,7 @@ For questions and issues related to the {template_name}, please refer to:
     return content
 
 
-async def copy_template_docs(template_docs: Dict[str, Dict], docs_dir: Path):
+async def copy_template_docs(template_docs: dict[str, dict], docs_dir: Path):
     """Copy template documentation to docs directory and fix CLI commands."""
     print("📄 Copying template documentation...")
 
@@ -807,7 +799,7 @@ async def copy_template_docs(template_docs: Dict[str, Dict], docs_dir: Path):
 
         # Copy the index.md file and fix CLI commands
         dest_file = template_doc_dir / "index.md"
-        with open(template_info["docs_file"], "r", encoding="utf-8") as f:
+        with open(template_info["docs_file"], encoding="utf-8") as f:
             content = f.read()
 
         # Fix CLI commands - add 'python -m' prefix and 'deploy' command
@@ -990,7 +982,7 @@ def remove_usage_sections_and_add_link(content: str, template_id: str) -> str:
     return content
 
 
-def generate_templates_index(template_docs: Dict[str, Dict], docs_dir: Path):
+def generate_templates_index(template_docs: dict[str, dict], docs_dir: Path):
     """Generate an index page for all templates."""
     print("📝 Generating templates index...")
 
@@ -1083,11 +1075,11 @@ This page lists all available MCP Platform server templates.
     print("✅ Templates index generated")
 
 
-def update_mkdocs_nav(template_docs: Dict[str, Dict], mkdocs_file: Path):
+def update_mkdocs_nav(template_docs: dict[str, dict], mkdocs_file: Path):
     """Update mkdocs.yml navigation with modern template structure."""
     print("⚙️  Updating mkdocs navigation with modern template structure...")
 
-    with open(mkdocs_file, "r", encoding="utf-8") as f:
+    with open(mkdocs_file, encoding="utf-8") as f:
         mkdocs_config = yaml.safe_load(f)
 
     # Find the Templates section in nav
@@ -1167,7 +1159,7 @@ def build_docs():
     print("🏗️  Building documentation with MkDocs...")
 
     try:
-        result = subprocess.run(
+        subprocess.run(
             ["mkdocs", "build"], check=True, capture_output=True, text=True
         )
         print("✅ Documentation built successfully")

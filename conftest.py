@@ -10,7 +10,7 @@ import json
 import sys
 import tempfile
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -44,7 +44,6 @@ from mcp_platform.template.utils.discovery import TemplateDiscovery
 @pytest.fixture(scope="session")
 def built_internal_images():
     """Build all internal template images before running deploy tests."""
-    import subprocess
     from pathlib import Path
 
     import docker
@@ -531,7 +530,7 @@ def create_test_template(temp_dir: Path, template_id: str, **kwargs) -> Path:
     return template_dir
 
 
-def assert_deployment_success(result: Dict[str, Any]) -> None:
+def assert_deployment_success(result: dict[str, Any]) -> None:
     """Assert that a deployment was successful."""
     assert result is not None
     assert "deployment_name" in result
@@ -539,7 +538,7 @@ def assert_deployment_success(result: Dict[str, Any]) -> None:
     assert result["status"] in ["deployed", "running"]
 
 
-def assert_valid_template_config(config: Dict[str, Any]) -> None:
+def assert_valid_template_config(config: dict[str, Any]) -> None:
     """Assert that a template configuration is valid."""
     required_fields = ["name", "description", "version", "author"]
     for field in required_fields:

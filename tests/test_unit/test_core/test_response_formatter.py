@@ -9,7 +9,7 @@ import datetime
 import json
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 from rich.console import Console
@@ -620,9 +620,7 @@ class TestTemplateResponseFormatter:
         mock_module = type("Module", (), {})()
 
         # Test direct match
-        setattr(
-            mock_module, "TestResponseFormatter", type("TestResponseFormatter", (), {})
-        )
+        mock_module.TestResponseFormatter = type("TestResponseFormatter", (), {})
         result = self.formatter._find_formatter_class(mock_module, "test")
         assert result is not None
         assert result.__name__ == "TestResponseFormatter"
@@ -638,13 +636,11 @@ class TestTemplateResponseFormatter:
         mock_module = type("Module", (), {})()
 
         # Add some classes
-        setattr(
-            mock_module,
-            "SomeCustomResponseFormatter",
-            type("SomeCustomResponseFormatter", (), {}),
+        mock_module.SomeCustomResponseFormatter = type(
+            "SomeCustomResponseFormatter", (), {}
         )
-        setattr(mock_module, "NotAFormatter", str)
-        setattr(mock_module, "_PrivateFormatter", type("_PrivateFormatter", (), {}))
+        mock_module.NotAFormatter = str
+        mock_module._PrivateFormatter = type("_PrivateFormatter", (), {})
 
         result = self.formatter._find_formatter_class(mock_module, "test")
         assert result is not None

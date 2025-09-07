@@ -63,9 +63,9 @@ class TestMCPClientTemplates:
         template_names = [
             template.get("name", "").lower() for template in result.values()
         ]
-        assert any(
-            "demo" in name.lower() for name in template_names
-        ), f"Demo template not found in {template_names}"
+        assert any("demo" in name.lower() for name in template_names), (
+            f"Demo template not found in {template_names}"
+        )
 
     @patch("mcp_platform.client.client.TemplateManager")
     def test_list_templates_with_deployed_status(self, mock_template_manager_class):
@@ -144,9 +144,7 @@ class TestMCPClientTemplates:
 
     def test_get_template_info_error(self):
         """Test template info retrieval error handling."""
-        self.mock_template_manager.get_template_info.side_effect = Exception(
-            "Info error"
-        )
+        self.mock_template_manager.get_template_info.side_effect = Exception("Info error")
 
         result = self.client.get_template_info("demo")
 
@@ -256,9 +254,7 @@ class TestMCPClientServers:
 
     def test_list_servers_error(self):
         """Test server listing error handling."""
-        self.mock_multi_manager.get_all_deployments.side_effect = Exception(
-            "List error"
-        )
+        self.mock_multi_manager.get_all_deployments.side_effect = Exception("List error")
 
         result = self.client.list_servers()
 
@@ -816,9 +812,7 @@ class TestMCPClientConfigurationHandling:
         self.client = MCPClient(backend_type="mock")
 
     @patch("mcp_platform.core.DeploymentManager")
-    def test_deploy_template_with_config_precedence(
-        self, mock_deployment_manager_class
-    ):
+    def test_deploy_template_with_config_precedence(self, mock_deployment_manager_class):
         """Test that deploy_template handles config precedence correctly."""
         # Setup mocks
         mock_deployment_manager = Mock()
@@ -918,9 +912,7 @@ class TestMCPClientConfigurationHandling:
         assert volumes["./data"] == "/app/data"
 
     @patch("mcp_platform.core.DeploymentManager")
-    def test_deploy_template_with_volumes_json_array(
-        self, mock_deployment_manager_class
-    ):
+    def test_deploy_template_with_volumes_json_array(self, mock_deployment_manager_class):
         """Test that deploy_template handles JSON array volumes correctly."""
         mock_deployment_manager = Mock()
         mock_deployment_manager_class.return_value = mock_deployment_manager

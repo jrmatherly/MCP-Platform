@@ -114,7 +114,6 @@ class TestCustomTemplatesIntegration:
                     )()
                 },
             ):
-
                 # Test basic import without full module
                 exec(
                     """

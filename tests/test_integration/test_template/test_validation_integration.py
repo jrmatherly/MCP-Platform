@@ -19,7 +19,7 @@ class TestTemplateIntegration:
         demo_template_path = TEMPLATES_DIR / "demo" / "template.json"
 
         if demo_template_path.exists():
-            with open(demo_template_path, "r") as f:
+            with open(demo_template_path) as f:
                 config = json.load(f)
 
             # Check that required fields are present
@@ -40,16 +40,16 @@ class TestTemplateIntegration:
         tools_json_path = TEMPLATES_DIR / "demo" / "tools.json"
 
         if demo_template_path.exists():
-            with open(demo_template_path, "r") as f:
+            with open(demo_template_path) as f:
                 config = json.load(f)
 
             if config.get("tool_discovery") == "static":
-                assert (
-                    tools_json_path.exists()
-                ), "Static tool discovery requires tools.json"
+                assert tools_json_path.exists(), (
+                    "Static tool discovery requires tools.json"
+                )
 
                 # Validate tools.json format
-                with open(tools_json_path, "r") as f:
+                with open(tools_json_path) as f:
                     tools_config = json.load(f)
 
                 assert "tools" in tools_config

@@ -7,7 +7,8 @@ consolidating functionality from CLI and MCPClient for deployment operations.
 
 import logging
 import time
-from typing import Any, Callable, Dict, List, Optional
+from collections.abc import Callable
+from typing import Any
 
 from mcp_platform.backends import get_backend
 from mcp_platform.core.config_processor import RESERVED_ENV_VARS, ConfigProcessor
@@ -21,11 +22,11 @@ class DeploymentOptions:
 
     def __init__(
         self,
-        name: Optional[str] = None,
-        transport: Optional[str] = None,
+        name: str | None = None,
+        transport: str | None = None,
         port: int = 7071,
-        data_dir: Optional[str] = None,
-        config_dir: Optional[str] = None,
+        data_dir: str | None = None,
+        config_dir: str | None = None,
         pull_image: bool = True,
         timeout: int = 300,
         dry_run: bool = False,
@@ -46,17 +47,17 @@ class DeploymentResult:
     def __init__(
         self,
         success: bool,
-        deployment_id: Optional[str] = None,
-        template: Optional[str] = None,
-        status: Optional[str] = None,
-        container_id: Optional[str] = None,
-        image: Optional[str] = None,
-        ports: Optional[Dict[str, int]] = None,
-        config: Optional[Dict[str, Any]] = None,
-        mcp_config_path: Optional[str] = None,
-        transport: Optional[str] = None,
-        endpoint: Optional[str] = None,
-        error: Optional[str] = None,
+        deployment_id: str | None = None,
+        template: str | None = None,
+        status: str | None = None,
+        container_id: str | None = None,
+        image: str | None = None,
+        ports: dict[str, int] | None = None,
+        config: dict[str, Any] | None = None,
+        mcp_config_path: str | None = None,
+        transport: str | None = None,
+        endpoint: str | None = None,
+        error: str | None = None,
         duration: float = 0.0,
     ):
         self.success = success
@@ -73,7 +74,7 @@ class DeploymentResult:
         self.error = error
         self.duration = duration
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert result to dictionary format."""
         return {
             "success": self.success,
@@ -110,7 +111,7 @@ class DeploymentManager:
     def deploy_template(
         self,
         template_id: str,
-        config_sources: Dict[str, Any],
+        config_sources: dict[str, Any],
         deployment_options: DeploymentOptions,
     ) -> DeploymentResult:
         """
@@ -215,7 +216,7 @@ class DeploymentManager:
 
     def stop_deployment(
         self, deployment_id: str, timeout: int = 30, force: bool = False
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Stop a deployment.
 
@@ -264,8 +265,8 @@ class DeploymentManager:
             }
 
     def stop_deployments_bulk(
-        self, deployment_filters: List[str], timeout: int = 30, force: bool = False
-    ) -> Dict[str, Any]:
+        self, deployment_filters: list[str], timeout: int = 30, force: bool = False
+    ) -> dict[str, Any]:
         """
         Stop multiple deployments.
 
@@ -302,9 +303,9 @@ class DeploymentManager:
         deployment_id: str,
         lines: int = 100,
         follow: bool = False,
-        since: Optional[str] = None,
-        until: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        since: str | None = None,
+        until: str | None = None,
+    ) -> dict[str, Any]:
         """
         Get logs from a deployment.
 
@@ -376,11 +377,11 @@ class DeploymentManager:
 
     def find_deployments_by_criteria(
         self,
-        template_name: Optional[str] = None,
-        custom_name: Optional[str] = None,
-        deployment_id: Optional[str] = None,
-        status: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        template_name: str | None = None,
+        custom_name: str | None = None,
+        deployment_id: str | None = None,
+        status: str | None = None,
+    ) -> list[dict[str, Any]]:
         """
         Find deployments matching specified criteria.
 
@@ -424,7 +425,7 @@ class DeploymentManager:
             logger.error(f"Failed to find deployments: {e}")
             return []
 
-    def list_deployments(self, running_only: bool = False) -> List[Dict[str, Any]]:
+    def list_deployments(self, running_only: bool = False) -> list[dict[str, Any]]:
         """
         List all deployments, optionally filtering to running only.
 
@@ -452,8 +453,8 @@ class DeploymentManager:
             return []
 
     def find_deployment_for_logs(
-        self, template_name: Optional[str] = None, custom_name: Optional[str] = None
-    ) -> Optional[str]:
+        self, template_name: str | None = None, custom_name: str | None = None
+    ) -> str | None:
         """
         Find deployment ID for log operations.
 
@@ -474,7 +475,7 @@ class DeploymentManager:
         # Return the first matching deployment
         return deployments[0].get("id")
 
-    def _execute_deployment(self, deployment_spec: Dict[str, Any]) -> DeploymentResult:
+    def _execute_deployment(self, deployment_spec: dict[str, Any]) -> DeploymentResult:
         """Execute the actual deployment using the backend."""
         try:
             # Extract the spec components for the backend interface
@@ -530,8 +531,8 @@ class DeploymentManager:
             )
 
     def _validate_and_set_transport(
-        self, template_info: Dict[str, Any], deployment_options: DeploymentOptions
-    ) -> Dict[str, Any]:
+        self, template_info: dict[str, Any], deployment_options: DeploymentOptions
+    ) -> dict[str, Any]:
         """
         Validate transport selection and set the appropriate transport.
 
@@ -580,8 +581,8 @@ class DeploymentManager:
         self.backend.connect_to_deployment(deployment_id)
 
     def cleanup_stopped_deployments(
-        self, template_name: Optional[str] = None
-    ) -> Dict[str, Any]:
+        self, template_name: str | None = None
+    ) -> dict[str, Any]:
         """
         Clean up stopped/failed deployments.
 
@@ -593,7 +594,7 @@ class DeploymentManager:
         """
         return self.backend.cleanup_stopped_containers(template_name)
 
-    def cleanup_dangling_images(self) -> Dict[str, Any]:
+    def cleanup_dangling_images(self) -> dict[str, Any]:
         """
         Clean up dangling images.
 

@@ -1,8 +1,8 @@
 """Database management for the MCP Platform Gateway."""
 
 import logging
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator, List, Optional
 
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import (
@@ -121,8 +121,8 @@ class DatabaseManager:
 
     def __init__(self, config: GatewayConfig):
         self.config = config
-        self.engine: Optional[AsyncEngine] = None
-        self.session_factory: Optional[sessionmaker] = None
+        self.engine: AsyncEngine | None = None
+        self.session_factory: sessionmaker | None = None
         self._initialized = False
 
     async def initialize(self):
@@ -208,7 +208,7 @@ class DatabaseManager:
             await session.refresh(server)
             return server
 
-    async def get_server_instance(self, server_id: str) -> Optional[ServerInstance]:
+    async def get_server_instance(self, server_id: str) -> ServerInstance | None:
         """Get server instance by ID."""
         async with self.get_session() as session:
             result = await session.get(ServerInstance, server_id)
@@ -216,7 +216,7 @@ class DatabaseManager:
 
     async def get_server_instances(
         self, skip: int = 0, limit: int = 100
-    ) -> List[ServerInstance]:
+    ) -> list[ServerInstance]:
         """Get all server instances with pagination."""
         async with self.get_session() as session:
             from sqlalchemy import select
@@ -228,7 +228,7 @@ class DatabaseManager:
 
     async def update_server_instance(
         self, server_id: str, server_data: dict
-    ) -> Optional[ServerInstance]:
+    ) -> ServerInstance | None:
         """Update server instance."""
         async with self.get_session() as session:
             server = await session.get(ServerInstance, server_id)
@@ -259,7 +259,7 @@ class DatabaseManager:
             await session.refresh(template)
             return template
 
-    async def get_server_template(self, template_id: str) -> Optional[ServerTemplate]:
+    async def get_server_template(self, template_id: str) -> ServerTemplate | None:
         """Get server template by ID."""
         async with self.get_session() as session:
             result = await session.get(ServerTemplate, template_id)
@@ -267,7 +267,7 @@ class DatabaseManager:
 
     async def get_server_templates(
         self, skip: int = 0, limit: int = 100
-    ) -> List[ServerTemplate]:
+    ) -> list[ServerTemplate]:
         """Get all server templates with pagination."""
         async with self.get_session() as session:
             from sqlalchemy import select
@@ -279,7 +279,7 @@ class DatabaseManager:
 
     async def update_server_template(
         self, template_id: str, template_data: dict
-    ) -> Optional[ServerTemplate]:
+    ) -> ServerTemplate | None:
         """Update server template."""
         async with self.get_session() as session:
             template = await session.get(ServerTemplate, template_id)
@@ -310,13 +310,13 @@ class DatabaseManager:
             await session.refresh(user)
             return user
 
-    async def get_user(self, user_id: str) -> Optional[User]:
+    async def get_user(self, user_id: str) -> User | None:
         """Get user by ID."""
         async with self.get_session() as session:
             result = await session.get(User, user_id)
             return result
 
-    async def get_users(self, skip: int = 0, limit: int = 100) -> List[User]:
+    async def get_users(self, skip: int = 0, limit: int = 100) -> list[User]:
         """Get all users with pagination."""
         async with self.get_session() as session:
             from sqlalchemy import select
@@ -324,7 +324,7 @@ class DatabaseManager:
             result = await session.execute(select(User).offset(skip).limit(limit))
             return result.scalars().all()
 
-    async def update_user(self, user_id: str, user_data: dict) -> Optional[User]:
+    async def update_user(self, user_id: str, user_data: dict) -> User | None:
         """Update user."""
         async with self.get_session() as session:
             user = await session.get(User, user_id)
@@ -355,13 +355,13 @@ class DatabaseManager:
             await session.refresh(api_key)
             return api_key
 
-    async def get_api_key(self, key_id: str) -> Optional[APIKey]:
+    async def get_api_key(self, key_id: str) -> APIKey | None:
         """Get API key by ID."""
         async with self.get_session() as session:
             result = await session.get(APIKey, key_id)
             return result
 
-    async def get_api_keys(self, skip: int = 0, limit: int = 100) -> List[APIKey]:
+    async def get_api_keys(self, skip: int = 0, limit: int = 100) -> list[APIKey]:
         """Get all API keys with pagination."""
         async with self.get_session() as session:
             from sqlalchemy import select
@@ -369,7 +369,7 @@ class DatabaseManager:
             result = await session.execute(select(APIKey).offset(skip).limit(limit))
             return result.scalars().all()
 
-    async def update_api_key(self, key_id: str, api_key_data: dict) -> Optional[APIKey]:
+    async def update_api_key(self, key_id: str, api_key_data: dict) -> APIKey | None:
         """Update API key."""
         async with self.get_session() as session:
             api_key = await session.get(APIKey, key_id)
@@ -402,7 +402,7 @@ class DatabaseManager:
 
     async def get_load_balancer_config(
         self, lb_id: str
-    ) -> Optional[LoadBalancerConfig]:
+    ) -> LoadBalancerConfig | None:
         """Get load balancer config by ID."""
         async with self.get_session() as session:
             result = await session.get(LoadBalancerConfig, lb_id)
@@ -410,7 +410,7 @@ class DatabaseManager:
 
     async def get_load_balancer_configs(
         self, skip: int = 0, limit: int = 100
-    ) -> List[LoadBalancerConfig]:
+    ) -> list[LoadBalancerConfig]:
         """Get all load balancer configs with pagination."""
         async with self.get_session() as session:
             from sqlalchemy import select
@@ -422,7 +422,7 @@ class DatabaseManager:
 
     async def update_load_balancer_config(
         self, lb_id: str, lb_data: dict
-    ) -> Optional[LoadBalancerConfig]:
+    ) -> LoadBalancerConfig | None:
         """Update load balancer config."""
         async with self.get_session() as session:
             load_balancer = await session.get(LoadBalancerConfig, lb_id)
@@ -459,11 +459,11 @@ class ServerInstanceCRUD:
         """Create a new server instance."""
         return await self.db.create_server_instance(server_data)
 
-    async def get_server_instance(self, server_id: str) -> Optional[ServerInstance]:
+    async def get_server_instance(self, server_id: str) -> ServerInstance | None:
         """Get server instance by ID."""
         return await self.db.get_server_instance(server_id)
 
-    async def get_active(self) -> List[ServerInstance]:
+    async def get_active(self) -> list[ServerInstance]:
         """Get all active server instances."""
         async with self.db.get_session() as session:
 
@@ -474,13 +474,13 @@ class ServerInstanceCRUD:
 
     async def get_server_instances(
         self, skip: int = 0, limit: int = 100
-    ) -> List[ServerInstance]:
+    ) -> list[ServerInstance]:
         """Get all server instances."""
         return await self.db.get_server_instances(skip, limit)
 
     async def update_server_instance(
         self, server_id: str, server_data: dict
-    ) -> Optional[ServerInstance]:
+    ) -> ServerInstance | None:
         """Update server instance."""
         return await self.db.update_server_instance(server_id, server_data)
 
@@ -488,15 +488,15 @@ class ServerInstanceCRUD:
         """Delete server instance."""
         return await self.db.delete_server_instance(server_id)
 
-    async def get_all(self) -> List[ServerInstance]:
+    async def get_all(self) -> list[ServerInstance]:
         """Get all server instances."""
         return await self.get_server_instances()
 
-    async def list_all(self) -> List[ServerInstance]:
+    async def list_all(self) -> list[ServerInstance]:
         """Get all server instances (alias for get_all)."""
         return await self.get_all()
 
-    async def get_by_template(self, template_name: str) -> List[ServerInstance]:
+    async def get_by_template(self, template_name: str) -> list[ServerInstance]:
         """Get server instances by template name."""
         async with self.db.get_session() as session:
             from sqlalchemy import select
@@ -508,7 +508,7 @@ class ServerInstanceCRUD:
             )
             return result.scalars().all()
 
-    async def get_healthy_by_template(self, template_name: str) -> List[ServerInstance]:
+    async def get_healthy_by_template(self, template_name: str) -> list[ServerInstance]:
         """Get healthy server instances by template name."""
         async with self.db.get_session() as session:
             from sqlalchemy import select
@@ -536,27 +536,27 @@ class ServerTemplateCRUD:
         """Create a new server template."""
         return await self.db.create_server_template(template_data)
 
-    async def get_server_template(self, template_id: str) -> Optional[ServerTemplate]:
+    async def get_server_template(self, template_id: str) -> ServerTemplate | None:
         """Get server template by ID."""
         return await self.db.get_server_template(template_id)
 
-    async def get_all(self) -> List[ServerTemplate]:
+    async def get_all(self) -> list[ServerTemplate]:
         """Get all server templates."""
         return await self.get_server_templates()
 
-    async def list_all(self) -> List[ServerTemplate]:
+    async def list_all(self) -> list[ServerTemplate]:
         """Get all server templates (alias for get_all)."""
         return await self.get_all()
 
     async def get_server_templates(
         self, skip: int = 0, limit: int = 100
-    ) -> List[ServerTemplate]:
+    ) -> list[ServerTemplate]:
         """Get all server templates."""
         return await self.db.get_server_templates(skip, limit)
 
     async def update_server_template(
         self, template_id: str, template_data: dict
-    ) -> Optional[ServerTemplate]:
+    ) -> ServerTemplate | None:
         """Update server template."""
         return await self.db.update_server_template(template_id, template_data)
 
@@ -592,15 +592,15 @@ class UserCRUD(BaseCRUD):
         """Create a new user."""
         return await self.db.create_user(user_data)
 
-    async def get_user(self, user_id: str) -> Optional[User]:
+    async def get_user(self, user_id: str) -> User | None:
         """Get user by ID."""
         return await self.db.get_user(user_id)
 
-    async def get_by_username(self, username: str) -> Optional[User]:
+    async def get_by_username(self, username: str) -> User | None:
         """Get user by username."""
         return await self.get_user_by_username(username)
 
-    async def get_user_by_username(self, username: str) -> Optional[User]:
+    async def get_user_by_username(self, username: str) -> User | None:
         """Get user by username."""
         async with self.db.get_session() as session:
             from sqlalchemy import select
@@ -610,7 +610,7 @@ class UserCRUD(BaseCRUD):
             )
             return result.scalar_one_or_none()
 
-    async def get_user_by_email(self, email: str) -> Optional[User]:
+    async def get_user_by_email(self, email: str) -> User | None:
         """Get user by email."""
         async with self.db.get_session() as session:
             from sqlalchemy import select
@@ -618,11 +618,11 @@ class UserCRUD(BaseCRUD):
             result = await session.execute(select(User).where(User.email == email))
             return result.scalar_one_or_none()
 
-    async def update(self, user_id: str, user_data: dict) -> Optional[User]:
+    async def update(self, user_id: str, user_data: dict) -> User | None:
         """Update user."""
         return await self.update_user(user_id, user_data)
 
-    async def update_user(self, user_id: str, user_data: dict) -> Optional[User]:
+    async def update_user(self, user_id: str, user_data: dict) -> User | None:
         """Update user."""
         return await self.db.update_user(user_id, user_data)
 
@@ -658,11 +658,11 @@ class APIKeyCRUD(BaseCRUD):
         """Create a new API key."""
         return await self.db.create_api_key(api_key_data)
 
-    async def get_api_key(self, key_id: str) -> Optional[APIKey]:
+    async def get_api_key(self, key_id: str) -> APIKey | None:
         """Get API key by ID."""
         return await self.db.get_api_key(key_id)
 
-    async def get_by_user(self, user_id: str) -> List[APIKey]:
+    async def get_by_user(self, user_id: str) -> list[APIKey]:
         """Get API keys by user ID."""
         async with self.db.get_session() as session:
             from sqlalchemy import select
@@ -672,7 +672,7 @@ class APIKeyCRUD(BaseCRUD):
             )
             return result.scalars().all()
 
-    async def get_api_key_by_key(self, key: str) -> Optional[APIKey]:
+    async def get_api_key_by_key(self, key: str) -> APIKey | None:
         """Get API key by key value."""
         async with self.db.get_session() as session:
             from sqlalchemy import select
@@ -680,11 +680,11 @@ class APIKeyCRUD(BaseCRUD):
             result = await session.execute(select(APIKey).where(APIKey.key == key))
             return result.scalar_one_or_none()
 
-    async def update(self, key_id: str, api_key_data: dict) -> Optional[APIKey]:
+    async def update(self, key_id: str, api_key_data: dict) -> APIKey | None:
         """Update API key."""
         return await self.update_api_key(key_id, api_key_data)
 
-    async def update_api_key(self, key_id: str, api_key_data: dict) -> Optional[APIKey]:
+    async def update_api_key(self, key_id: str, api_key_data: dict) -> APIKey | None:
         """Update API key."""
         return await self.db.update_api_key(key_id, api_key_data)
 
@@ -694,7 +694,7 @@ class APIKeyCRUD(BaseCRUD):
 
 
 # Global database manager instance
-_database_manager: Optional[DatabaseManager] = None
+_database_manager: DatabaseManager | None = None
 
 
 def get_database() -> DatabaseManager:

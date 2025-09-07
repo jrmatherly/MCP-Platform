@@ -39,9 +39,7 @@ class TestMCPConnection:
             patch(
                 "asyncio.create_subprocess_exec", return_value=mock_process
             ) as mock_exec,
-            patch.object(
-                conn, "_initialize_mcp_session", return_value=True
-            ) as mock_init,
+            patch.object(conn, "_initialize_mcp_session", return_value=True) as mock_init,
         ):
             result = await conn.connect_stdio(["python", "server.py"])
 
@@ -132,9 +130,7 @@ class TestMCPConnection:
         }
 
         with (
-            patch.object(
-                conn, "_send_request", return_value=init_response
-            ) as mock_send,
+            patch.object(conn, "_send_request", return_value=init_response) as mock_send,
             patch.object(conn, "_send_notification") as mock_notify,
         ):
             result = await conn._initialize_mcp_session()

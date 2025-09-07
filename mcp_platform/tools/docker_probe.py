@@ -8,7 +8,7 @@ import os
 import socket
 import subprocess
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import requests
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
@@ -81,10 +81,10 @@ class DockerProbe(BaseProbe):
     def discover_tools_from_image(
         self,
         image_name: str,
-        server_args: Optional[List[str]] = None,
-        env_vars: Optional[Dict[str, str]] = None,
+        server_args: list[str] | None = None,
+        env_vars: dict[str, str] | None = None,
         timeout: int = DISCOVERY_TIMEOUT,
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         Discover tools from MCP server Docker image.
 
@@ -123,9 +123,9 @@ class DockerProbe(BaseProbe):
     def _try_mcp_stdio_discovery(
         self,
         image_name: str,
-        server_args: Optional[List[str]],
-        env_vars: Optional[Dict[str, str]],
-    ) -> Optional[Dict[str, Any]]:
+        server_args: list[str] | None,
+        env_vars: dict[str, str] | None,
+    ) -> dict[str, Any] | None:
         """Try to discover tools using MCP stdio protocol."""
         try:
             args = server_args or []
@@ -155,7 +155,7 @@ class DockerProbe(BaseProbe):
     )
     def _try_http_discovery(
         self, image_name: str, timeout: int
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Try to discover tools using HTTP endpoints with proper MCP protocol."""
         container_name = None
         try:
@@ -201,7 +201,7 @@ class DockerProbe(BaseProbe):
             if container_name:
                 self._cleanup_container(container_name)
 
-    def _find_available_port(self) -> Optional[int]:
+    def _find_available_port(self) -> int | None:
         """Find an available port for the container."""
         for port in range(CONTAINER_PORT_RANGE[0], CONTAINER_PORT_RANGE[1]):
             try:
@@ -297,7 +297,7 @@ class DockerProbe(BaseProbe):
                             "Container %s port %d is open", container_name, port
                         )
                         return True
-                except socket.error:
+                except OSError:
                     pass
 
             except requests.RequestException:

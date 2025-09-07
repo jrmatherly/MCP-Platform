@@ -11,7 +11,7 @@ import logging
 import os
 import re
 import sys
-from typing import Any, Dict, List
+from typing import Any
 
 import sqlparse
 from fastmcp import FastMCP
@@ -207,7 +207,7 @@ class BigQueryMCPServer:
         patterns = [pattern.strip() for pattern in allowed_datasets.split(",")]
         return any(fnmatch.fnmatch(dataset_id, pattern) for pattern in patterns)
 
-    def _filter_datasets(self, datasets: List[Any]) -> List[Any]:
+    def _filter_datasets(self, datasets: list[Any]) -> list[Any]:
         """Filter datasets based on access control configuration."""
         return [ds for ds in datasets if self._is_dataset_allowed(ds.dataset_id)]
 
@@ -245,7 +245,7 @@ class BigQueryMCPServer:
         self.mcp.tool(self.get_job_status, tags=["jobs", "status"])
         self.mcp.tool(self.get_dataset_info, tags=["datasets", "metadata"])
 
-    def list_datasets(self) -> Dict[str, Any]:
+    def list_datasets(self) -> dict[str, Any]:
         """List all accessible BigQuery datasets in the project."""
         try:
             datasets = list(self.client.list_datasets())
@@ -274,7 +274,7 @@ class BigQueryMCPServer:
             self.logger.error("Error listing datasets: %s", e)
             return {"success": False, "error": str(e), "datasets": []}
 
-    def list_tables(self, dataset_id: str) -> Dict[str, Any]:
+    def list_tables(self, dataset_id: str) -> dict[str, Any]:
         """List tables in a specific dataset."""
         if not self._is_dataset_allowed(dataset_id):
             return {
@@ -311,7 +311,7 @@ class BigQueryMCPServer:
             self.logger.error(f"Error listing tables in dataset '{dataset_id}': {e}")
             return {"success": False, "error": str(e), "tables": []}
 
-    def describe_table(self, dataset_id: str, table_id: str) -> Dict[str, Any]:
+    def describe_table(self, dataset_id: str, table_id: str) -> dict[str, Any]:
         """Get detailed schema information for a table."""
         if not self._is_dataset_allowed(dataset_id):
             return {
@@ -359,7 +359,7 @@ class BigQueryMCPServer:
             )
             return {"success": False, "error": str(e)}
 
-    def _format_nested_fields(self, fields) -> List[Dict[str, Any]]:
+    def _format_nested_fields(self, fields) -> list[dict[str, Any]]:
         """Format nested schema fields recursively."""
         result = []
         for field in fields:
@@ -374,7 +374,7 @@ class BigQueryMCPServer:
             result.append(field_info)
         return result
 
-    def execute_query(self, query: str, dry_run: bool = False) -> Dict[str, Any]:
+    def execute_query(self, query: str, dry_run: bool = False) -> dict[str, Any]:
         """Execute a SQL query against BigQuery."""
         # Check for write operations in read-only mode
         if self._check_write_operation(query):
@@ -404,9 +404,7 @@ class BigQueryMCPServer:
                     "dry_run": True,
                     "query": query,
                     "total_bytes_processed": query_job.total_bytes_processed,
-                    "message": "Query is valid and would process {} bytes".format(
-                        query_job.total_bytes_processed or 0
-                    ),
+                    "message": f"Query is valid and would process {query_job.total_bytes_processed or 0} bytes",
                 }
 
             # Wait for query completion with timeout
@@ -433,7 +431,7 @@ class BigQueryMCPServer:
             self.logger.error("Error executing query: %s", e)
             return {"success": False, "error": str(e), "query": query}
 
-    def get_job_status(self, job_id: str) -> Dict[str, Any]:
+    def get_job_status(self, job_id: str) -> dict[str, Any]:
         """Get status of a BigQuery job."""
         try:
             job = self.client.get_job(job_id)
@@ -455,7 +453,7 @@ class BigQueryMCPServer:
             self.logger.error("Error getting job status for '%s': %s", job_id, e)
             return {"success": False, "error": str(e), "job_id": job_id}
 
-    def get_dataset_info(self, dataset_id: str) -> Dict[str, Any]:
+    def get_dataset_info(self, dataset_id: str) -> dict[str, Any]:
         """Get detailed information about a dataset."""
         if not self._is_dataset_allowed(dataset_id):
             return {

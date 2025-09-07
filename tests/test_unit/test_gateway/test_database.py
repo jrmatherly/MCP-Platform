@@ -58,9 +58,8 @@ class TestDatabaseManager:
             patch(
                 "mcp_platform.gateway.database.async_sessionmaker"
             ) as mock_sessionmaker,
-            patch.object(self.db_manager, "_create_tables") as mock_create_tables,
+            patch.object(self.db_manager, "_create_tables"),
         ):
-
             mock_engine.return_value = Mock()
             mock_sessionmaker.return_value = Mock()
 
@@ -88,11 +87,10 @@ class TestDatabaseManager:
             patch("mcp_platform.gateway.database.create_async_engine") as mock_engine,
             patch(
                 "mcp_platform.gateway.database.async_sessionmaker"
-            ) as mock_sessionmaker,
-            patch.object(db_manager, "_create_tables") as mock_create_tables,
+            ),
+            patch.object(db_manager, "_create_tables"),
             patch("mcp_platform.gateway.database._validate_postgresql_driver"),
         ):
-
             await db_manager.initialize()
 
             # Should convert to asyncpg URL
@@ -107,10 +105,9 @@ class TestDatabaseManager:
             patch("mcp_platform.gateway.database.create_async_engine") as mock_engine,
             patch(
                 "mcp_platform.gateway.database.async_sessionmaker"
-            ) as mock_sessionmaker,
-            patch.object(self.db_manager, "_create_tables") as mock_create_tables,
+            ),
+            patch.object(self.db_manager, "_create_tables"),
         ):
-
             await self.db_manager.initialize()
             await self.db_manager.initialize()  # Second call
 
@@ -317,9 +314,7 @@ class TestAPIKeyCRUD:
         result = await self.api_key_crud.update(key_id, {"is_active": False})
 
         assert result.is_active is False
-        self.mock_db.update_api_key.assert_called_once_with(
-            key_id, {"is_active": False}
-        )
+        self.mock_db.update_api_key.assert_called_once_with(key_id, {"is_active": False})
 
 
 class TestServerInstanceCRUD:

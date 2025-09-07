@@ -18,7 +18,7 @@ class TestFilesystemUnit:
         template_path = Path(__file__).parent.parent / "template.json"
         assert template_path.exists(), "template.json should exist"
 
-        with open(template_path, "r", encoding="utf-8") as f:
+        with open(template_path, encoding="utf-8") as f:
             config = json.load(f)
 
         assert config is not None
@@ -30,7 +30,7 @@ class TestFilesystemUnit:
         """Test that the template config schema is properly structured."""
         template_path = Path(__file__).parent.parent / "template.json"
 
-        with open(template_path, "r", encoding="utf-8") as f:
+        with open(template_path, encoding="utf-8") as f:
             config = json.load(f)
 
         # Check config schema exists
@@ -52,7 +52,7 @@ class TestFilesystemUnit:
         """Test that transport configuration is correct."""
         template_path = Path(__file__).parent.parent / "template.json"
 
-        with open(template_path, "r", encoding="utf-8") as f:
+        with open(template_path, encoding="utf-8") as f:
             config = json.load(f)
 
         # Filesystem template should be stdio by default

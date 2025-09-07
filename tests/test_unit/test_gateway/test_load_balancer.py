@@ -141,7 +141,7 @@ class TestLoadBalancingStrategies:
 
         # With random, we should get different instances (high probability)
         # Use instance IDs instead of the objects themselves since ServerInstance is not hashable
-        unique_selections = set(instance.id for instance in selections)
+        unique_selections = {instance.id for instance in selections}
         assert len(unique_selections) > 1
 
     def test_health_based_strategy(self):

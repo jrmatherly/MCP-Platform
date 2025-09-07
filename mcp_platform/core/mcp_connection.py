@@ -10,7 +10,7 @@ import asyncio
 import json
 import logging
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import aiohttp
 
@@ -48,7 +48,7 @@ class MCPConnection:
     async def connect_http_smart(
         self,
         base_url: str,
-        endpoints: Optional[List[str]] = None,
+        endpoints: list[str] | None = None,
     ) -> bool:
         """
         Connect to MCP server via HTTP with smart endpoint discovery.
@@ -120,9 +120,9 @@ class MCPConnection:
 
     async def connect_stdio(
         self,
-        command: List[str],
-        working_dir: Optional[str] = None,
-        env_vars: Optional[Dict[str, str]] = None,
+        command: list[str],
+        working_dir: str | None = None,
+        env_vars: dict[str, str] | None = None,
     ) -> bool:
         """
         Connect to MCP server via stdio.
@@ -246,7 +246,7 @@ class MCPConnection:
             logger.error(f"HTTP MCP session initialization failed: {e}")
             return False
 
-    def _parse_http_response(self, response_text: str) -> Optional[Dict[str, Any]]:
+    def _parse_http_response(self, response_text: str) -> dict[str, Any] | None:
         """
         Parse HTTP response, handling both JSON and FastMCP SSE formats.
 
@@ -263,7 +263,7 @@ class MCPConnection:
             # Try SSE format parsing (FastMCP)
             try:
                 lines = response_text.strip().split("\n")
-                for i, line in enumerate(lines):
+                for line in lines:
                     if line.startswith("data: "):
                         data_content = line[6:]  # Remove "data: " prefix
                         return json.loads(data_content)
@@ -273,7 +273,7 @@ class MCPConnection:
                 return None
 
     async def _send_http_notification(
-        self, url: str, notification: Dict[str, Any], headers: Dict[str, str]
+        self, url: str, notification: dict[str, Any], headers: dict[str, str]
     ) -> None:
         """
         Send HTTP notification (no response expected).
@@ -334,7 +334,7 @@ class MCPConnection:
             logger.error("MCP session initialization failed: %s", e)
             return False
 
-    async def list_tools(self) -> Optional[List[Dict[str, Any]]]:
+    async def list_tools(self) -> list[dict[str, Any]] | None:
         """
         List available tools from the MCP server.
 
@@ -349,7 +349,7 @@ class MCPConnection:
             logger.error("No active MCP connection")
             return None
 
-    async def _list_tools_http(self) -> Optional[List[Dict[str, Any]]]:
+    async def _list_tools_http(self) -> list[dict[str, Any]] | None:
         """List tools via HTTP transport."""
         if not self.http_session or not self.base_url:
             logger.error("No active HTTP MCP connection")
@@ -388,7 +388,7 @@ class MCPConnection:
             logger.error(f"Failed to list tools via HTTP: {e}")
             return None
 
-    async def _list_tools_stdio(self) -> Optional[List[Dict[str, Any]]]:
+    async def _list_tools_stdio(self) -> list[dict[str, Any]] | None:
         """List tools via stdio transport."""
         if not self.process:
             logger.error("No active stdio MCP connection")
@@ -409,8 +409,8 @@ class MCPConnection:
             return None
 
     async def call_tool(
-        self, tool_name: str, arguments: Dict[str, Any]
-    ) -> Optional[Dict[str, Any]]:
+        self, tool_name: str, arguments: dict[str, Any]
+    ) -> dict[str, Any] | None:
         """
         Call a tool on the MCP server.
 
@@ -430,8 +430,8 @@ class MCPConnection:
             return None
 
     async def _call_tool_http(
-        self, tool_name: str, arguments: Dict[str, Any]
-    ) -> Optional[Dict[str, Any]]:
+        self, tool_name: str, arguments: dict[str, Any]
+    ) -> dict[str, Any] | None:
         """Call tool via HTTP transport."""
         if not self.http_session or not self.base_url:
             logger.error("No active HTTP MCP connection")
@@ -476,8 +476,8 @@ class MCPConnection:
             return None
 
     async def _call_tool_stdio(
-        self, tool_name: str, arguments: Dict[str, Any]
-    ) -> Optional[Dict[str, Any]]:
+        self, tool_name: str, arguments: dict[str, Any]
+    ) -> dict[str, Any] | None:
         """Call tool via stdio transport."""
         if not self.process:
             logger.error("No active stdio MCP connection")
@@ -502,7 +502,7 @@ class MCPConnection:
             logger.error(f"Failed to call tool {tool_name} via stdio: {e}")
             return None
 
-    async def _send_request(self, request: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    async def _send_request(self, request: dict[str, Any]) -> dict[str, Any] | None:
         """
         Send a JSON-RPC request and wait for response.
 
@@ -542,7 +542,7 @@ class MCPConnection:
             logger.error("Failed to send request: %s", e)
             return None
 
-    async def _send_notification(self, notification: Dict[str, Any]) -> None:
+    async def _send_notification(self, notification: dict[str, Any]) -> None:
         """
         Send a JSON-RPC notification (no response expected).
 
@@ -601,10 +601,10 @@ class MCPConnection:
         else:
             return False
 
-    def get_server_info(self) -> Optional[Dict[str, Any]]:
+    def get_server_info(self) -> dict[str, Any] | None:
         """Get server information from initialization."""
         return self.server_info
 
-    def get_session_info(self) -> Optional[Dict[str, Any]]:
+    def get_session_info(self) -> dict[str, Any] | None:
         """Get session information from initialization."""
         return self.session_info

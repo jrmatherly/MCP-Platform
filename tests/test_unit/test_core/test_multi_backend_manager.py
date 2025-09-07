@@ -536,9 +536,7 @@ class TestGetAllTools:
         mock_deployment_manager = Mock()
         mock_deployment_manager.find_deployments_by_criteria.side_effect = [
             [{"id": "docker-123", "template": "demo", "status": "running"}],  # docker
-            [
-                {"id": "k8s-456", "template": "github", "status": "running"}
-            ],  # kubernetes
+            [{"id": "k8s-456", "template": "github", "status": "running"}],  # kubernetes
             [],  # mock backend
         ]
         mock_dm_class.return_value = mock_deployment_manager

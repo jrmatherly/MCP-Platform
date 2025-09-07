@@ -10,7 +10,7 @@ import logging
 import os
 import time
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -41,8 +41,8 @@ class CacheManager:
 
     def __init__(
         self,
-        cache_dir: Optional[Path] = None,
-        max_age_hours: Union[float, int] = MCP_DEFAULT_CACHE_MAX_AGE_HOURS,
+        cache_dir: Path | None = None,
+        max_age_hours: float | int = MCP_DEFAULT_CACHE_MAX_AGE_HOURS,
     ):
         """
         Initialize cache manager.
@@ -55,7 +55,7 @@ class CacheManager:
         self.max_age_hours = max_age_hours
         self.cache_dir.mkdir(parents=True, exist_ok=True)
 
-    def get(self, key: str) -> Optional[Dict[str, Any]]:
+    def get(self, key: str) -> dict[str, Any] | None:
         """
         Get cached data for a key.
 
@@ -72,7 +72,7 @@ class CacheManager:
             return None
 
         try:
-            with open(cache_file, "r", encoding="utf-8") as f:
+            with open(cache_file, encoding="utf-8") as f:
                 cached_data = json.load(f)
 
             # Validate cache structure
@@ -98,7 +98,7 @@ class CacheManager:
             self._remove_cache_file(cache_file)
             return None
 
-    def set(self, key: str, data: Dict[str, Any]) -> bool:
+    def set(self, key: str, data: dict[str, Any]) -> bool:
         """
         Store data in cache.
 
@@ -213,7 +213,7 @@ class CacheManager:
     def _is_cache_expired(self, cache_file: Path, current_time: float) -> bool:
         """Check if a cache file is expired or corrupted."""
         try:
-            with open(cache_file, "r", encoding="utf-8") as f:
+            with open(cache_file, encoding="utf-8") as f:
                 cached_data = json.load(f)
 
             # Check if expired
@@ -228,7 +228,7 @@ class CacheManager:
             # Treat corrupted files as expired
             return True
 
-    def get_cache_info(self) -> Dict[str, Any]:
+    def get_cache_info(self) -> dict[str, Any]:
         """
         Get information about the cache.
 

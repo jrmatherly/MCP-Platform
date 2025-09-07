@@ -428,7 +428,7 @@ class TestTrinoServerTools:
         """Test discovery tools have proper parameter structure."""
         template_path = os.path.join(os.path.dirname(__file__), "..", "template.json")
 
-        with open(template_path, "r") as f:
+        with open(template_path) as f:
             template_config = json.load(f)
 
         tools = {tool["name"]: tool for tool in template_config["tools"]}
@@ -457,7 +457,7 @@ class TestTrinoServerTools:
         """Test query execution tool has proper parameters."""
         template_path = os.path.join(os.path.dirname(__file__), "..", "template.json")
 
-        with open(template_path, "r") as f:
+        with open(template_path) as f:
             template_config = json.load(f)
 
         tools = {tool["name"]: tool for tool in template_config["tools"]}
@@ -487,7 +487,7 @@ class TestTrinoServerTools:
         """Test table inspection tools have proper structure."""
         template_path = os.path.join(os.path.dirname(__file__), "..", "template.json")
 
-        with open(template_path, "r") as f:
+        with open(template_path) as f:
             template_config = json.load(f)
 
         tools = {tool["name"]: tool for tool in template_config["tools"]}
@@ -506,7 +506,7 @@ class TestTrinoServerTools:
         """Test query management tools are properly defined."""
         template_path = os.path.join(os.path.dirname(__file__), "..", "template.json")
 
-        with open(template_path, "r") as f:
+        with open(template_path) as f:
             template_config = json.load(f)
 
         tools = {tool["name"]: tool for tool in template_config["tools"]}
@@ -528,7 +528,7 @@ class TestTrinoServerTools:
         """Test tools integrate with access control configuration."""
         template_path = os.path.join(os.path.dirname(__file__), "..", "template.json")
 
-        with open(template_path, "r") as f:
+        with open(template_path) as f:
             template_config = json.load(f)
 
         # Access control should be mentioned in capabilities
@@ -558,7 +558,7 @@ class TestTrinoServerTools:
         """Test read-only mode restrictions are documented."""
         template_path = os.path.join(os.path.dirname(__file__), "..", "template.json")
 
-        with open(template_path, "r") as f:
+        with open(template_path) as f:
             template_config = json.load(f)
 
         # Read-only should be default
@@ -581,7 +581,7 @@ class TestTrinoServerTools:
         """Test environment variables are consistent with upstream."""
         template_path = os.path.join(os.path.dirname(__file__), "..", "template.json")
 
-        with open(template_path, "r") as f:
+        with open(template_path) as f:
             template_config = json.load(f)
 
         properties = template_config["config_schema"]["properties"]
@@ -626,7 +626,7 @@ class TestTrinoServerTools:
         """Test all tool parameters have clear descriptions."""
         template_path = os.path.join(os.path.dirname(__file__), "..", "template.json")
 
-        with open(template_path, "r") as f:
+        with open(template_path) as f:
             template_config = json.load(f)
 
         tools = template_config["tools"]

@@ -3,24 +3,32 @@
 ## Requirements
 
 - Python 3.10 or higher
+- [uv](https://docs.astral.sh/uv/) (recommended) or pip for package management
 - Docker (for containerized deployment)
 - Git
 
-## Install from PyPI
+## Install with uv (Recommended)
 
 ```bash
-pip install mcp-platform
+# Install as a project dependency
+uv add mcp-platform
+
+# Or install as a global tool
+uv tool install mcp-platform
 ```
 
 ## Installation Methods
 
-### Option 1: Install from PyPI (Recommended)
+### Option 1: Install with uv (Recommended)
 
-The simplest way to install MCP Server Templates is directly from PyPI:
+The fastest and most reliable way to install MCP Platform is using uv:
 
 ```bash
-# Install the latest stable version
-pip install mcp-platform
+# Install the latest stable version as a global tool
+uv tool install mcp-platform
+
+# Or add to your project
+uv add mcp-platform
 
 # Verify installation
 mcpp --version
@@ -41,8 +49,8 @@ For development or to get the latest features:
 git clone https://github.com/Data-Everything/MCP-Platform
 cd MCP-Platform
 
-# Install in development mode
-pip install -e .
+# Install dependencies and project
+uv sync
 
 ## Verify Installation
 

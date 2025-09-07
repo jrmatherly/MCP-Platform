@@ -47,7 +47,7 @@ class TestSlackTemplate:
         """Test template.json is valid JSON with required fields."""
         template_json = template_dir / "template.json"
 
-        with open(template_json, "r") as f:
+        with open(template_json) as f:
             config = json.load(f)
 
         # Required top-level fields
@@ -80,7 +80,7 @@ class TestSlackTemplate:
         """Test configuration schema has proper structure."""
         template_json = template_dir / "template.json"
 
-        with open(template_json, "r") as f:
+        with open(template_json) as f:
             config = json.load(f)
 
         schema = config["config_schema"]
@@ -118,7 +118,7 @@ class TestSlackTemplate:
         """Test transport configuration is properly defined."""
         template_json = template_dir / "template.json"
 
-        with open(template_json, "r") as f:
+        with open(template_json) as f:
             config = json.load(f)
 
         transport = config["transport"]
@@ -136,7 +136,7 @@ class TestSlackTemplate:
         """Test capabilities include proper examples."""
         template_json = template_dir / "template.json"
 
-        with open(template_json, "r") as f:
+        with open(template_json) as f:
             config = json.load(f)
 
         capabilities = config["capabilities"]
@@ -170,7 +170,7 @@ class TestSlackTemplate:
         usage_file = template_dir / "USAGE.md"
 
         # Check README content
-        with open(readme_file, "r") as f:
+        with open(readme_file) as f:
             readme_content = f.read()
 
         readme_sections = [
@@ -189,7 +189,7 @@ class TestSlackTemplate:
             assert section in readme_content, f"Missing README section: {section}"
 
         # Check USAGE content
-        with open(usage_file, "r") as f:
+        with open(usage_file) as f:
             usage_content = f.read()
 
         usage_sections = [
@@ -209,7 +209,7 @@ class TestSlackTemplate:
         """Test Slack-specific features are properly documented."""
         template_json = template_dir / "template.json"
 
-        with open(template_json, "r") as f:
+        with open(template_json) as f:
             config = json.load(f)
 
         # Test examples section
@@ -236,7 +236,7 @@ class TestSlackTemplate:
         """Test environment variable mappings are consistent."""
         template_json = template_dir / "template.json"
 
-        with open(template_json, "r") as f:
+        with open(template_json) as f:
             config = json.load(f)
 
         properties = config["config_schema"]["properties"]
@@ -278,7 +278,7 @@ class TestSlackTemplate:
         # Check Dockerfile exists and has basic structure
         assert dockerfile.exists()
 
-        with open(dockerfile, "r") as f:
+        with open(dockerfile) as f:
             dockerfile_content = f.read()
 
         dockerfile_requirements = [
@@ -297,7 +297,7 @@ class TestSlackTemplate:
         assert script_file.exists()
 
         # Check script has proper shebang and basic structure
-        with open(script_file, "r") as f:
+        with open(script_file) as f:
             script_content = f.read()
 
         script_requirements = ["#!/bin/bash", "set -e", "MCP_TRANSPORT"]
@@ -311,7 +311,7 @@ class TestSlackTemplate:
         """Test template metadata and origin information."""
         template_json = template_dir / "template.json"
 
-        with open(template_json, "r") as f:
+        with open(template_json) as f:
             config = json.load(f)
 
         # Test origin is marked as external since it extends korotovsky/slack-mcp-server
@@ -330,7 +330,7 @@ class TestSlackTemplate:
         """Test that safety and security features are properly configured."""
         template_json = template_dir / "template.json"
 
-        with open(template_json, "r") as f:
+        with open(template_json) as f:
             config = json.load(f)
 
         properties = config["config_schema"]["properties"]

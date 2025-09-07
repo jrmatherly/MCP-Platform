@@ -453,8 +453,6 @@ class TestTemplateManager:
 
     def test_get_template_path(self):
         """Test getting template file system path."""
-        mock_path = Path("/templates/demo")
-
         with patch.object(
             self.template_manager.template_discovery, "templates_dir", "/templates"
         ):

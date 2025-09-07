@@ -7,7 +7,7 @@ import json
 import logging
 import subprocess
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
@@ -61,10 +61,10 @@ class KubernetesProbe(BaseProbe):
     def discover_tools_from_image(
         self,
         image_name: str,
-        server_args: Optional[List[str]] = None,
-        env_vars: Optional[Dict[str, str]] = None,
+        server_args: list[str] | None = None,
+        env_vars: dict[str, str] | None = None,
         timeout: int = DISCOVERY_TIMEOUT,
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         Discover tools from MCP server Kubernetes image.
 
@@ -110,9 +110,9 @@ class KubernetesProbe(BaseProbe):
     def _try_mcp_stdio_discovery(
         self,
         image_name: str,
-        server_args: Optional[List[str]],
-        env_vars: Optional[Dict[str, str]],
-    ) -> Optional[Dict[str, Any]]:
+        server_args: list[str] | None,
+        env_vars: dict[str, str] | None,
+    ) -> dict[str, Any] | None:
         """Try to discover tools using MCP stdio protocol via Kubernetes Pod."""
         try:
             args = server_args or []
@@ -135,9 +135,9 @@ class KubernetesProbe(BaseProbe):
     def _discover_tools_via_kubernetes_mcp(
         self,
         image_name: str,
-        args: Optional[List[str]] = None,
-        env_vars: Optional[Dict[str, str]] = None,
-    ) -> Optional[Dict[str, Any]]:
+        args: list[str] | None = None,
+        env_vars: dict[str, str] | None = None,
+    ) -> dict[str, Any] | None:
         """
         Discover tools from MCP server running in Kubernetes pod using stdio.
 
@@ -192,8 +192,8 @@ class KubernetesProbe(BaseProbe):
         reraise=True,
     )
     def _try_http_discovery(
-        self, image_name: str, timeout: int, env_vars: Optional[Dict[str, str]] = None
-    ) -> Optional[Dict[str, Any]]:
+        self, image_name: str, timeout: int, env_vars: dict[str, str] | None = None
+    ) -> dict[str, Any] | None:
         """Try to discover tools using HTTP endpoints with proper MCP protocol."""
         pod_name = None
         service_name = None
@@ -284,7 +284,7 @@ class KubernetesProbe(BaseProbe):
         timestamp = int(time.time())
         return f"mcp-discovery-svc-{clean_name}-{timestamp}"[:63]  # K8s name limit
 
-    def _find_available_port(self) -> Optional[int]:
+    def _find_available_port(self) -> int | None:
         """Find an available port for the service."""
         # For Kubernetes, we can use any port since it's internal
         # Just return a port from our range
@@ -294,9 +294,9 @@ class KubernetesProbe(BaseProbe):
         self,
         job_name: str,
         image_name: str,
-        args: List[str],
-        env_vars: Optional[Dict[str, str]],
-    ) -> Dict[str, Any]:
+        args: list[str],
+        env_vars: dict[str, str] | None,
+    ) -> dict[str, Any]:
         """Create a Kubernetes Job manifest for MCP stdio discovery."""
         env_list = []
         if env_vars:
@@ -338,7 +338,7 @@ class KubernetesProbe(BaseProbe):
         pod_name: str,
         image_name: str,
         port: int,
-        env_vars: Optional[Dict[str, str]],
+        env_vars: dict[str, str] | None,
     ) -> bool:
         """Create pod with HTTP server (fallback method)."""
         try:
@@ -413,7 +413,7 @@ class KubernetesProbe(BaseProbe):
 
     def _wait_for_job_completion(
         self, job_name: str, timeout: int
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Wait for job to complete and extract results."""
         start_time = time.time()
 
@@ -481,7 +481,7 @@ class KubernetesProbe(BaseProbe):
 
     def _extract_mcp_tools_from_job_logs(
         self, job_name: str
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Extract MCP tools information from job logs."""
         try:
             # Get pods for this job
@@ -508,7 +508,7 @@ class KubernetesProbe(BaseProbe):
             logger.debug("Failed to get job logs: %s", e)
             return None
 
-    def _parse_mcp_tools_from_logs(self, logs: str) -> Optional[Dict[str, Any]]:
+    def _parse_mcp_tools_from_logs(self, logs: str) -> dict[str, Any] | None:
         """Parse MCP tools from container logs."""
         # This is a placeholder implementation
         # In practice, you'd implement proper MCP protocol parsing
@@ -560,9 +560,9 @@ class KubernetesProbe(BaseProbe):
         self,
         pod_name: str,
         image_name: str,
-        args: Optional[List[str]],
-        env_vars: Optional[Dict[str, str]],
-    ) -> Dict[str, Any]:
+        args: list[str] | None,
+        env_vars: dict[str, str] | None,
+    ) -> dict[str, Any]:
         """Create a Kubernetes Pod manifest for MCP stdio discovery."""
         env_list = []
         if env_vars:
@@ -603,8 +603,8 @@ class KubernetesProbe(BaseProbe):
         }
 
     def _execute_mcp_handshake_via_kubectl(
-        self, pod_name: str, args: Optional[List[str]]
-    ) -> Optional[Dict[str, Any]]:
+        self, pod_name: str, args: list[str] | None
+    ) -> dict[str, Any] | None:
         """Execute MCP protocol handshake via kubectl attach to pod's stdin."""
         try:
 
@@ -668,7 +668,7 @@ class KubernetesProbe(BaseProbe):
             logger.error(f"Failed to execute MCP handshake via kubectl: {e}")
             return None
 
-    def _parse_mcp_responses(self, output: str) -> Optional[Dict[str, Any]]:
+    def _parse_mcp_responses(self, output: str) -> dict[str, Any] | None:
         """Parse MCP server responses from kubectl exec output."""
         try:
 

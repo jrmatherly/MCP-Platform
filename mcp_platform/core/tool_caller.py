@@ -9,7 +9,7 @@ import asyncio
 import json
 import logging
 from dataclasses import dataclass
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Literal
 from urllib.parse import urlparse
 
 import requests
@@ -27,11 +27,11 @@ class ToolCallResult:
     """Structured result from a tool call."""
 
     success: bool
-    result: Optional[Dict[str, Any]] = None
-    content: Optional[list] = None
+    result: dict[str, Any] | None = None
+    content: list | None = None
     is_error: bool = False
-    error_message: Optional[str] = None
-    raw_output: Optional[str] = None
+    error_message: str | None = None
+    raw_output: str | None = None
 
 
 class ToolCaller:
@@ -72,7 +72,7 @@ class ToolCaller:
         else:
             self.docker_service = None  # For mock/other backends
 
-    def _call_http_api(self, url: str, method: str = "GET", data: Dict = None) -> Dict:
+    def _call_http_api(self, url: str, method: str = "GET", data: dict = None) -> dict:
         """Make HTTP API call with error handling."""
         try:
             if method == "POST":
@@ -89,7 +89,7 @@ class ToolCaller:
 
     def list_tools_from_server(
         self, endpoint: str, transport: str, timeout: int = 30
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """List tools from a running MCP server."""
         try:
             if transport == "http":
@@ -114,8 +114,8 @@ class ToolCaller:
         self,
         base_url: str,
         tool_name: str,
-        arguments: Dict[str, Any],
-        timeout: Optional[int] = None,
+        arguments: dict[str, Any],
+        timeout: int | None = None,
     ) -> ToolCallResult:
         """
         Call a tool using unified MCPConnection with FastMCP support.
@@ -171,9 +171,9 @@ class ToolCaller:
         endpoint: str,
         transport: str,
         tool_name: str,
-        parameters: Dict,
+        parameters: dict,
         timeout: int = 30,
-    ) -> Dict:
+    ) -> dict:
         """Call a tool on a running MCP server."""
         try:
             if transport == "http":
@@ -230,10 +230,10 @@ class ToolCaller:
         self,
         template_name: str,
         tool_name: str,
-        arguments: Dict[str, Any],
-        template_config: Dict[str, Any],
-        config_values: Optional[Dict[str, Any]] = None,
-        env_vars: Optional[Dict[str, str]] = None,
+        arguments: dict[str, Any],
+        template_config: dict[str, Any],
+        config_values: dict[str, Any] | None = None,
+        env_vars: dict[str, str] | None = None,
         pull_image: bool = True,
     ) -> ToolCallResult:
         """
@@ -321,8 +321,8 @@ class ToolCaller:
         self,
         server_url: str,
         tool_name: str,
-        arguments: Dict[str, Any],
-    ) -> Optional[Dict[str, Any]]:
+        arguments: dict[str, Any],
+    ) -> dict[str, Any] | None:
         """
         Call a tool via HTTP transport.
 
@@ -351,7 +351,7 @@ class ToolCaller:
             raise ToolCallError(f"HTTP tool call failed: {e}")
 
     def _parse_stdio_response_enhanced(
-        self, docker_result: Dict[str, Any], tool_name: str
+        self, docker_result: dict[str, Any], tool_name: str
     ) -> ToolCallResult:
         """
         Parse the stdio response from Docker execution with enhanced structure.
@@ -476,7 +476,7 @@ class ToolCaller:
                 raw_output=stdout_content,
             )
 
-    def _extract_structured_content(self, content: list) -> Dict[str, Any]:
+    def _extract_structured_content(self, content: list) -> dict[str, Any]:
         """
         Extract structured content from MCP content array.
 
@@ -517,12 +517,12 @@ class ToolCaller:
         self,
         template_name: str,
         tool_name: str,
-        arguments: Dict[str, Any],
-        template_config: Dict[str, Any],
-        config_values: Optional[Dict[str, Any]] = None,
-        env_vars: Optional[Dict[str, str]] = None,
+        arguments: dict[str, Any],
+        template_config: dict[str, Any],
+        config_values: dict[str, Any] | None = None,
+        env_vars: dict[str, str] | None = None,
         pull_image: bool = True,
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         Legacy method for backward compatibility with CLI.
 
@@ -543,7 +543,7 @@ class ToolCaller:
         else:
             return None
 
-    def validate_template_stdio_support(self, template_config: Dict[str, Any]) -> bool:
+    def validate_template_stdio_support(self, template_config: dict[str, Any]) -> bool:
         """
         Validate that a template supports stdio transport.
 
@@ -560,8 +560,8 @@ class ToolCaller:
         return "stdio" in supported_transports or default_transport == "stdio"
 
     def _process_tool_response(
-        self, tool_response: Dict[str, Any]
-    ) -> Optional[Dict[str, Any]]:
+        self, tool_response: dict[str, Any]
+    ) -> dict[str, Any] | None:
         """Process a tool response and return formatted result."""
         if "result" in tool_response:
             result_data = tool_response["result"]

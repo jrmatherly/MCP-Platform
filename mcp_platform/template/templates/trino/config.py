@@ -12,7 +12,7 @@ import os
 import re
 import sys
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 # Import base configuration from MCP Platform
 try:
@@ -36,7 +36,7 @@ except ImportError:
                 # Try to load template.json for fallback
                 try:
                     template_path = Path(__file__).parent / "template.json"
-                    with open(template_path, mode="r", encoding="utf-8") as f:
+                    with open(template_path, encoding="utf-8") as f:
                         template_data = json.load(f)
                     # Merge with config overrides
                     template_data.update(self.config_dict)
@@ -69,7 +69,7 @@ class TrinoServerConfig(ServerConfig):
         self._setup_logging()
 
     def _get_config(
-        self, key: str, env_var: str, default: Any, cast_to: Optional[type] = str
+        self, key: str, env_var: str, default: Any, cast_to: type | None = str
     ) -> Any:
         """
         Get configuration value with precedence handling.
@@ -109,7 +109,7 @@ class TrinoServerConfig(ServerConfig):
         self.logger.debug("Using default value for '%s': %s", key, default)
         return default
 
-    def get_template_config(self) -> Dict[str, Any]:
+    def get_template_config(self) -> dict[str, Any]:
         """
         Get configuration properties from the template.
 
@@ -284,7 +284,7 @@ class TrinoServerConfig(ServerConfig):
         # Update our logger level
         self.logger.setLevel(logging_level)
 
-    def get_connection_config(self) -> Dict[str, Any]:
+    def get_connection_config(self) -> dict[str, Any]:
         """Get Trino connection configuration."""
         config = self.get_template_config()
 
@@ -308,7 +308,7 @@ class TrinoServerConfig(ServerConfig):
 
         return connection_config
 
-    def _get_oauth_auth_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
+    def _get_oauth_auth_config(self, config: dict[str, Any]) -> dict[str, Any]:
         """Get OAuth authentication configuration."""
         oauth_provider = config.get("oauth_provider")
 
@@ -329,7 +329,7 @@ class TrinoServerConfig(ServerConfig):
         else:
             raise ValueError(f"Unsupported OAuth provider: {oauth_provider}")
 
-    def get_query_limits(self) -> Dict[str, int]:
+    def get_query_limits(self) -> dict[str, int]:
         """Get query execution limits."""
         config = self.get_template_config()
 
@@ -341,7 +341,7 @@ class TrinoServerConfig(ServerConfig):
             "max_results": config.get("trino_max_results", 1000),
         }
 
-    def get_security_config(self) -> Dict[str, Any]:
+    def get_security_config(self) -> dict[str, Any]:
         """Get security-related configuration."""
         config = self.get_template_config()
         return {
@@ -379,7 +379,7 @@ class TrinoServerConfig(ServerConfig):
         for key, value in safe_config.items():
             self.logger.info("  %s: %s", key, value)
 
-    def _load_template(self, template_path: str = None) -> Dict[str, Any]:
+    def _load_template(self, template_path: str = None) -> dict[str, Any]:
         """
         Load template data from template.json file.
 
@@ -393,7 +393,7 @@ class TrinoServerConfig(ServerConfig):
             template_path = Path(__file__).parent / "template.json"
 
         try:
-            with open(template_path, mode="r", encoding="utf-8") as template_file:
+            with open(template_path, encoding="utf-8") as template_file:
                 return json.load(template_file)
         except (FileNotFoundError, json.JSONDecodeError) as e:
             self.logger.warning(
@@ -407,7 +407,7 @@ class TrinoServerConfig(ServerConfig):
                 "transport": {"port": 7090},
             }
 
-    def get_template_data(self) -> Dict[str, Any]:
+    def get_template_data(self) -> dict[str, Any]:
         """
         Get the full template data, potentially modified by configuration overrides.
 
@@ -433,7 +433,7 @@ class TrinoServerConfig(ServerConfig):
 
 # Convenience function for creating configuration
 def create_trino_config(
-    config_dict: Optional[Dict[str, Any]] = None,
+    config_dict: dict[str, Any] | None = None,
     skip_validation: bool = False,
 ) -> TrinoServerConfig:
     """

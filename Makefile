@@ -35,31 +35,31 @@ help:
 
 # Installation
 install:
-	pip install -r requirements.txt
-	pip install -r requirements-dev.txt
+	uv sync
 
 install-dev:
-	pip install -e .
+	uv sync --extra dev
+	uv pip install -e .
 
 # Testing
 test-quick:
 	@echo "🔬 Running quick validation tests..."
-	pytest tests/runner.py quick
+	uv run python tests/runner.py --unit
 
 test-unit:
 	@echo "🧪 Running unit tests..."
-	pytest tests/runner.py unit
+	uv run python tests/runner.py --unit
 
 test-integration:
 	@echo "🐳 Running integration tests..."
-	pytest tests/runner.py integration
+	uv run python tests/runner.py --integration
 
 test-all:
 	@echo "🚀 Running all tests..."
-	pytest tests/runner.py all
+	uv run python tests/runner.py --all
 
 test:
-	pytest tests
+	uv run pytest tests
 
 # Template-specific testing
 test-template:
@@ -69,7 +69,7 @@ test-template:
 	fi; \
 	if [ -d "templates/$(TEMPLATE)/tests" ]; then \
 		echo "🧪 Running tests for template: $(TEMPLATE)"; \
-		cd templates/$(TEMPLATE) && pytest tests/ -v; \
+		cd templates/$(TEMPLATE) && uv run pytest tests/ -v; \
 	else \
 		echo "❌ No tests found for template: $(TEMPLATE)"; \
 		exit 1; \
@@ -81,7 +81,7 @@ test-templates:
 		template_name=$$(basename "$$template"); \
 		if [ -d "$$template/tests" ]; then \
 			echo "Testing $$template_name..."; \
-			cd "$$template" && pytest tests/ -v --tb=short || exit 1; \
+			cd "$$template" && uv run pytest tests/ -v --tb=short || exit 1; \
 			cd - > /dev/null; \
 		else \
 			echo "⚠️  No tests found for $$template_name"; \
@@ -92,22 +92,22 @@ test-templates:
 # Code quality
 lint:
 	@echo "🔍 Running code linting..."
-	flake8 mcp_platform/ tests/ --max-line-length=100 --ignore=E203,W503
-	bandit -r mcp_platform/ -f json -o bandit-report.json || true
+	uv run flake8 mcp_platform/ tests/ --max-line-length=90 --ignore=E203,W503
+	uv run bandit -r mcp_platform/ -f json -o bandit-report.json || true
 
 format:
 	@echo "🎨 Formatting code..."
-	black mcp_platform/ tests/
-	isort mcp_platform/ tests/
+	uv run black mcp_platform/ tests/
+	uv run isort mcp_platform/ tests/
 
 type-check:
 	@echo "🔬 Running type checking..."
-	mypy mcp_platform/ --ignore-missing-imports
+	uv run mypy mcp_platform/ --ignore-missing-imports
 
 # Package building
 build:
 	@echo "📦 Building package..."
-	python -m build
+	uv build
 
 clean:
 	@echo "🧹 Cleaning build artifacts..."
@@ -123,15 +123,15 @@ clean:
 # Local development helpers
 deploy-test:
 	@echo "🚀 Deploying test template..."
-	python -m mcp_platform deploy file-server
+	uv run python -m mcp_platform deploy file-server
 
 cleanup-test:
 	@echo "🧹 Cleaning up test deployments..."
-	python -m mcp_platform cleanup --all
+	uv run python -m mcp_platform cleanup --all
 
 list-templates:
 	@echo "📋 Available templates:"
-	python -m mcp_platform list
+	uv run python -m mcp_platform list
 
 # CI/CD simulation
 ci-quick:
@@ -141,7 +141,7 @@ ci-quick:
 
 ci-full:
 	@echo "🏗️ Simulating full CI pipeline..."
-	make install
+	uv sync --all-extras
 	make test-quick
 	make test-unit
 	make lint
@@ -149,9 +149,28 @@ ci-full:
 	make test-integration
 	make build
 
+# UV-specific commands
+uv-setup:
+	@echo "📦 Installing uv package manager..."
+	curl -LsSf https://astral.sh/uv/install.sh | sh
+	@echo "✅ uv installed successfully!"
+	@echo "💡 You may need to restart your shell or run: source $$HOME/.cargo/env"
+
+uv-lock:
+	@echo "🔒 Updating uv.lock file..."
+	uv lock
+
+uv-upgrade:
+	@echo "⬆️ Upgrading all dependencies..."
+	uv lock --upgrade
+
 # Development workflow
-dev-setup: install install-dev
+dev-setup:
+	@echo "🔧 Setting up development environment with uv..."
+	uv venv
+	uv sync --all-extras
 	@echo "✅ Development environment setup complete!"
+	@echo "💡 Tip: Run 'source .venv/bin/activate' to activate the virtual environment"
 
 dev-test: test-quick lint
 	@echo "✅ Development tests passed!"
@@ -159,17 +178,17 @@ dev-test: test-quick lint
 # Coverage reporting
 coverage:
 	@echo "📊 Generating coverage report..."
-	pytest tests/test_deployment_units.py -m unit --cov=mcp_platform --cov-report=html --cov-report=term
+	uv run pytest tests/test_deployment_units.py -m unit --cov=mcp_platform --cov-report=html --cov-report=term
 	@echo "📋 Coverage report generated in htmlcov/"
 
 # Documentation
 docs:
 	@echo "📚 Building documentation..."
-	python scripts/build_docs.py
+	uv run python scripts/build_docs.py
 
 docs-serve:
 	@echo "🌐 Serving documentation locally..."
-	mkdocs serve
+	uv run mkdocs serve
 
 docs-clean:
 	@echo "🧹 Cleaning documentation build..."
@@ -185,7 +204,7 @@ docker-check:
 # Template development
 validate-templates:
 	@echo "✅ Validating all templates..."
-	python -c "from mcp_platform import TemplateDiscovery; import sys; d = TemplateDiscovery(); t = d.discover_templates(); print(f'Found {len(t)} templates: {list(t.keys())}') if t else sys.exit(1)"
+	uv run python -c "from mcp_platform import TemplateDiscovery; import sys; d = TemplateDiscovery(); t = d.discover_templates(); print(f'Found {len(t)} templates: {list(t.keys())}') if t else sys.exit(1)"
 
 # Release helpers
 pre-release: ci-full
@@ -193,4 +212,4 @@ pre-release: ci-full
 
 version:
 	@echo "📊 Package version:"
-	python -c "import mcp_platform; print(getattr(mcp_platform, '__version__', 'unknown'))"
+	uv run python -c "import mcp_platform; print(getattr(mcp_platform, '__version__', 'unknown'))"

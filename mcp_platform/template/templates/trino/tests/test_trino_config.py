@@ -37,7 +37,7 @@ class TestTrinoTemplateConfiguration:
         """Test Trino template.json has required structure for Python implementation."""
         template_path = os.path.join(os.path.dirname(__file__), "..", "template.json")
 
-        with open(template_path, "r") as f:
+        with open(template_path) as f:
             template_config = json.load(f)
 
         # Verify required template fields for new implementation
@@ -68,7 +68,7 @@ class TestTrinoTemplateConfiguration:
         """Test basic connection configuration options."""
         template_path = os.path.join(os.path.dirname(__file__), "..", "template.json")
 
-        with open(template_path, "r") as f:
+        with open(template_path) as f:
             template_config = json.load(f)
 
         config_schema = template_config["config_schema"]
@@ -96,7 +96,7 @@ class TestTrinoTemplateConfiguration:
         """Test authentication configuration options."""
         template_path = os.path.join(os.path.dirname(__file__), "..", "template.json")
 
-        with open(template_path, "r") as f:
+        with open(template_path) as f:
             template_config = json.load(f)
 
         properties = template_config["config_schema"]["properties"]
@@ -132,7 +132,7 @@ class TestTrinoTemplateConfiguration:
         """Test security and performance configuration options."""
         template_path = os.path.join(os.path.dirname(__file__), "..", "template.json")
 
-        with open(template_path, "r") as f:
+        with open(template_path) as f:
             template_config = json.load(f)
 
         properties = template_config["config_schema"]["properties"]
@@ -357,7 +357,7 @@ class TestTrinoTemplateConfiguration:
         """Test that tools and capabilities are properly defined for new implementation."""
         template_path = os.path.join(os.path.dirname(__file__), "..", "template.json")
 
-        with open(template_path, "r") as f:
+        with open(template_path) as f:
             template_config = json.load(f)
 
         # Check capabilities
@@ -416,7 +416,7 @@ class TestTrinoTemplateConfiguration:
         """Test that examples are updated for new HTTP transport."""
         template_path = os.path.join(os.path.dirname(__file__), "..", "template.json")
 
-        with open(template_path, "r") as f:
+        with open(template_path) as f:
             template_config = json.load(f)
 
         examples = template_config.get("examples", {})

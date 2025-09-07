@@ -21,7 +21,7 @@ def demonstrate_bigquery_mcp_server():
     print("=" * 50)
 
     # Load template configuration
-    with open("template.json", "r") as f:
+    with open("template.json") as f:
         template = json.load(f)
 
     print(f"Server: {template['name']}")

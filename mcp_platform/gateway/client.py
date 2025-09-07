@@ -8,7 +8,7 @@ session management, and native MCP protocol support.
 import asyncio
 import logging
 from contextlib import asynccontextmanager
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import aiohttp
 from aiohttp import ClientSession, ClientTimeout
@@ -31,7 +31,7 @@ class GatewayClient:
     def __init__(
         self,
         base_url: str = "http://localhost:8080",
-        api_key: Optional[str] = None,
+        api_key: str | None = None,
         timeout: int = 60,
         max_connections: int = 100,
         max_connections_per_host: int = 30,
@@ -53,10 +53,10 @@ class GatewayClient:
         self.max_connections_per_host = max_connections_per_host
 
         # Session will be created lazily
-        self._session: Optional[ClientSession] = None
+        self._session: ClientSession | None = None
         self._closed = False
 
-    def _get_headers(self) -> Dict[str, str]:
+    def _get_headers(self) -> dict[str, str]:
         """Get request headers."""
         headers = {"Content-Type": "application/json"}
         if self.api_key:
@@ -113,7 +113,7 @@ class GatewayClient:
         except aiohttp.ClientError as e:
             raise GatewayClientError(f"Request failed: {e}")
 
-    async def _get_json(self, path: str, **kwargs) -> Dict[str, Any]:
+    async def _get_json(self, path: str, **kwargs) -> dict[str, Any]:
         """Make GET request and return JSON."""
         async with await self._request("GET", path, **kwargs) as response:
             if response.status >= 400:
@@ -124,8 +124,8 @@ class GatewayClient:
             return await response.json()
 
     async def _post_json(
-        self, path: str, data: Dict[str, Any], **kwargs
-    ) -> Dict[str, Any]:
+        self, path: str, data: dict[str, Any], **kwargs
+    ) -> dict[str, Any]:
         """Make POST request with JSON and return JSON."""
         async with await self._request("POST", path, json=data, **kwargs) as response:
             if response.status >= 400:
@@ -137,7 +137,7 @@ class GatewayClient:
 
     # Gateway Management
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Check gateway health."""
         return await self._get_json("/gateway/health")
 
@@ -146,13 +146,13 @@ class GatewayClient:
         data = await self._get_json("/gateway/stats")
         return GatewayStatsResponse(**data)
 
-    async def get_registry(self) -> Dict[str, Any]:
+    async def get_registry(self) -> dict[str, Any]:
         """Get server registry information."""
         return await self._get_json("/gateway/registry")
 
     # Template Management
 
-    async def list_templates(self) -> List[str]:
+    async def list_templates(self) -> list[str]:
         """List available templates."""
         data = await self._get_json("/gateway/templates")
         return data.get("templates", [])
@@ -164,7 +164,7 @@ class GatewayClient:
 
     # Tool Operations
 
-    async def list_tools(self, template_name: str) -> List[Dict[str, Any]]:
+    async def list_tools(self, template_name: str) -> list[dict[str, Any]]:
         """List tools for a template."""
         data = await self._get_json(f"/mcp/{template_name}/tools/list")
         return data.get("tools", [])
@@ -173,7 +173,7 @@ class GatewayClient:
         self,
         template_name: str,
         tool_name: str,
-        arguments: Optional[Dict[str, Any]] = None,
+        arguments: dict[str, Any] | None = None,
     ) -> ToolCallResponse:
         """Call a tool through the gateway."""
         payload = {
@@ -185,7 +185,7 @@ class GatewayClient:
 
     # Resource Operations
 
-    async def list_resources(self, template_name: str) -> List[Dict[str, Any]]:
+    async def list_resources(self, template_name: str) -> list[dict[str, Any]]:
         """List resources for a template."""
         data = await self._get_json(f"/mcp/{template_name}/resources/list")
         return data.get("resources", [])
@@ -194,14 +194,14 @@ class GatewayClient:
         self,
         template_name: str,
         resource_uri: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Read a resource through the gateway."""
         payload = {"uri": resource_uri}
         return await self._post_json(f"/mcp/{template_name}/resources/read", payload)
 
     # Prompt Operations
 
-    async def list_prompts(self, template_name: str) -> List[Dict[str, Any]]:
+    async def list_prompts(self, template_name: str) -> list[dict[str, Any]]:
         """List prompts for a template."""
         data = await self._get_json(f"/mcp/{template_name}/prompts/list")
         return data.get("prompts", [])
@@ -210,8 +210,8 @@ class GatewayClient:
         self,
         template_name: str,
         prompt_name: str,
-        arguments: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        arguments: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """Get a prompt through the gateway."""
         payload = {
             "name": prompt_name,
@@ -223,8 +223,8 @@ class GatewayClient:
 
     async def call_tools_batch(
         self,
-        calls: List[Dict[str, Any]],
-    ) -> List[ToolCallResponse]:
+        calls: list[dict[str, Any]],
+    ) -> list[ToolCallResponse]:
         """Call multiple tools in batch."""
         tasks = []
         for call in calls:
@@ -264,7 +264,7 @@ class MCPGatewayConnection:
         self,
         template_name: str,
         gateway_url: str = "http://localhost:8080",
-        api_key: Optional[str] = None,
+        api_key: str | None = None,
     ):
         """
         Initialize MCP gateway connection.
@@ -277,7 +277,7 @@ class MCPGatewayConnection:
         self.template_name = template_name
         self.gateway_url = gateway_url.rstrip("/")
         self.api_key = api_key
-        self._connection: Optional[MCPConnection] = None
+        self._connection: MCPConnection | None = None
 
     async def connect(self) -> bool:
         """Connect to MCP server through gateway."""
@@ -324,7 +324,7 @@ class MCPGatewayConnection:
         if self._connection is None:
             raise GatewayClientError("Not connected. Call connect() first.")
 
-    async def list_tools(self) -> List[Dict[str, Any]]:
+    async def list_tools(self) -> list[dict[str, Any]]:
         """List available tools."""
         self._check_connected()
         result = await self._connection.list_tools()
@@ -333,23 +333,23 @@ class MCPGatewayConnection:
     async def call_tool(
         self,
         name: str,
-        arguments: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        arguments: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """Call a tool."""
         self._check_connected()
         return await self._connection.call_tool(name, arguments or {})
 
-    async def list_resources(self) -> List[Dict[str, Any]]:
+    async def list_resources(self) -> list[dict[str, Any]]:
         """List available resources."""
         self._check_connected()
         raise NotImplementedError("list_resources is not implemented in MCPConnection")
 
-    async def read_resource(self, uri: str) -> Dict[str, Any]:
+    async def read_resource(self, uri: str) -> dict[str, Any]:
         """Read a resource."""
         self._check_connected()
         raise NotImplementedError("read_resource is not implemented in MCPConnection")
 
-    async def list_prompts(self) -> List[Dict[str, Any]]:
+    async def list_prompts(self) -> list[dict[str, Any]]:
         """List available prompts."""
         self._check_connected()
         raise NotImplementedError("list_prompts is not implemented in MCPConnection")
@@ -357,8 +357,8 @@ class MCPGatewayConnection:
     async def get_prompt(
         self,
         name: str,
-        arguments: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        arguments: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """Get a prompt."""
         self._check_connected()
         raise NotImplementedError("get_prompt is not implemented in MCPConnection")
@@ -371,7 +371,7 @@ class GatewayConnectionPool:
     def __init__(
         self,
         gateway_url: str = "http://localhost:8080",
-        api_key: Optional[str] = None,
+        api_key: str | None = None,
         max_connections: int = 10,
     ):
         """
@@ -385,8 +385,8 @@ class GatewayConnectionPool:
         self.gateway_url = gateway_url
         self.api_key = api_key
         self.max_connections = max_connections
-        self._pools: Dict[str, List[MCPGatewayConnection]] = {}
-        self._semaphores: Dict[str, asyncio.Semaphore] = {}
+        self._pools: dict[str, list[MCPGatewayConnection]] = {}
+        self._semaphores: dict[str, asyncio.Semaphore] = {}
 
     def _get_semaphore(self, template_name: str) -> asyncio.Semaphore:
         """Get semaphore for template."""
@@ -431,7 +431,7 @@ class GatewayConnectionPool:
 
 
 async def create_gateway_client(
-    base_url: str = "http://localhost:8080", api_key: Optional[str] = None, **kwargs
+    base_url: str = "http://localhost:8080", api_key: str | None = None, **kwargs
 ) -> GatewayClient:
     """Create and return a gateway client."""
     return GatewayClient(base_url, api_key, **kwargs)
@@ -440,9 +440,9 @@ async def create_gateway_client(
 async def call_tool_simple(
     template_name: str,
     tool_name: str,
-    arguments: Optional[Dict[str, Any]] = None,
+    arguments: dict[str, Any] | None = None,
     gateway_url: str = "http://localhost:8080",
-    api_key: Optional[str] = None,
+    api_key: str | None = None,
 ) -> ToolCallResponse:
     """Simple tool call function."""
     async with GatewayClient(gateway_url, api_key) as client:

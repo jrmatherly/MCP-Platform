@@ -38,9 +38,9 @@ class TestAllTemplates:
             results[template_name] = result
 
             # Assert basic requirements - for CompletedProcess, check returncode
-            assert (
-                result.returncode == 0
-            ), f"{template_name}: Template tests failed with return code {result.returncode}. Output: {result.stdout} {result.stderr}"
+            assert result.returncode == 0, (
+                f"{template_name}: Template tests failed with return code {result.returncode}. Output: {result.stdout} {result.stderr}"
+            )
 
             # Check if stdout contains success indicators
             output = result.stdout + result.stderr
@@ -102,9 +102,9 @@ class TestProductionTemplates:
         """Test that we can discover production templates."""
 
         production_templates = self._get_production_templates()
-        assert (
-            len(production_templates) > 0
-        ), "Should discover at least one production template"
+        assert len(production_templates) > 0, (
+            "Should discover at least one production template"
+        )
         print(f"Discovered production templates: {production_templates}")
 
     def test_production_template_comprehensive(self):
@@ -116,9 +116,9 @@ class TestProductionTemplates:
             result = run_template_tests(template_name)
 
             # Check that tests pass (return code 0 means success)
-            assert (
-                result.returncode == 0
-            ), f"Template tests failed for {template_name}. Output: {result.stdout} {result.stderr}"
+            assert result.returncode == 0, (
+                f"Template tests failed for {template_name}. Output: {result.stdout} {result.stderr}"
+            )
 
 
 class TestTemplateMetadata:
@@ -149,13 +149,13 @@ class TestTemplateMetadata:
                 with open(template_json_path, encoding="utf-8") as f:
                     template_data = json.load(f)
 
-                assert (
-                    "docker_image" in template_data
-                ), f"{template_name}: Missing docker_image"
+                assert "docker_image" in template_data, (
+                    f"{template_name}: Missing docker_image"
+                )
                 # Allow any valid docker image format for flexibility
-                assert template_data[
-                    "docker_image"
-                ], f"{template_name}: docker_image cannot be empty"
+                assert template_data["docker_image"], (
+                    f"{template_name}: docker_image cannot be empty"
+                )
 
 
 if __name__ == "__main__":

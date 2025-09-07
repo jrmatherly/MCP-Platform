@@ -12,8 +12,6 @@ import pytest
 import typer
 from typer.testing import CliRunner
 
-pytestmark = pytest.mark.unit
-
 from mcp_platform.cli.cli import (
     AliasGroup,
     app,
@@ -22,6 +20,8 @@ from mcp_platform.cli.cli import (
     setup_logging,
     split_command_args,
 )
+
+pytestmark = pytest.mark.unit
 
 
 class TestCLIUtilities:
@@ -466,9 +466,7 @@ class TestCLIConfigurationOptions:
 
     @patch("mcp_platform.backends.available_valid_backends")
     @patch("mcp_platform.cli.cli.MCPClient")
-    def test_deploy_with_backend_option(
-        self, mock_client_class, mock_available_backends
-    ):
+    def test_deploy_with_backend_option(self, mock_client_class, mock_available_backends):
         """Test deploy command with backend specification."""
         mock_client = Mock()
         mock_client_class.return_value = mock_client

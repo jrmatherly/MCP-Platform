@@ -93,7 +93,7 @@ Add another option? [y/N]: n
   - Dockerfile (container definition)
   - src/server.py (MCP server implementation)
   - src/tools.py (tool implementations)
-  - requirements.txt (Python dependencies)
+  - pyproject.toml (Python dependencies and project config)
   - README.md (documentation)
   - config/schema.json (configuration schema)
 
@@ -237,7 +237,8 @@ The create command generates a complete template structure:
 templates/my-template/
 ├── template.json          # Template configuration and metadata
 ├── Dockerfile            # Container definition
-├── requirements.txt      # Python dependencies
+├── pyproject.toml        # Python dependencies and project config
+├── uv.lock              # Locked dependency versions
 ├── README.md            # Template documentation
 ├── src/
 │   ├── __init__.py      # Package initialization

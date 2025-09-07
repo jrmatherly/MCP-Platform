@@ -8,7 +8,7 @@ and metadata operations, consolidating functionality from CLI and MCPClient.
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from mcp_platform.backends import get_backend
 from mcp_platform.core.cache import CacheManager
@@ -40,7 +40,7 @@ class TemplateManager:
         self,
         include_deployed_status: bool = False,
         filter_deployed_only: bool = False,
-    ) -> Dict[str, Dict]:
+    ) -> dict[str, dict]:
         """
         List all available templates with optional deployment status.
 
@@ -132,7 +132,7 @@ class TemplateManager:
 
     def get_template_info(
         self, template_id: str, include_deployed_status: bool = False
-    ) -> Optional[Dict]:
+    ) -> dict | None:
         """
         Get detailed information for a specific template.
 
@@ -181,7 +181,7 @@ class TemplateManager:
             logger.error(f"Failed to validate template {template_id}: {e}")
             return False
 
-    def search_templates(self, query: str) -> Dict[str, Dict]:
+    def search_templates(self, query: str) -> dict[str, dict]:
         """
         Search templates by name, description, or tags.
 
@@ -221,7 +221,7 @@ class TemplateManager:
             logger.error(f"Failed to search templates: {e}")
             return {}
 
-    def get_template_config_schema(self, template_id: str) -> Optional[Dict]:
+    def get_template_config_schema(self, template_id: str) -> dict | None:
         """
         Get the configuration schema for a template.
 
@@ -242,7 +242,7 @@ class TemplateManager:
             logger.error(f"Failed to get config schema for {template_id}: {e}")
             return None
 
-    def get_template_tools(self, template_id: str) -> List[Dict]:
+    def get_template_tools(self, template_id: str) -> list[dict]:
         """
         Get the tools defined for a template.
 
@@ -270,7 +270,7 @@ class TemplateManager:
         # Clear persistent cache
         self.cache_manager.delete("templates")
 
-    def get_template_path(self, template_id: str) -> Optional[Path]:
+    def get_template_path(self, template_id: str) -> Path | None:
         """
         Get the file system path for a template.
 
@@ -294,7 +294,7 @@ class TemplateManager:
             logger.error(f"Failed to get template path for {template_id}: {e}")
             return None
 
-    def load_template_config(self, template_id: str) -> Dict[str, Any]:
+    def load_template_config(self, template_id: str) -> dict[str, Any]:
         """
         Load the complete template configuration from template.json.
 
@@ -313,7 +313,7 @@ class TemplateManager:
             if not config_file.exists():
                 return {}
 
-            with open(config_file, "r") as f:
+            with open(config_file) as f:
                 return json.load(f)
 
         except Exception as e:

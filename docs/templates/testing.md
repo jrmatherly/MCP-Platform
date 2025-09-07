@@ -19,7 +19,7 @@ Professional MCP template testing follows a multi-layered approach:
 
 ```bash
 # Install test dependencies
-pip install -r requirements-dev.txt
+uv sync
 
 # Dependencies include:
 # - pytest (testing framework)
@@ -1392,9 +1392,9 @@ jobs:
 
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements-dev.txt
-        pip install -e .
+        pip install uv
+        uv sync
+        # Dependencies installed with uv sync
 
     - name: Run unit tests
       run: |
@@ -1410,7 +1410,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       redis:
-        image: redis:alpine
+        image: redis:8-alpine
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s
@@ -1427,9 +1427,9 @@ jobs:
 
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements-dev.txt
-        pip install -e .
+        pip install uv
+        uv sync
+        # Dependencies installed with uv sync
 
     - name: Run integration tests
       run: |
@@ -1449,9 +1449,9 @@ jobs:
 
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements-dev.txt
-        pip install bandit safety
+        pip install uv
+        uv sync
+        uv tool install bandit safety
 
     - name: Run security tests
       run: |
@@ -1484,9 +1484,9 @@ jobs:
 
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements-dev.txt
-        pip install docker
+        pip install uv
+        uv sync
+        uv tool install docker
 
     - name: Run E2E tests
       run: |

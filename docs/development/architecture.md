@@ -67,7 +67,8 @@ templates/template-name/
 │   ├── test_units.py    # Unit tests
 │   └── test_integration.py # Integration tests
 ├── config/              # Configuration files (optional)
-├── requirements.txt     # Python dependencies
+├── pyproject.toml       # Python dependencies and project config
+├── uv.lock             # Locked dependency versions
 └── README.md           # Usage instructions
 ```
 

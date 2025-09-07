@@ -25,7 +25,7 @@ def get_custom_templates_dir() -> Path:
     return None
 
 
-def get_all_template_directories() -> List[Path]:
+def get_all_template_directories() -> list[Path]:
     """Get all template directories (built-in + custom).
 
     Returns:

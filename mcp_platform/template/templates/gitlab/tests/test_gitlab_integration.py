@@ -41,7 +41,7 @@ class TestGitLabTemplate:
         """Test template.json is valid JSON with required fields."""
         template_json = template_dir / "template.json"
 
-        with open(template_json, "r") as f:
+        with open(template_json) as f:
             config = json.load(f)
 
         # Required top-level fields
@@ -75,7 +75,7 @@ class TestGitLabTemplate:
         """Test configuration schema has proper structure."""
         template_json = template_dir / "template.json"
 
-        with open(template_json, "r") as f:
+        with open(template_json) as f:
             config = json.load(f)
 
         schema = config["config_schema"]
@@ -95,7 +95,7 @@ class TestGitLabTemplate:
         """Test transport configuration is properly defined."""
         template_json = template_dir / "template.json"
 
-        with open(template_json, "r") as f:
+        with open(template_json) as f:
             config = json.load(f)
 
         transport = config["transport"]
@@ -114,7 +114,7 @@ class TestGitLabTemplate:
         """Test capabilities include proper examples."""
         template_json = template_dir / "template.json"
 
-        with open(template_json, "r") as f:
+        with open(template_json) as f:
             config = json.load(f)
 
         capabilities = config["capabilities"]
@@ -164,7 +164,7 @@ class TestGitLabTemplate:
         """Test feature toggles are properly documented."""
         template_json = template_dir / "template.json"
 
-        with open(template_json, "r") as f:
+        with open(template_json) as f:
             config = json.load(f)
 
         properties = config["config_schema"]["properties"]
@@ -186,7 +186,7 @@ class TestGitLabTemplate:
         """Test environment variable mappings are consistent."""
         template_json = template_dir / "template.json"
 
-        with open(template_json, "r") as f:
+        with open(template_json) as f:
             config = json.load(f)
 
         properties = config["config_schema"]["properties"]
@@ -211,7 +211,7 @@ class TestGitLabTemplate:
         """Test Docker configuration is properly defined."""
         template_json = template_dir / "template.json"
 
-        with open(template_json, "r") as f:
+        with open(template_json) as f:
             config = json.load(f)
 
         # Docker configuration
@@ -225,7 +225,7 @@ class TestGitLabTemplate:
         """Test template category and tags are appropriate."""
         template_json = template_dir / "template.json"
 
-        with open(template_json, "r") as f:
+        with open(template_json) as f:
             config = json.load(f)
 
         assert config["category"] == "Development"
@@ -239,7 +239,7 @@ class TestGitLabTemplate:
         """Test template version follows semantic versioning."""
         template_json = template_dir / "template.json"
 
-        with open(template_json, "r") as f:
+        with open(template_json) as f:
             config = json.load(f)
 
         version = config["version"]

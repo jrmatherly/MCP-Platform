@@ -12,7 +12,7 @@ import logging
 import os
 import re
 import sys
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import sqlparse
 from fastmcp import FastMCP
@@ -109,7 +109,7 @@ class TrinoMCPServer:
         self.logger = self.config.logger
 
         # Initialize SQLAlchemy engine
-        self.engine: Optional[Engine] = None
+        self.engine: Engine | None = None
         self.client = None
         try:
             self._initialize_trino_engine()
@@ -203,7 +203,7 @@ class TrinoMCPServer:
             if not self._skip_validation:
                 raise
 
-    def _create_auth(self, auth_config: Dict[str, Any]):
+    def _create_auth(self, auth_config: dict[str, Any]):
         """Create Trino authentication object based on configuration."""
         auth_type = auth_config.get("type")
 
@@ -312,7 +312,7 @@ class TrinoMCPServer:
         patterns = [p.strip() for p in str(allowed).split(",") if p.strip()]
         return any(fnmatch.fnmatch(schema, p) for p in patterns)
 
-    def list_catalogs(self) -> Dict[str, Any]:
+    def list_catalogs(self) -> dict[str, Any]:
         """List all accessible Trino catalogs."""
         try:
             with self.engine.connect() as conn:
@@ -333,7 +333,7 @@ class TrinoMCPServer:
             self.logger.error("Error listing catalogs: %s", e)
             return {"success": False, "error": str(e), "catalogs": []}
 
-    def list_schemas(self, catalog: str) -> Dict[str, Any]:
+    def list_schemas(self, catalog: str) -> dict[str, Any]:
         """List schemas in a specific catalog."""
         # Check catalog-level access
         if not self._is_catalog_allowed(catalog):
@@ -362,7 +362,7 @@ class TrinoMCPServer:
             self.logger.error("Error listing schemas in catalog '%s': %s", catalog, e)
             return {"success": False, "error": str(e), "schemas": []}
 
-    def list_tables(self, catalog: str, schema: str) -> Dict[str, Any]:
+    def list_tables(self, catalog: str, schema: str) -> dict[str, Any]:
         """List tables in a specific schema."""
         # Enforce access control
         if not self._is_catalog_allowed(catalog):
@@ -397,7 +397,7 @@ class TrinoMCPServer:
             )
             return {"success": False, "error": str(e), "tables": []}
 
-    def describe_table(self, catalog: str, schema: str, table: str) -> Dict[str, Any]:
+    def describe_table(self, catalog: str, schema: str, table: str) -> dict[str, Any]:
         """Get detailed schema information for a table."""
         # Enforce access control
         if not self._is_catalog_allowed(catalog):
@@ -461,8 +461,8 @@ class TrinoMCPServer:
             return {"success": False, "error": str(e)}
 
     def execute_query(
-        self, query: str, catalog: Optional[str] = None, schema: Optional[str] = None
-    ) -> Dict[str, Any]:
+        self, query: str, catalog: str | None = None, schema: str | None = None
+    ) -> dict[str, Any]:
         """Execute a SQL query against Trino."""
         # Check for write operations in read-only mode
         if self._check_write_operation(query):
@@ -481,7 +481,7 @@ class TrinoMCPServer:
             # If catalog/schema provided, prefer lightweight USE statements
             # instead of attempting to set non-existent session properties.
             # If not provided, rely on fully-qualified names in the query.
-            use_statements: List[str] = []
+            use_statements: list[str] = []
             if catalog and schema:
                 # Use catalog.schema to set both
                 use_statements.append(f"USE {catalog}.{schema}")
@@ -541,7 +541,7 @@ class TrinoMCPServer:
             self.logger.error("Error executing query: %s", e)
             return {"success": False, "error": str(e), "query": query}
 
-    def get_query_status(self, query_id: str) -> Dict[str, Any]:
+    def get_query_status(self, query_id: str) -> dict[str, Any]:
         """Get status of a running query."""
         try:
             with self.engine.connect() as conn:
@@ -573,7 +573,7 @@ class TrinoMCPServer:
             self.logger.error("Error getting query status for '%s': %s", query_id, e)
             return {"success": False, "error": str(e), "query_id": query_id}
 
-    def cancel_query(self, query_id: str) -> Dict[str, Any]:
+    def cancel_query(self, query_id: str) -> dict[str, Any]:
         """Cancel a running query."""
         try:
             with self.engine.connect() as conn:
@@ -589,7 +589,7 @@ class TrinoMCPServer:
             self.logger.error("Error cancelling query '%s': %s", query_id, e)
             return {"success": False, "error": str(e), "query_id": query_id}
 
-    def get_cluster_info(self) -> Dict[str, Any]:
+    def get_cluster_info(self) -> dict[str, Any]:
         """Get information about the Trino cluster."""
         try:
             with self.engine.connect() as conn:

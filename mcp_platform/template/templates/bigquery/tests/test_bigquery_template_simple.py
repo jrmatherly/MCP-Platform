@@ -25,7 +25,7 @@ class TestBigQueryTemplateValidation:
 
         assert os.path.exists(template_path), "template.json file must exist"
 
-        with open(template_path, "r") as f:
+        with open(template_path) as f:
             template_data = json.load(f)
 
         # Test required fields
@@ -48,7 +48,7 @@ class TestBigQueryTemplateValidation:
             os.path.dirname(os.path.dirname(__file__)), "template.json"
         )
 
-        with open(template_path, "r") as f:
+        with open(template_path) as f:
             template_data = json.load(f)
 
         config_schema = template_data["config_schema"]
@@ -82,7 +82,7 @@ class TestBigQueryTemplateValidation:
             os.path.dirname(os.path.dirname(__file__)), "template.json"
         )
 
-        with open(template_path, "r") as f:
+        with open(template_path) as f:
             template_data = json.load(f)
 
         tools = template_data["tools"]
@@ -122,7 +122,7 @@ class TestBigQueryTemplateValidation:
             os.path.dirname(os.path.dirname(__file__)), "template.json"
         )
 
-        with open(template_path, "r") as f:
+        with open(template_path) as f:
             template_data = json.load(f)
 
         capabilities = template_data["capabilities"]
@@ -153,7 +153,7 @@ class TestBigQueryTemplateValidation:
             os.path.dirname(os.path.dirname(__file__)), "template.json"
         )
 
-        with open(template_path, "r") as f:
+        with open(template_path) as f:
             template_data = json.load(f)
 
         assert "docker_image" in template_data
@@ -175,7 +175,7 @@ class TestBigQueryTemplateValidation:
             os.path.dirname(os.path.dirname(__file__)), "template.json"
         )
 
-        with open(template_path, "r") as f:
+        with open(template_path) as f:
             template_data = json.load(f)
 
         properties = template_data["config_schema"]["properties"]
@@ -206,7 +206,7 @@ class TestBigQueryTemplateValidation:
             os.path.dirname(os.path.dirname(__file__)), "template.json"
         )
 
-        with open(template_path, "r") as f:
+        with open(template_path) as f:
             template_data = json.load(f)
 
         properties = template_data["config_schema"]["properties"]
@@ -248,7 +248,7 @@ class TestBigQueryTemplateValidation:
             os.path.dirname(os.path.dirname(__file__)), "README.md"
         )
 
-        with open(readme_path, "r") as f:
+        with open(readme_path) as f:
             readme_content = f.read()
 
         # Test essential sections are present
@@ -278,7 +278,7 @@ class TestBigQueryTemplateValidation:
             os.path.dirname(os.path.dirname(__file__)), "Dockerfile"
         )
 
-        with open(dockerfile_path, "r") as f:
+        with open(dockerfile_path) as f:
             dockerfile_content = f.read()
 
         # Test security best practices
@@ -299,7 +299,7 @@ class TestBigQueryTemplateValidation:
             os.path.dirname(os.path.dirname(__file__)), "requirements.txt"
         )
 
-        with open(requirements_path, "r") as f:
+        with open(requirements_path) as f:
             requirements_content = f.read()
 
         # Test essential dependencies
@@ -326,7 +326,7 @@ class TestBigQueryToolCategorization:
             os.path.dirname(os.path.dirname(__file__)), "template.json"
         )
 
-        with open(template_path, "r") as f:
+        with open(template_path) as f:
             template_data = json.load(f)
 
         tools = template_data["tools"]
@@ -353,7 +353,7 @@ class TestBigQueryToolCategorization:
             os.path.dirname(os.path.dirname(__file__)), "template.json"
         )
 
-        with open(template_path, "r") as f:
+        with open(template_path) as f:
             template_data = json.load(f)
 
         tools = template_data["tools"]
@@ -384,7 +384,7 @@ class TestBigQueryToolCategorization:
             os.path.dirname(os.path.dirname(__file__)), "template.json"
         )
 
-        with open(template_path, "r") as f:
+        with open(template_path) as f:
             template_data = json.load(f)
 
         tools = template_data["tools"]
@@ -424,7 +424,7 @@ class TestBigQueryToolCategorization:
             os.path.dirname(os.path.dirname(__file__)), "template.json"
         )
 
-        with open(template_path, "r") as f:
+        with open(template_path) as f:
             template_data = json.load(f)
 
         transport = template_data["transport"]
@@ -449,7 +449,7 @@ class TestBigQueryToolCategorization:
             os.path.dirname(os.path.dirname(__file__)), "template.json"
         )
 
-        with open(template_path, "r") as f:
+        with open(template_path) as f:
             template_data = json.load(f)
 
         auth_method_config = template_data["config_schema"]["properties"]["auth_method"]
@@ -473,7 +473,7 @@ class TestBigQueryToolCategorization:
             os.path.dirname(os.path.dirname(__file__)), "template.json"
         )
 
-        with open(template_path, "r") as f:
+        with open(template_path) as f:
             template_data = json.load(f)
 
         examples = template_data["examples"]
@@ -512,7 +512,7 @@ class TestBigQueryToolCategorization:
             os.path.dirname(os.path.dirname(__file__)), "template.json"
         )
 
-        with open(template_path, "r") as f:
+        with open(template_path) as f:
             template_data = json.load(f)
 
         # Test version format

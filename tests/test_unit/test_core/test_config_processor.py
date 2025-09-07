@@ -11,7 +11,7 @@ from unittest.mock import mock_open, patch
 import pytest
 import yaml
 
-from mcp_platform.core.config_processor import ConfigProcessor, ValidationResult
+from mcp_platform.core.config_processor import ConfigProcessor
 
 
 @pytest.mark.unit

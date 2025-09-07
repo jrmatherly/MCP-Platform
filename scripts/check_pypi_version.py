@@ -15,7 +15,7 @@ def get_current_version():
     """Get the current version from setup.py."""
     setup_file = Path(__file__).parent.parent / "setup.py"
 
-    with open(setup_file, "r", encoding="utf-8") as f:
+    with open(setup_file, encoding="utf-8") as f:
         content = f.read()
 
     # Extract version from setup.py
@@ -76,7 +76,7 @@ def update_setup_version(new_version):
     """Update the version in setup.py."""
     setup_file = Path(__file__).parent.parent / "setup.py"
 
-    with open(setup_file, "r", encoding="utf-8") as f:
+    with open(setup_file, encoding="utf-8") as f:
         content = f.read()
 
     # Replace version string
@@ -128,9 +128,7 @@ def main():
             print(f"📈 Latest version on PyPI: {latest_version}")
 
             # Choose version to increment from
-            version_to_increment = max(
-                current_version, latest_version, key=parse_version
-            )
+            version_to_increment = max(current_version, latest_version, key=parse_version)
             new_version = increment_version(version_to_increment)
 
             print(f"🚀 Auto-incrementing to: {new_version}")
@@ -147,6 +145,6 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-    except (ValueError, IOError, HTTPError) as e:
+    except (OSError, ValueError, HTTPError) as e:
         print(f"❌ Error: {e}")
         sys.exit(1)

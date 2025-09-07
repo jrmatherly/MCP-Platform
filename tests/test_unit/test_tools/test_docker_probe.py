@@ -10,9 +10,9 @@ from unittest.mock import Mock, call, patch
 
 import pytest
 
-pytestmark = pytest.mark.unit
-
 from mcp_platform.tools.docker_probe import DockerProbe
+
+pytestmark = pytest.mark.unit
 
 
 class TestDockerProbe:
@@ -46,7 +46,7 @@ class TestDockerProbe:
         """Test container cleanup with timeout."""
         mock_run.side_effect = subprocess.TimeoutExpired("docker", 10)
 
-        with patch.object(self.probe, "_background_cleanup") as mock_bg_cleanup:
+        with patch.object(self.probe, "_background_cleanup"):
             self.probe._cleanup_container("test-container")
             time.sleep(0.1)  # Allow thread to execute
 

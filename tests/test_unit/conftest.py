@@ -67,8 +67,19 @@ def mock_subprocess():
 
 
 @pytest.fixture
-def mock_docker_client():
-    """Mock Docker client for unit tests."""
+def unit_mock_docker_client():
+    """
+    Simplified mock Docker client specifically for unit tests.
+
+    Scope: function - Lightweight mock with minimal configuration.
+    This is the unit-test specific version with basic Docker client mocking.
+    Differs from the main mock_docker_client by being simpler and unit-focused.
+
+    Returns:
+        MagicMock: Basic mock Docker client for isolated unit testing.
+
+    Note: Consider using 'mock_docker_client' from root conftest for integration tests.
+    """
     with patch("docker.from_env") as mock_client:
         mock_instance = Mock()
         mock_instance.containers.run.return_value = Mock(id="mock-container-id")

@@ -9,7 +9,7 @@ import json
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 from .database import DatabaseManager, ServerInstanceCRUD, ServerTemplateCRUD
 from .models import (
@@ -41,8 +41,8 @@ class ServerRegistry:
 
     def __init__(
         self,
-        db: Optional[DatabaseManager] = None,
-        fallback_file: Optional[Union[str, Path]] = None,
+        db: DatabaseManager | None = None,
+        fallback_file: str | Path | None = None,
     ):
         """
         Initialize enhanced server registry.
@@ -57,7 +57,7 @@ class ServerRegistry:
         self.template_crud = ServerTemplateCRUD(db) if db else None
 
         # In-memory cache for when database is not available
-        self._memory_templates: Dict[str, ServerTemplate] = {}
+        self._memory_templates: dict[str, ServerTemplate] = {}
         self._use_memory = db is None
 
         if self._use_memory:
@@ -93,7 +93,7 @@ class ServerRegistry:
             return
 
         try:
-            with open(self.fallback_file, "r", encoding="utf-8") as f:
+            with open(self.fallback_file, encoding="utf-8") as f:
                 data = json.load(f)
 
             # Convert old format to new Pydantic models
@@ -162,8 +162,8 @@ class ServerRegistry:
     async def register_server(
         self,
         template_name: str,
-        instance: Union[ServerInstance, ServerInstanceCreate, Dict[str, Any]],
-        load_balancer_config: Optional[LoadBalancerConfigCreate] = None,
+        instance: ServerInstance | ServerInstanceCreate | dict[str, Any],
+        load_balancer_config: LoadBalancerConfigCreate | None = None,
     ) -> ServerInstance:
         """
         Register a new server instance.
@@ -244,14 +244,14 @@ class ServerRegistry:
 
         return removed
 
-    async def get_template(self, template_name: str) -> Optional[ServerTemplate]:
+    async def get_template(self, template_name: str) -> ServerTemplate | None:
         """Get server template by name."""
         if self._use_memory:
             return self._memory_templates.get(template_name)
         else:
             return await self.template_crud.get(template_name)
 
-    async def get_healthy_instances(self, template_name: str) -> List[ServerInstance]:
+    async def get_healthy_instances(self, template_name: str) -> list[ServerInstance]:
         """Get all healthy instances for a template."""
         if self._use_memory:
             template = self._memory_templates.get(template_name)
@@ -263,7 +263,7 @@ class ServerRegistry:
 
     async def get_instance(
         self, template_name: str, instance_id: str
-    ) -> Optional[ServerInstance]:
+    ) -> ServerInstance | None:
         """Get specific server instance."""
         if self._use_memory:
             template = self._memory_templates.get(template_name)
@@ -275,7 +275,7 @@ class ServerRegistry:
         else:
             return await self.instance_crud.get(instance_id)
 
-    async def list_templates(self) -> List[str]:
+    async def list_templates(self) -> list[str]:
         """List all registered template names."""
         if self._use_memory:
             return list(self._memory_templates.keys())
@@ -283,7 +283,7 @@ class ServerRegistry:
             templates = await self.template_crud.list_all()
             return [template.name for template in templates]
 
-    async def list_instances(self, template_name: str) -> List[ServerInstance]:
+    async def list_instances(self, template_name: str) -> list[ServerInstance]:
         """List all instances for a specific template."""
         if self._use_memory:
             template = self._memory_templates.get(template_name)
@@ -291,7 +291,7 @@ class ServerRegistry:
         else:
             return await self.instance_crud.get_by_template(template_name)
 
-    async def list_all_instances(self) -> List[ServerInstance]:
+    async def list_all_instances(self) -> list[ServerInstance]:
         """List all registered server instances across all templates."""
         if self._use_memory:
             instances = []
@@ -335,7 +335,7 @@ class ServerRegistry:
             instance = await self.instance_crud.update(instance_id, updates)
             return instance is not None
 
-    async def get_registry_stats(self) -> Dict[str, Any]:
+    async def get_registry_stats(self) -> dict[str, Any]:
         """Get registry statistics and overview."""
         if self._use_memory:
             total_instances = sum(

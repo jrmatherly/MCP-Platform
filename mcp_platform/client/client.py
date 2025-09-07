@@ -39,7 +39,7 @@ import asyncio
 import json
 import logging
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 from mcp_platform.core import (
     DeploymentManager,
@@ -74,8 +74,8 @@ class MCPClient:
         self,
         backend_type: str = "docker",
         timeout: int = 30,
-        gateway_url: Optional[str] = None,
-        api_key: Optional[str] = None,
+        gateway_url: str | None = None,
+        api_key: str | None = None,
     ):
         """
         Initialize MCP Client.
@@ -117,7 +117,7 @@ class MCPClient:
         self,
         include_deployed_status: bool = False,
         all_backends: bool = False,
-    ) -> Dict[str, Dict[str, Any]]:
+    ) -> dict[str, dict[str, Any]]:
         """
         List all available MCP server templates.
 
@@ -178,7 +178,7 @@ class MCPClient:
 
     def get_template_info(
         self, template_id: str, include_deployed_status: bool = False
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         Get detailed information about a specific template.
 
@@ -213,7 +213,7 @@ class MCPClient:
             logger.error("Failed to validate template %s: %s", template_id, e)
             return False
 
-    def search_templates(self, query: str) -> Dict[str, Dict[str, Any]]:
+    def search_templates(self, query: str) -> dict[str, dict[str, Any]]:
         """
         Search templates by name, description, or tags.
 
@@ -232,10 +232,10 @@ class MCPClient:
     # Server Management
     def list_servers(
         self,
-        template_name: Optional[str] = None,
+        template_name: str | None = None,
         all_backends: bool = False,
         status: str = None,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         List all currently running MCP servers.
 
@@ -260,7 +260,7 @@ class MCPClient:
             logger.error("Failed to list servers: %s", e)
             return []
 
-    def list_servers_by_template(self, template: str) -> List[Dict[str, Any]]:
+    def list_servers_by_template(self, template: str) -> list[dict[str, Any]]:
         """
         List all currently running MCP servers for a specific template.
 
@@ -276,20 +276,20 @@ class MCPClient:
     def start_server(
         self,
         template_id: str,
-        configuration: Optional[Dict[str, Any]] = None,
-        config_file: Optional[str] = None,
-        env_vars: Optional[Dict[str, str]] = None,
-        overrides: Optional[Dict[str, str]] = None,
-        volumes: Optional[Union[Dict[str, str], List[str]]] = None,
+        configuration: dict[str, Any] | None = None,
+        config_file: str | None = None,
+        env_vars: dict[str, str] | None = None,
+        overrides: dict[str, str] | None = None,
+        volumes: dict[str, str] | list[str] | None = None,
         pull_image: bool = True,
-        transport: Optional[str] = "http",
-        host: Optional[str] = "0.0.0.0",
-        port: Optional[int] = None,
-        name: Optional[str] = None,
+        transport: str | None = "http",
+        host: str | None = "0.0.0.0",
+        port: int | None = None,
+        name: str | None = None,
         timeout: int = 300,
-        backend_config: Optional[Dict[str, Any]] = None,
-        backend_config_file: Optional[str] = None,
-    ) -> Optional[Dict[str, Any]]:
+        backend_config: dict[str, Any] | None = None,
+        backend_config_file: str | None = None,
+    ) -> dict[str, Any] | None:
         """
         Start a new MCP server instance.
 
@@ -383,20 +383,20 @@ class MCPClient:
     def deploy_template(
         self,
         template_id: str,
-        config_file: Optional[str] = None,
-        config: Optional[Dict[str, str]] = None,
-        env_vars: Optional[Dict[str, str]] = None,
-        overrides: Optional[Dict[str, str]] = None,
-        volumes: Optional[Union[Dict[str, str], List[str], str]] = None,
-        transport: Optional[str] = None,
+        config_file: str | None = None,
+        config: dict[str, str] | None = None,
+        env_vars: dict[str, str] | None = None,
+        overrides: dict[str, str] | None = None,
+        volumes: dict[str, str] | list[str] | str | None = None,
+        transport: str | None = None,
         pull_image: bool = True,
-        name: Optional[str] = None,
+        name: str | None = None,
         timeout: int = 300,
         host: str = "0.0.0.0",
         port: int = None,
-        backend_config: Optional[Dict[str, Any]] = None,
-        backend_config_file: Optional[str] = None,
-    ) -> Optional[Dict[str, Any]]:
+        backend_config: dict[str, Any] | None = None,
+        backend_config_file: str | None = None,
+    ) -> dict[str, Any] | None:
         """
         Deploy a template with CLI-like interface supporting config precedence and volumes.
 
@@ -467,7 +467,7 @@ class MCPClient:
             logger.error("Failed to deploy template %s: %s", template_id, e)
             return None
 
-    def stop_server(self, deployment_id: str, timeout: int = 30) -> Dict[str, Any]:
+    def stop_server(self, deployment_id: str, timeout: int = 30) -> dict[str, Any]:
         """Stop a running server.
 
         Args:
@@ -558,7 +558,7 @@ class MCPClient:
 
         return results
 
-    def get_server_info(self, deployment_id: str) -> Optional[Dict[str, Any]]:
+    def get_server_info(self, deployment_id: str) -> dict[str, Any] | None:
         """
         Get information about a specific server deployment.
 
@@ -579,7 +579,7 @@ class MCPClient:
 
     def get_server_logs(
         self, deployment_id: str, lines: int = 100, follow: bool = False
-    ) -> Optional[str]:
+    ) -> str | None:
         """
         Get logs from a running server.
 
@@ -608,7 +608,7 @@ class MCPClient:
         template: str,
         lines: int = 100,
         all_backends: bool = False,
-    ) -> Dict[str, List[Dict[str, str]]]:
+    ) -> dict[str, list[dict[str, str]]]:
         """
         Get logs for all running deployments of a template, grouped by backend_type.
 
@@ -650,7 +650,7 @@ class MCPClient:
         static: bool = True,
         dynamic: bool = True,
         include_metadata: bool = False,
-    ) -> Union[List[Dict[str, Any]], Dict[str, Any]]:
+    ) -> list[dict[str, Any]] | dict[str, Any]:
         """
         List available tools from a template or all discovered tools.
 
@@ -689,13 +689,13 @@ class MCPClient:
         self,
         template_id: str,
         tool_name: str,
-        arguments: Dict[str, Any] = None,
-        deployment_id: Optional[str] = None,
-        server_config: Optional[Dict[str, Any]] = None,
+        arguments: dict[str, Any] = None,
+        deployment_id: str | None = None,
+        server_config: dict[str, Any] | None = None,
         timeout: int = 30,
         pull_image: bool = True,
         force_stdio: bool = False,
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         Call a tool on an MCP server.
 
@@ -736,15 +736,15 @@ class MCPClient:
         self,
         template_id: str,
         tool_name: str,
-        arguments: Dict[str, Any] = None,
-        config_file: Optional[str] = None,
-        env_vars: Optional[Dict[str, str]] = None,
-        config_values: Optional[Dict[str, Any]] = None,
+        arguments: dict[str, Any] = None,
+        config_file: str | None = None,
+        env_vars: dict[str, str] | None = None,
+        config_values: dict[str, Any] | None = None,
         all_backends: bool = True,
         timeout: int = 30,
         pull_image: bool = True,
         force_stdio: bool = False,
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         Call a tool with flexible configuration support for interactive CLI.
 
@@ -805,11 +805,11 @@ class MCPClient:
     # Direct Connection Methods
     async def connect_stdio(
         self,
-        command: List[str],
-        working_dir: Optional[str] = None,
-        env_vars: Optional[Dict[str, str]] = None,
-        connection_id: Optional[str] = None,
-    ) -> Optional[str]:
+        command: list[str],
+        working_dir: str | None = None,
+        env_vars: dict[str, str] | None = None,
+        connection_id: str | None = None,
+    ) -> str | None:
         """
         Create a direct stdio connection to an MCP server.
 
@@ -839,7 +839,7 @@ class MCPClient:
 
     async def list_tools_from_connection(
         self, connection_id: str
-    ) -> Optional[List[Dict[str, Any]]]:
+    ) -> list[dict[str, Any]] | None:
         """
         List tools from an active connection.
 
@@ -857,8 +857,8 @@ class MCPClient:
         return await connection.list_tools()
 
     async def call_tool_from_connection(
-        self, connection_id: str, tool_name: str, arguments: Dict[str, Any]
-    ) -> Optional[Dict[str, Any]]:
+        self, connection_id: str, tool_name: str, arguments: dict[str, Any]
+    ) -> dict[str, Any] | None:
         """
         Call a tool using an active connection.
 
@@ -899,13 +899,13 @@ class MCPClient:
     async def start_server_async(
         self,
         template_id: str,
-        configuration: Optional[Dict[str, Any]] = None,
+        configuration: dict[str, Any] | None = None,
         pull_image: bool = True,
-        transport: Optional[str] = None,
-        port: Optional[int] = None,
-        name: Optional[str] = None,
+        transport: str | None = None,
+        port: int | None = None,
+        name: str | None = None,
         timeout: int = 300,
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Async version of start_server."""
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(
@@ -922,10 +922,10 @@ class MCPClient:
 
     async def list_tools_async(
         self,
-        template_name: Optional[str] = None,
+        template_name: str | None = None,
         force_refresh: bool = False,
         discovery_method: str = "auto",
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Async version of list_tools."""
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(
@@ -936,9 +936,9 @@ class MCPClient:
         self,
         template_id: str,
         tool_name: str,
-        arguments: Dict[str, Any] = None,
+        arguments: dict[str, Any] = None,
         timeout: int = 30,
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Async version of call_tool."""
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(
@@ -1003,8 +1003,8 @@ class MCPClient:
 
     # Gateway-integrated methods
     async def call_tool_via_gateway(
-        self, template_name: str, tool_name: str, arguments: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, template_name: str, tool_name: str, arguments: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Call a tool through the gateway with automatic fallback.
 
@@ -1028,7 +1028,7 @@ class MCPClient:
         # Fallback to direct call
         return await self.call_tool(template_name, tool_name, arguments)
 
-    async def list_tools_via_gateway(self, template_name: str) -> List[Dict[str, Any]]:
+    async def list_tools_via_gateway(self, template_name: str) -> list[dict[str, Any]]:
         """
         List tools through the gateway with automatic fallback.
 
@@ -1048,12 +1048,12 @@ class MCPClient:
         # Fallback to direct call
         return await self.list_tools(template_name)
 
-    async def get_gateway_health(self) -> Dict[str, Any]:
+    async def get_gateway_health(self) -> dict[str, Any]:
         """Get gateway health status."""
         gateway_client = self._get_gateway_client()
         return await gateway_client.health_check()
 
-    async def get_gateway_stats(self) -> Dict[str, Any]:
+    async def get_gateway_stats(self) -> dict[str, Any]:
         """Get gateway statistics."""
         gateway_client = self._get_gateway_client()
         return await gateway_client.get_stats()

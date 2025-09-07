@@ -13,9 +13,8 @@ Help improve MCP Server Templates!
 ## Development Setup
 
 ```bash
-# Install in development mode
-pip install -e .
-pip install -r requirements-dev.txt
+# Install dependencies and project in development mode
+uv sync
 
 # Run tests
 python -m pytest

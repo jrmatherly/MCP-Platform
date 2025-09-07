@@ -9,7 +9,7 @@ import json
 import logging
 import re
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from mcp_platform.backends import get_backend
 from mcp_platform.core.cache import CacheManager
@@ -52,8 +52,8 @@ class ToolManager:
         dynamic: bool = True,
         timeout: int = 30,
         force_refresh: bool = False,
-        config_values: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        config_values: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """
         List tools for a template or deployment using priority-based discovery.
 
@@ -175,9 +175,9 @@ class ToolManager:
         template_or_deployment: str,
         timeout: int = 30,
         force_refresh: bool = False,
-        config_values: Optional[Dict[str, Any]] = None,
+        config_values: dict[str, Any] | None = None,
         is_template: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Discover tools using priority order: cache → running deployments → stdio → http → static.
 
@@ -288,8 +288,8 @@ class ToolManager:
         }
 
     def _discover_from_running_deployment(
-        self, deployment: Dict, timeout: int
-    ) -> List[Dict]:
+        self, deployment: dict, timeout: int
+    ) -> list[dict]:
         """Helper method to discover tools from a running deployment via MCP JSON-RPC."""
         try:
             # Use BaseProbe's HTTP discovery methods
@@ -307,8 +307,8 @@ class ToolManager:
             return []
 
     def _discover_via_stdio(
-        self, template_name: str, timeout: int, config_values: Optional[Dict] = None
-    ) -> List[Dict]:
+        self, template_name: str, timeout: int, config_values: dict | None = None
+    ) -> list[dict]:
         """Helper method to discover tools via stdio."""
         try:
             # Get template info to check stdio support
@@ -345,8 +345,8 @@ class ToolManager:
         return []
 
     def _generate_discovery_env_vars(
-        self, template_info: Dict[str, Any], config_values: Optional[Dict] = None
-    ) -> Dict[str, str]:
+        self, template_info: dict[str, Any], config_values: dict | None = None
+    ) -> dict[str, str]:
         """
         Generate environment variables for tool discovery, using dummy values for required config.
 
@@ -389,7 +389,7 @@ class ToolManager:
 
         return final_config
 
-    def _generate_dummy_value(self, prop_name: str, prop_config: Dict[str, Any]) -> Any:
+    def _generate_dummy_value(self, prop_name: str, prop_config: dict[str, Any]) -> Any:
         """Generate a dummy value for a configuration property based on its type."""
         # Check if there's a default value
         if "default" in prop_config:
@@ -466,7 +466,7 @@ class ToolManager:
 
     def _discover_via_http(
         self, template_or_deployment: str, timeout: int
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """Helper method to discover tools via MCP JSON-RPC (for already deployed services)."""
         try:
             # Get deployment manager to find running deployments
@@ -498,7 +498,7 @@ class ToolManager:
             return []
 
     def _cache_tools(
-        self, template_name: str, tools: List[Dict], method: str, source: str
+        self, template_name: str, tools: list[dict], method: str, source: str
     ):
         """Helper method to cache discovered tools with metadata."""
         cache_key = self._get_cache_key(template_name)
@@ -511,7 +511,7 @@ class ToolManager:
         }
         self.cache_manager.set(cache_key, cache_data)
 
-    def discover_tools_static(self, template_id: str) -> List[Dict]:
+    def discover_tools_static(self, template_id: str) -> list[dict]:
         """
         Discover tools from template files.
 
@@ -530,7 +530,7 @@ class ToolManager:
             if template_path:
                 tools_file = template_path / "tools.json"
                 if tools_file.exists():
-                    with open(tools_file, "r") as f:
+                    with open(tools_file) as f:
                         file_tools = json.load(f)
                         if isinstance(file_tools, list):
                             tools.extend(file_tools)
@@ -545,7 +545,7 @@ class ToolManager:
 
     def discover_tools_dynamic(
         self, template_or_deployment_id: str, timeout: int
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """
         Discover tools from running server.
 
@@ -611,8 +611,8 @@ class ToolManager:
             return []
 
     def discover_tools_from_image(
-        self, image: str, timeout: int, env_vars: Optional[Dict[str, str]] = None
-    ) -> List[Dict]:
+        self, image: str, timeout: int, env_vars: dict[str, str] | None = None
+    ) -> list[dict]:
         """
         Discover tools by probing container image using the appropriate backend.
 
@@ -646,7 +646,7 @@ class ToolManager:
             logger.error("Failed to discover tools from image %s: %s", image, e)
             return []
 
-    def normalize_tool_schema(self, tool_data: Dict, source: str) -> Dict:
+    def normalize_tool_schema(self, tool_data: dict, source: str) -> dict:
         """
         Normalize tool schemas from different sources.
 
@@ -748,7 +748,7 @@ class ToolManager:
                     "error": str(e),
                 }
 
-    def validate_tool_definition(self, tool: Dict) -> bool:
+    def validate_tool_definition(self, tool: dict) -> bool:
         """
         Validate tool definition structure.
 
@@ -790,12 +790,12 @@ class ToolManager:
         self,
         template_or_deployment: str,
         tool_name: str,
-        parameters: Dict[str, Any],
-        config_values: Optional[Dict[str, Any]] = None,
+        parameters: dict[str, Any],
+        config_values: dict[str, Any] | None = None,
         timeout: int = 30,
         pull_image: bool = True,
         force_stdio: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Call a tool using the best available transport.
 
@@ -950,7 +950,7 @@ class ToolManager:
             logger.error("Failed to call tool %s: %s", tool_name, e)
             return {"success": False, "error": str(e)}
 
-    def _discover_tools_auto(self, template_or_id: str, timeout: int) -> List[Dict]:
+    def _discover_tools_auto(self, template_or_id: str, timeout: int) -> list[dict]:
         """
         Automatically discover tools using the best available method.
 
@@ -992,7 +992,7 @@ class ToolManager:
         # No tools found
         return []
 
-    def clear_cache(self, template_name: Optional[str] = None):
+    def clear_cache(self, template_name: str | None = None):
         """
         Clear the tool discovery cache.
 
@@ -1010,7 +1010,7 @@ class ToolManager:
 
     def get_cached_tools(
         self, template_or_id: str, discovery_method: str = "auto"
-    ) -> Optional[List[Dict]]:
+    ) -> list[dict] | None:
         """
         Get cached tools if available.
 
@@ -1025,7 +1025,7 @@ class ToolManager:
         return self.cache_manager.get(cache_key) or None
 
     def _determine_actual_discovery_method(
-        self, template_or_id: str, tools: List[Dict]
+        self, template_or_id: str, tools: list[dict]
     ) -> str:
         """
         Determine the actual discovery method used based on template/deployment.

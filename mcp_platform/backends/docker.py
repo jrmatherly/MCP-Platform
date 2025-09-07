@@ -12,7 +12,7 @@ import time
 import uuid
 from contextlib import suppress
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 from rich.console import Console
 from rich.panel import Panel
@@ -237,7 +237,7 @@ class DockerDeploymentService(BaseDeploymentBackend):
 
     # Docker Infrastructure Methods
     def _run_command(
-        self, command: List[str], check: bool = True, **kwargs: Any
+        self, command: list[str], check: bool = True, **kwargs: Any
     ) -> subprocess.CompletedProcess:
         """Execute a shell command and return the result.
 
@@ -300,12 +300,12 @@ class DockerDeploymentService(BaseDeploymentBackend):
     def deploy_template(
         self,
         template_id: str,
-        config: Dict[str, Any],
-        template_data: Dict[str, Any],
-        backend_config: Dict[str, Any],
+        config: dict[str, Any],
+        template_data: dict[str, Any],
+        backend_config: dict[str, Any],
         pull_image: bool = True,
         dry_run: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Deploy a template using Docker CLI.
 
         Args:
@@ -433,8 +433,8 @@ class DockerDeploymentService(BaseDeploymentBackend):
         return f"mcp-{template_id}-{timestamp}-{str(uuid.uuid4())[:8]}"
 
     def _prepare_environment_variables(
-        self, config: Dict[str, Any], template_data: Dict[str, Any]
-    ) -> List[str]:
+        self, config: dict[str, Any], template_data: dict[str, Any]
+    ) -> list[str]:
         """Prepare environment variables for container deployment."""
         env_vars = []
         env_dict = {}  # Use dict to prevent duplicates
@@ -507,7 +507,7 @@ class DockerDeploymentService(BaseDeploymentBackend):
 
         return env_vars
 
-    def _prepare_volume_mounts(self, template_data: Dict[str, Any]) -> List[str]:
+    def _prepare_volume_mounts(self, template_data: dict[str, Any]) -> list[str]:
         """Prepare volume mounts for container deployment."""
         volumes = []
         template_volumes = template_data.get("volumes", {})
@@ -521,7 +521,7 @@ class DockerDeploymentService(BaseDeploymentBackend):
             volumes.extend(["--volume", f"{expanded_path}:{container_path}"])
         return volumes
 
-    def _prepare_port_mappings(self, template_data: Dict[str, Any]) -> List[str]:
+    def _prepare_port_mappings(self, template_data: dict[str, Any]) -> list[str]:
         """Prepare port mappings for container deployment, using a free port if needed."""
         ports = []
         template_ports = template_data.get("ports", {})
@@ -549,7 +549,7 @@ class DockerDeploymentService(BaseDeploymentBackend):
 
     @staticmethod
     def _identify_stdio_deployment(
-        env_vars: List[str],
+        env_vars: list[str],
     ) -> bool:
         """Identify if the deployment is using stdio transport."""
 
@@ -571,13 +571,13 @@ class DockerDeploymentService(BaseDeploymentBackend):
         container_name: str,
         template_id: str,
         image_name: str,
-        env_vars: List[str],
-        volumes: List[str],
-        ports: List[str],
-        command_args: List[str],
+        env_vars: list[str],
+        volumes: list[str],
+        ports: list[str],
+        command_args: list[str],
         is_stdio: bool = False,
         detached: bool = True,
-    ) -> List[str]:
+    ) -> list[str]:
         """Build the Docker command with all configuration."""
         docker_command = [
             self.backend_name,
@@ -628,10 +628,10 @@ class DockerDeploymentService(BaseDeploymentBackend):
         container_name: str,
         template_id: str,
         image_name: str,
-        env_vars: List[str],
-        volumes: List[str],
-        ports: List[str],
-        command_args: List[str],
+        env_vars: list[str],
+        volumes: list[str],
+        ports: list[str],
+        command_args: list[str],
         is_stdio: bool = False,
         dry_run: bool = False,
     ) -> str:
@@ -688,11 +688,11 @@ class DockerDeploymentService(BaseDeploymentBackend):
     def run_stdio_command(
         self,
         template_id: str,
-        config: Dict[str, Any],
-        template_data: Dict[str, Any],
+        config: dict[str, Any],
+        template_data: dict[str, Any],
         json_input: str,
         pull_image: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Run a stdio MCP command directly and return the result."""
         try:
             # Prepare deployment configuration
@@ -855,7 +855,7 @@ EOF""",
 
     def _get_host_port(
         self,
-        ports: Union[Dict, List, str],
+        ports: dict | list | str,
     ):
         """
         Resolve ports list to extract hot port
@@ -894,7 +894,7 @@ EOF""",
 
     def _prepare_deployment_result(
         self,
-        container: Dict,
+        container: dict,
         include_logs: bool = False,
         lines: int = 100,
     ):
@@ -1015,7 +1015,7 @@ EOF""",
         return deployment
 
     # Container Management Methods
-    def list_deployments(self, template: Optional[str] = None) -> List[Dict[str, Any]]:
+    def list_deployments(self, template: str | None = None) -> list[dict[str, Any]]:
         """List all MCP deployments managed by this Docker service.
 
         Returns:
@@ -1076,7 +1076,7 @@ EOF""",
 
     def get_deployment_info(
         self, deployment_name: str, include_logs: bool = False, lines: int = 10
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get detailed information about a specific deployment.
 
         Args:
@@ -1118,8 +1118,8 @@ EOF""",
         deployment_name: str,
         lines: int = 100,
         follow: bool = False,
-        since: Optional[str] = None,
-        until: Optional[str] = None,
+        since: str | None = None,
+        until: str | None = None,
     ) -> dict:
         """Get logs from a deployment.
 
@@ -1207,7 +1207,7 @@ EOF""",
             return False
 
     def _build_internal_image(
-        self, template_id: str, image_name: str, template_data: Dict[str, Any]
+        self, template_id: str, image_name: str, template_data: dict[str, Any]
     ) -> None:
         """Build Docker image for internal templates."""
 
@@ -1306,8 +1306,8 @@ EOF""",
         )
 
     def cleanup_stopped_containers(
-        self, template_name: Optional[str] = None
-    ) -> Dict[str, Any]:
+        self, template_name: str | None = None
+    ) -> dict[str, Any]:
         """
         Clean up stopped containers.
 
@@ -1402,7 +1402,7 @@ EOF""",
                 "failed_cleanups": [],
             }
 
-    def cleanup_dangling_images(self) -> Dict[str, Any]:
+    def cleanup_dangling_images(self) -> dict[str, Any]:
         """
         Clean up dangling Docker images related to MCP templates.
 

@@ -3,7 +3,6 @@ Image utility functions for handling registry prefixes and image references.
 """
 
 import os
-from typing import Optional
 
 
 def get_default_registry() -> str:
@@ -17,7 +16,7 @@ def get_default_registry() -> str:
     return registry if registry else "docker.io"
 
 
-def normalize_image_name(image_name: str, registry: Optional[str] = None) -> str:
+def normalize_image_name(image_name: str, registry: str | None = None) -> str:
     """Normalize an image name by adding registry prefix if needed.
 
     Args:

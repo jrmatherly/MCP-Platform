@@ -21,7 +21,7 @@ import sys
 import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any
 from urllib.parse import urlencode
 
 import aiohttp
@@ -185,7 +185,7 @@ class ZendeskMCPServer:
             key_parts.append(urlencode(sorted(params.items())))
         return "|".join(key_parts)
 
-    def _get_cached_data(self, cache_key: str) -> Optional[Any]:
+    def _get_cached_data(self, cache_key: str) -> Any | None:
         """Get data from cache if available and not expired."""
         if not self.cache_enabled:
             return None
@@ -214,7 +214,7 @@ class ZendeskMCPServer:
         params: dict = None,
         data: dict = None,
         use_cache: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Make authenticated request to Zendesk API with rate limiting and caching."""
         if not self.session:
             raise RuntimeError(
@@ -283,11 +283,11 @@ class ZendeskMCPServer:
         self,
         subject: str,
         description: str,
-        requester_email: Optional[str] = None,
-        priority: Optional[str] = None,
-        type: Optional[str] = None,
-        tags: Optional[List[str]] = None,
-    ) -> Dict[str, Any]:
+        requester_email: str | None = None,
+        priority: str | None = None,
+        type: str | None = None,
+        tags: list[str] | None = None,
+    ) -> dict[str, Any]:
         """
         Create a new support ticket in Zendesk.
 
@@ -335,7 +335,7 @@ class ZendeskMCPServer:
 
     async def get_ticket(
         self, ticket_id: int, include_comments: bool = True
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Retrieve detailed information about a specific ticket.
 
@@ -384,11 +384,11 @@ class ZendeskMCPServer:
     async def update_ticket(
         self,
         ticket_id: int,
-        status: Optional[str] = None,
-        priority: Optional[str] = None,
-        assignee_id: Optional[int] = None,
-        tags: Optional[List[str]] = None,
-    ) -> Dict[str, Any]:
+        status: str | None = None,
+        priority: str | None = None,
+        assignee_id: int | None = None,
+        tags: list[str] | None = None,
+    ) -> dict[str, Any]:
         """
         Update an existing ticket's properties.
 
@@ -439,13 +439,13 @@ class ZendeskMCPServer:
 
     async def search_tickets(
         self,
-        query: Optional[str] = None,
-        status: Optional[str] = None,
-        priority: Optional[str] = None,
-        requester_email: Optional[str] = None,
-        created_after: Optional[str] = None,
+        query: str | None = None,
+        status: str | None = None,
+        priority: str | None = None,
+        requester_email: str | None = None,
+        created_after: str | None = None,
         limit: int = 25,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Search for tickets using various criteria.
 
@@ -501,8 +501,8 @@ class ZendeskMCPServer:
         ticket_id: int,
         body: str,
         public: bool = True,
-        author_id: Optional[int] = None,
-    ) -> Dict[str, Any]:
+        author_id: int | None = None,
+    ) -> dict[str, Any]:
         """
         Add a comment to an existing ticket.
 
@@ -552,8 +552,8 @@ class ZendeskMCPServer:
         name: str,
         email: str,
         role: str = "end-user",
-        organization_id: Optional[int] = None,
-    ) -> Dict[str, Any]:
+        organization_id: int | None = None,
+    ) -> dict[str, Any]:
         """
         Create a new user in Zendesk.
 
@@ -591,8 +591,8 @@ class ZendeskMCPServer:
         }
 
     async def get_user(
-        self, user_id: Optional[int] = None, email: Optional[str] = None
-    ) -> Dict[str, Any]:
+        self, user_id: int | None = None, email: str | None = None
+    ) -> dict[str, Any]:
         """
         Retrieve information about a specific user.
 
@@ -639,10 +639,10 @@ class ZendeskMCPServer:
 
     async def search_users(
         self,
-        query: Optional[str] = None,
-        role: Optional[str] = None,
-        organization_id: Optional[int] = None,
-    ) -> Dict[str, Any]:
+        query: str | None = None,
+        role: str | None = None,
+        organization_id: int | None = None,
+    ) -> dict[str, Any]:
         """
         Search for users in Zendesk.
 
@@ -682,8 +682,8 @@ class ZendeskMCPServer:
     # Knowledge Base Tools
 
     async def search_articles(
-        self, query: str, locale: str = "en-us", section_id: Optional[int] = None
-    ) -> Dict[str, Any]:
+        self, query: str, locale: str = "en-us", section_id: int | None = None
+    ) -> dict[str, Any]:
         """
         Search knowledge base articles.
 
@@ -718,7 +718,7 @@ class ZendeskMCPServer:
 
     async def get_article(
         self, article_id: int, locale: str = "en-us"
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Retrieve a specific knowledge base article.
 
@@ -753,10 +753,10 @@ class ZendeskMCPServer:
 
     async def get_ticket_metrics(
         self,
-        start_date: Optional[str] = None,
-        end_date: Optional[str] = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
         group_by: str = "day",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Get metrics and analytics for tickets.
 
@@ -834,7 +834,7 @@ class ZendeskMCPServer:
 
     # Organization Tools
 
-    async def list_organizations(self, query: Optional[str] = None) -> Dict[str, Any]:
+    async def list_organizations(self, query: str | None = None) -> dict[str, Any]:
         """
         List organizations in Zendesk.
 

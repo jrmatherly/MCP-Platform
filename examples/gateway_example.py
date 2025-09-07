@@ -13,7 +13,6 @@ Usage:
 """
 
 import asyncio
-import json
 import logging
 import time
 from pathlib import Path
@@ -21,7 +20,6 @@ from pathlib import Path
 import aiohttp
 
 from mcp_platform.gateway import MCPGatewayServer, ServerRegistry
-from mcp_platform.gateway.integration import GatewayIntegration
 from mcp_platform.gateway.registry import LoadBalancerConfig, ServerInstance
 
 # Setup logging
@@ -130,7 +128,6 @@ async def demonstrate_gateway_usage():
     base_url = "http://localhost:8080"
 
     async with aiohttp.ClientSession() as session:
-
         # 1. Get gateway health
         try:
             async with session.get(f"{base_url}/gateway/health") as response:
@@ -152,22 +149,22 @@ async def demonstrate_gateway_usage():
                 async with session.get(f"{base_url}/mcp/demo/tools/list") as response:
                     duration = time.time() - start_time
                     if response.status == 200:
-                        print(f"   Request {i+1}: ✅ Success ({duration:.2f}s)")
+                        print(f"   Request {i + 1}: ✅ Success ({duration:.2f}s)")
                     else:
-                        print(f"   Request {i+1}: ❌ Failed ({response.status})")
+                        print(f"   Request {i + 1}: ❌ Failed ({response.status})")
 
                 # Small delay between requests
                 await asyncio.sleep(0.5)
 
             except Exception as e:
-                print(f"   Request {i+1}: ❌ Error - {e}")
+                print(f"   Request {i + 1}: ❌ Error - {e}")
 
         # 3. Check template health
         try:
             async with session.get(f"{base_url}/mcp/demo/health") as response:
                 if response.status == 200:
                     health_data = await response.json()
-                    print(f"\n🏥 Demo template health:")
+                    print("\n🏥 Demo template health:")
                     print(f"   Total instances: {health_data['total_instances']}")
                     print(f"   Healthy instances: {health_data['healthy_instances']}")
                     print(
@@ -181,7 +178,7 @@ async def demonstrate_gateway_usage():
             async with session.get(f"{base_url}/gateway/registry") as response:
                 if response.status == 200:
                     registry_data = await response.json()
-                    print(f"\n📊 Registry status:")
+                    print("\n📊 Registry status:")
                     stats = registry_data["stats"]
                     print(f"   Total templates: {stats['total_templates']}")
                     print(f"   Total instances: {stats['total_instances']}")

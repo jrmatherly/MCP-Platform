@@ -339,20 +339,20 @@ class TestGatewayErrorHandling:
         # Test invalid token - verify_token raises exceptions
         try:
             auth_manager.verify_token("invalid.token.here")
-            assert False, "Should have raised an exception"
+            raise AssertionError("Should have raised an exception")
         except AuthenticationError:
             pass  # Expected
 
         # Test malformed token
         try:
             auth_manager.verify_token("not-a-jwt-at-all")
-            assert False, "Should have raised an exception"
+            raise AssertionError("Should have raised an exception")
         except AuthenticationError:
             pass  # Expected
 
         # Test empty token
         try:
             auth_manager.verify_token("")
-            assert False, "Should have raised an exception"
+            raise AssertionError("Should have raised an exception")
         except AuthenticationError:
             pass  # Expected

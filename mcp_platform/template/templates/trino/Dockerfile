@@ -9,11 +9,11 @@ RUN apt-get update && apt-get install -y \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first for better caching
-COPY requirements.txt .
+# Copy dependencies first for better caching
+COPY pyproject.toml uv.lock ./
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install uv && uv sync --frozen --no-dev
 
 # Copy source code
 COPY . .

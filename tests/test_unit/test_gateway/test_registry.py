@@ -150,7 +150,7 @@ class TestServerRegistry:
 
             # Verify file was written
             assert Path(fallback_path).exists()
-            with open(fallback_path, "r") as f:
+            with open(fallback_path) as f:
                 data = json.load(f)
 
             assert "servers" in data
@@ -335,9 +335,7 @@ class TestServerRegistryOperations:
             command=["python", "server.py"],
         )
 
-        template = ServerTemplate(
-            name="test-template", instances=[instance1, instance2]
-        )
+        template = ServerTemplate(name="test-template", instances=[instance1, instance2])
         registry._memory_templates["test-template"] = template
 
         instances = await registry.list_instances("test-template")

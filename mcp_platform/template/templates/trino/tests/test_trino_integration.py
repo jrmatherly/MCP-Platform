@@ -20,7 +20,7 @@ def template_dir() -> Path:
 
 def load_template(template_dir: Path) -> dict:
     path = template_dir / "template.json"
-    with open(path, "r") as f:
+    with open(path) as f:
         return json.load(f)
 
 

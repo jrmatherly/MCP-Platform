@@ -8,7 +8,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import pytest
 
@@ -34,12 +34,12 @@ class MCPTestClient:
             self.process.terminate()
             await self.process.wait()
 
-    async def list_tools(self) -> List[Dict[str, Any]]:
+    async def list_tools(self) -> list[dict[str, Any]]:
         """List available tools from the server."""
         # TODO: Implement tool listing
         return []
 
-    async def call_tool(self, name: str, arguments: Dict[str, Any]) -> Any:
+    async def call_tool(self, name: str, arguments: dict[str, Any]) -> Any:
         """Call a tool on the server."""
         # TODO: Implement tool calling
         return {"result": "mock_result"}
@@ -52,24 +52,24 @@ class TemplateTestBase:
         self.template_dir = template_dir
         self.config = self._load_template_config()
 
-    def _load_template_config(self) -> Dict[str, Any]:
+    def _load_template_config(self) -> dict[str, Any]:
         """Load template configuration."""
         config_file = self.template_dir / "template.json"
         if config_file.exists():
-            with open(config_file, "r", encoding="utf-8") as f:
+            with open(config_file, encoding="utf-8") as f:
                 return json.load(f)
         return {}
 
-    def get_expected_tools(self) -> List[str]:
+    def get_expected_tools(self) -> list[str]:
         """Get list of expected tools from template config."""
         capabilities = self.config.get("capabilities", [])
         return [cap.get("name", "").lower().replace(" ", "_") for cap in capabilities]
 
-    def get_config_schema(self) -> Dict[str, Any]:
+    def get_config_schema(self) -> dict[str, Any]:
         """Get configuration schema from template config."""
         return self.config.get("config_schema", {})
 
-    def create_mock_env(self) -> Dict[str, str]:
+    def create_mock_env(self) -> dict[str, str]:
         """Create mock environment variables for testing."""
         env_vars = {}
         schema = self.get_config_schema()
@@ -84,7 +84,7 @@ class TemplateTestBase:
 
 
 def run_docker_command(
-    args: List[str], cwd: Optional[Path] = None
+    args: list[str], cwd: Path | None = None
 ) -> subprocess.CompletedProcess:
     """Run a docker command and return the result."""
     cmd = ["docker"] + args
@@ -97,9 +97,7 @@ def build_template_image(template_dir: Path, tag: str) -> bool:
     return result.returncode == 0
 
 
-def run_template_container(
-    image_tag: str, env_vars: Optional[Dict[str, str]] = None
-) -> str:
+def run_template_container(image_tag: str, env_vars: dict[str, str] | None = None) -> str:
     """Run a template container and return container ID."""
     args = ["run", "-d"]
 
@@ -149,7 +147,7 @@ def docker_client():
 class TemplateTestContainer:
     """Context manager for running template containers in tests."""
 
-    def __init__(self, template_name: str, config: Dict[str, Any]):
+    def __init__(self, template_name: str, config: dict[str, Any]):
         self.template_name = template_name
         self.config = config
         self.container_id = None
@@ -160,9 +158,7 @@ class TemplateTestContainer:
         tag = f"mcp-test-{self.template_name}"
 
         if not build_template_image(template_dir, tag):
-            raise RuntimeError(
-                f"Failed to build template image for {self.template_name}"
-            )
+            raise RuntimeError(f"Failed to build template image for {self.template_name}")
 
         # Create config file
         config_data = json.dumps(self.config, indent=2)
@@ -186,7 +182,7 @@ class TemplateTestContainer:
         return ""
 
 
-def build_and_run_template(template_name: str, config: Dict[str, Any]):
+def build_and_run_template(template_name: str, config: dict[str, Any]):
     """Context manager for building and running template containers.
 
     This is an alias for TemplateTestContainer for backward compatibility.
@@ -194,7 +190,7 @@ def build_and_run_template(template_name: str, config: Dict[str, Any]):
     return TemplateTestContainer(template_name, config)
 
 
-def get_template_list() -> List[str]:
+def get_template_list() -> list[str]:
     """Get list of available templates using TemplateDiscovery."""
     # Import here to avoid circular imports
     from mcp_platform.template.utils.discovery import TemplateDiscovery

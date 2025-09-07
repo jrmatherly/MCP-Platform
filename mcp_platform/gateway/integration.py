@@ -6,7 +6,7 @@ deployed or removed through the existing MCP Platform.
 """
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
 from mcp_platform.core.multi_backend_manager import MultiBackendManager
 
@@ -26,7 +26,7 @@ class GatewayIntegration:
     def __init__(
         self,
         registry: ServerRegistry,
-        backend_manager: Optional[MultiBackendManager] = None,
+        backend_manager: MultiBackendManager | None = None,
     ):
         """
         Initialize gateway integration.
@@ -72,7 +72,7 @@ class GatewayIntegration:
             logger.error(f"Failed to sync gateway with deployments: {e}")
 
     def register_deployment(
-        self, template_name: str, deployment_info: Dict[str, Any]
+        self, template_name: str, deployment_info: dict[str, Any]
     ) -> bool:
         """
         Register a deployment with the gateway.
@@ -160,8 +160,8 @@ class GatewayIntegration:
             return False
 
     def _deployment_to_server_instance(
-        self, deployment_info: Dict[str, Any]
-    ) -> Optional[ServerInstance]:
+        self, deployment_info: dict[str, Any]
+    ) -> ServerInstance | None:
         """
         Convert deployment info to server instance.
 
@@ -269,7 +269,7 @@ class GatewayIntegration:
             return None
 
     def _get_load_balancer_config(
-        self, deployment_info: Dict[str, Any]
+        self, deployment_info: dict[str, Any]
     ) -> LoadBalancerConfig:
         """
         Get load balancer configuration for a deployment.
@@ -336,7 +336,7 @@ class GatewayIntegration:
         except Exception as e:
             logger.error(f"Failed to cleanup stale registrations: {e}")
 
-    def get_integration_stats(self) -> Dict[str, Any]:
+    def get_integration_stats(self) -> dict[str, Any]:
         """Get integration statistics."""
         try:
             # Get deployment counts per backend

@@ -9,6 +9,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from mcp_platform.backends.docker import DockerDeploymentService
+from mcp_platform.core.exceptions import DeploymentError
 
 
 @pytest.mark.unit
@@ -89,9 +90,9 @@ class TestDockerDeploymentService:
 
         # Verify a pull was attempted (inspect then pull should occur somewhere)
         called_cmds = [c[0][0] for c in mock_run_command.call_args_list if c and c[0]]
-        assert any(
-            (len(cmd) >= 2 and cmd[1] == "pull") for cmd in called_cmds
-        ), "Expected a docker pull to be attempted"
+        assert any((len(cmd) >= 2 and cmd[1] == "pull") for cmd in called_cmds), (
+            "Expected a docker pull to be attempted"
+        )
 
     @patch(
         "mcp_platform.backends.docker.DockerDeploymentService._ensure_docker_available"
@@ -104,7 +105,7 @@ class TestDockerDeploymentService:
         service = DockerDeploymentService()
         template_data = {"image": "test-image:latest"}
 
-        with pytest.raises(Exception):
+        with pytest.raises(DeploymentError):
             service.deploy_template("test", {}, template_data, {})
 
     # CREATE_NETWORK TESTS - Core focus of this task
@@ -163,9 +164,9 @@ class TestDockerDeploymentService:
 
         # Ensure we attempted a create with an explicit subnet (IPAM)
         called_cmds = [" ".join(call[0][0]) for call in mock_run_command.call_args_list]
-        assert any(
-            "--subnet" in c for c in called_cmds
-        ), "Expected an IPAM create attempt with --subnet"
+        assert any("--subnet" in c for c in called_cmds), (
+            "Expected an IPAM create attempt with --subnet"
+        )
         assert any(
             "172.30.0.0/24" in c or "172.31.0.0/24" in c or "172.28.0.0/24" in c
             for c in called_cmds
@@ -212,9 +213,9 @@ class TestDockerDeploymentService:
             " ".join(call[0][0]) if call and call[0] else ""
             for call in mock_run_command.call_args_list
         ]
-        assert any(
-            "--subnet" in c for c in called_cmds
-        ), "Expected an IPAM create attempt"
+        assert any("--subnet" in c for c in called_cmds), (
+            "Expected an IPAM create attempt"
+        )
         # Look for the fallback create (without --subnet but basic docker network create)
         fallback_creates = [
             c
@@ -249,9 +250,7 @@ class TestDockerDeploymentService:
                         [
                             {
                                 "IPAM": {
-                                    "Config": [
-                                        {"Subnet": s, "Gateway": s.split("/")[0]}
-                                    ]
+                                    "Config": [{"Subnet": s, "Gateway": s.split("/")[0]}]
                                 }
                             }
                         ]
@@ -277,9 +276,9 @@ class TestDockerDeploymentService:
             for call in mock_run_command.call_args_list
         ]
         # No IPAM create should have been attempted (no --subnet in any call)
-        assert not any(
-            "--subnet" in c for c in called_cmds
-        ), "Did not expect an IPAM create when no candidate available"
+        assert not any("--subnet" in c for c in called_cmds), (
+            "Did not expect an IPAM create when no candidate available"
+        )
         # Fallback create should exist (basic docker network create)
         fallback_creates = [
             c for c in called_cmds if "network create" in c and "mcp-platform" in c
@@ -298,9 +297,7 @@ class TestDockerDeploymentService:
         mock_run_command.side_effect = [
             Mock(returncode=1),  # inspect mcp-platform (not found)
             Exception("docker daemon error"),  # docker network ls fails
-            Mock(
-                stdout="network_created_safe", returncode=0
-            ),  # fallback create succeeds
+            Mock(stdout="network_created_safe", returncode=0),  # fallback create succeeds
         ]
 
         service = DockerDeploymentService()
@@ -314,9 +311,7 @@ class TestDockerDeploymentService:
         fallback_creates = [
             c for c in called_cmds if "network create" in c and "mcp-platform" in c
         ]
-        assert (
-            len(fallback_creates) > 0
-        ), "Expected fallback create when discovery fails"
+        assert len(fallback_creates) > 0, "Expected fallback create when discovery fails"
 
     @patch(
         "mcp_platform.backends.docker.DockerDeploymentService._ensure_docker_available"
@@ -457,9 +452,7 @@ class TestDockerDeploymentService:
             assert "-p" in port_mappings
             # Check that there are two port mappings (even if ports are remapped)
             port_args = [
-                port_mappings[i + 1]
-                for i, arg in enumerate(port_mappings)
-                if arg == "-p"
+                port_mappings[i + 1] for i, arg in enumerate(port_mappings) if arg == "-p"
             ]
             assert len(port_args) == 2
 

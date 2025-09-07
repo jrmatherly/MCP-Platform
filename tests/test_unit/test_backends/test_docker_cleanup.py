@@ -53,7 +53,7 @@ class TestDockerCleanup:
                 Mock(returncode=0),  # docker rm
             ]
 
-            result = docker_service.cleanup_stopped_containers("demo")
+            _result = docker_service.cleanup_stopped_containers("demo")
 
             # Verify docker ps was called with template filter
             ps_call = mock_run.call_args_list[0]

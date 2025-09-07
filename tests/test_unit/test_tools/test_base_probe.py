@@ -9,8 +9,6 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-pytestmark = pytest.mark.unit
-
 from mcp_platform.tools.base_probe import (
     CONTAINER_HEALTH_CHECK_TIMEOUT,
     CONTAINER_PORT_RANGE,
@@ -20,6 +18,8 @@ from mcp_platform.tools.base_probe import (
     BaseProbe,
 )
 from mcp_platform.tools.mcp_client_probe import MCPClientProbe
+
+pytestmark = pytest.mark.unit
 
 
 class ConcreteProbe(BaseProbe):

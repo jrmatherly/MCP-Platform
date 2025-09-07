@@ -9,7 +9,7 @@ results, status) using rich tables and panels.
 
 import json
 import logging
-from typing import Any, Optional
+from typing import Any
 
 from rich.console import Console
 from rich.panel import Panel
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 class TrinoResponseFormatter:
     """Formatter for Trino tool responses."""
 
-    def __init__(self, console: Optional[Console] = None):
+    def __init__(self, console: Console | None = None):
         self.console = console or Console()
 
     def format_tool_response(self, tool_name: str, raw_response: str) -> None:
@@ -64,7 +64,7 @@ class TrinoResponseFormatter:
                 text = text[1:-1]
         return text
 
-    def _parse_json(self, text: str) -> Optional[Any]:
+    def _parse_json(self, text: str) -> Any | None:
         try:
             return json.loads(text)
         except Exception:

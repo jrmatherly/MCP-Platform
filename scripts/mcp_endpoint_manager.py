@@ -8,12 +8,10 @@ Provides consistent endpoints and usage documentation for deployed MCP servers.
 import json
 import sys
 from pathlib import Path
-from typing import Any, Dict, List
-from urllib.parse import urlparse
+from typing import Any
 
 import yaml
 from rich.console import Console
-from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.table import Table
 
@@ -29,7 +27,7 @@ MARKDOWN_JSON_CODE_BLOCK = "```json"
 class MCPEndpointManager:
     """Manage MCP server endpoints and generate usage documentation."""
 
-    def __init__(self, deployment_info: Dict[str, Any]):
+    def __init__(self, deployment_info: dict[str, Any]):
         self.deployment_info = deployment_info
         self.template_name = deployment_info.get("template_id", "unknown")
         self.container_name = deployment_info.get("deployment_name", "unknown")
@@ -41,7 +39,7 @@ class MCPEndpointManager:
         container_id = self.container_name.lower().replace("_", "-")
         return f"mcp://{container_id}"
 
-    def generate_endpoint_documentation(self) -> Dict[str, Any]:
+    def generate_endpoint_documentation(self) -> dict[str, Any]:
         """Generate comprehensive endpoint documentation."""
         doc = {
             "server_info": {
@@ -58,7 +56,7 @@ class MCPEndpointManager:
         }
         return doc
 
-    def _generate_endpoint_list(self) -> List[Dict[str, Any]]:
+    def _generate_endpoint_list(self) -> list[dict[str, Any]]:
         """Generate list of available MCP endpoints/tools."""
         # Load template configuration to get capabilities
         template_config = self._load_template_config()
@@ -113,7 +111,7 @@ class MCPEndpointManager:
 
         return endpoints
 
-    def _capability_to_endpoint(self, capability: Dict[str, Any]) -> Dict[str, Any]:
+    def _capability_to_endpoint(self, capability: dict[str, Any]) -> dict[str, Any]:
         """Convert capability definition to endpoint documentation."""
         name = capability.get("name", "").lower().replace(" ", "_")
 
@@ -144,7 +142,7 @@ class MCPEndpointManager:
             },
         }
 
-    def _generate_client_configs(self) -> Dict[str, Any]:
+    def _generate_client_configs(self) -> dict[str, Any]:
         """Generate client configuration for major MCP frameworks."""
         return {
             "claude_desktop": self._generate_claude_config(),
@@ -156,7 +154,7 @@ class MCPEndpointManager:
             "mcp_client_nodejs": self._generate_nodejs_client_config(),
         }
 
-    def _generate_claude_config(self) -> Dict[str, Any]:
+    def _generate_claude_config(self) -> dict[str, Any]:
         """Generate Claude Desktop configuration."""
         config = {
             "mcpServers": {
@@ -191,7 +189,7 @@ class MCPEndpointManager:
             ],
         }
 
-    def _generate_cline_config(self) -> Dict[str, Any]:
+    def _generate_cline_config(self) -> dict[str, Any]:
         """Generate Cline VS Code extension configuration."""
         return {
             "config": {
@@ -222,7 +220,7 @@ class MCPEndpointManager:
             ],
         }
 
-    def _generate_continue_config(self) -> Dict[str, Any]:
+    def _generate_continue_config(self) -> dict[str, Any]:
         """Generate Continue.dev configuration."""
         return {
             "config": {
@@ -253,7 +251,7 @@ class MCPEndpointManager:
             ],
         }
 
-    def _generate_openai_config(self) -> Dict[str, Any]:
+    def _generate_openai_config(self) -> dict[str, Any]:
         """Generate OpenAI-compatible configuration."""
         return {
             "config": {
@@ -289,7 +287,7 @@ class MCPEndpointManager:
             ],
         }
 
-    def _generate_anthropic_config(self) -> Dict[str, Any]:
+    def _generate_anthropic_config(self) -> dict[str, Any]:
         """Generate Anthropic Workbench configuration."""
         return {
             "config": {
@@ -318,7 +316,7 @@ class MCPEndpointManager:
             ],
         }
 
-    def _generate_python_client_config(self) -> Dict[str, Any]:
+    def _generate_python_client_config(self) -> dict[str, Any]:
         """Generate Python MCP client configuration."""
         return {
             "code": f'''
@@ -363,7 +361,7 @@ asyncio.run(call_{self.template_name.replace("-", "_")}_server())
             ],
         }
 
-    def _generate_nodejs_client_config(self) -> Dict[str, Any]:
+    def _generate_nodejs_client_config(self) -> dict[str, Any]:
         """Generate Node.js MCP client configuration."""
         return {
             "code": f"""
@@ -421,7 +419,7 @@ connect{self.template_name.replace("-", "").title()}Server().catch(console.error
             ],
         }
 
-    def _generate_usage_examples(self) -> List[Dict[str, Any]]:
+    def _generate_usage_examples(self) -> list[dict[str, Any]]:
         """Generate practical usage examples."""
         examples = []
 
@@ -471,7 +469,7 @@ connect{self.template_name.replace("-", "").title()}Server().catch(console.error
 
         return examples
 
-    def _generate_claude_example(self, capability: Dict[str, Any]) -> str:
+    def _generate_claude_example(self, capability: dict[str, Any]) -> str:
         """Generate Claude Desktop usage example."""
         tool_name = capability.get("name", "tool").lower().replace(" ", "_")
         return f"""
@@ -491,7 +489,7 @@ Claude: "I'll use the {capability.get("name", "tool")} to help you with that."
 Claude: [Shows results and explains what was done]
 """
 
-    def _generate_python_example(self, capability: Dict[str, Any]) -> str:
+    def _generate_python_example(self, capability: dict[str, Any]) -> str:
         """Generate Python client usage example."""
         tool_name = capability.get("name", "tool").lower().replace(" ", "_")
         return f"""
@@ -517,7 +515,7 @@ except Exception as e:
     print(f"Failed to call tool: {{e}}")
 """
 
-    def _generate_curl_example(self, capability: Dict[str, Any]) -> str:
+    def _generate_curl_example(self, capability: dict[str, Any]) -> str:
         """Generate curl equivalent for debugging."""
         tool_name = capability.get("name", "tool").lower().replace(" ", "_")
         return f"""
@@ -537,7 +535,7 @@ curl -X POST "http://localhost:8000/mcp/rpc" \\
 # Actual usage requires MCP-compatible client over stdio transport
 """
 
-    def _generate_troubleshooting_guide(self) -> Dict[str, Any]:
+    def _generate_troubleshooting_guide(self) -> dict[str, Any]:
         """Generate troubleshooting guide."""
         return {
             "common_issues": [
@@ -624,23 +622,21 @@ curl -X POST "http://localhost:8000/mcp/rpc" \\
             ],
         }
 
-    def _load_template_config(self) -> Dict[str, Any]:
+    def _load_template_config(self) -> dict[str, Any]:
         """Load template configuration."""
         try:
-            template_dir = (
-                Path(__file__).parent.parent / "templates" / self.template_name
-            )
+            template_dir = Path(__file__).parent.parent / "templates" / self.template_name
             template_json = template_dir / "template.json"
 
             if template_json.exists():
-                with open(template_json, "r", encoding="utf-8") as f:
+                with open(template_json, encoding="utf-8") as f:
                     return json.load(f)
         except Exception:
             pass
 
         return {}
 
-    def _extract_required_env_vars(self) -> Dict[str, str]:
+    def _extract_required_env_vars(self) -> dict[str, str]:
         """Extract required environment variables with example values."""
         template_config = self._load_template_config()
         config_schema = template_config.get("config_schema", {})
@@ -681,7 +677,7 @@ curl -X POST "http://localhost:8000/mcp/rpc" \\
 
         console.print(f"✅ Documentation saved to {output_dir}")
 
-    def _generate_markdown_docs(self, doc: Dict[str, Any], output_dir: Path):
+    def _generate_markdown_docs(self, doc: dict[str, Any], output_dir: Path):
         """Generate comprehensive markdown documentation."""
         md_content = self._render_markdown_template(doc)
 
@@ -690,7 +686,7 @@ curl -X POST "http://localhost:8000/mcp/rpc" \\
         ) as f:
             f.write(md_content)
 
-    def _render_markdown_template(self, doc: Dict[str, Any]) -> str:
+    def _render_markdown_template(self, doc: dict[str, Any]) -> str:
         """Render markdown documentation template."""
         md_parts = []
 
@@ -701,9 +697,7 @@ curl -X POST "http://localhost:8000/mcp/rpc" \\
         md_parts.append(self._render_endpoints_section(doc["endpoints"]))
 
         # Add client configurations section
-        md_parts.append(
-            self._render_client_configs_section(doc["client_configurations"])
-        )
+        md_parts.append(self._render_client_configs_section(doc["client_configurations"]))
 
         # Add usage examples section
         md_parts.append(self._render_usage_examples_section(doc["usage_examples"]))
@@ -713,7 +707,7 @@ curl -X POST "http://localhost:8000/mcp/rpc" \\
 
         return "\n".join(md_parts)
 
-    def _render_header_section(self, server_info: Dict[str, Any]) -> str:
+    def _render_header_section(self, server_info: dict[str, Any]) -> str:
         """Render header section of markdown."""
         return f"""# {server_info["name"]} - Usage Guide
 
@@ -728,7 +722,7 @@ curl -X POST "http://localhost:8000/mcp/rpc" \\
 
 """
 
-    def _render_endpoints_section(self, endpoints: List[Dict[str, Any]]) -> str:
+    def _render_endpoints_section(self, endpoints: list[dict[str, Any]]) -> str:
         """Render endpoints section of markdown."""
         md_parts = []
 
@@ -752,7 +746,7 @@ curl -X POST "http://localhost:8000/mcp/rpc" \\
 
         return "\n".join(md_parts)
 
-    def _render_client_configs_section(self, clients: Dict[str, Any]) -> str:
+    def _render_client_configs_section(self, clients: dict[str, Any]) -> str:
         """Render client configurations section of markdown."""
         md_parts = ["## Client Configurations\n"]
 
@@ -780,7 +774,7 @@ curl -X POST "http://localhost:8000/mcp/rpc" \\
 
         return "\n".join(md_parts)
 
-    def _render_usage_examples_section(self, examples: List[Dict[str, Any]]) -> str:
+    def _render_usage_examples_section(self, examples: list[dict[str, Any]]) -> str:
         """Render usage examples section of markdown."""
         md_parts = ["## Usage Examples\n"]
 
@@ -807,7 +801,7 @@ curl -X POST "http://localhost:8000/mcp/rpc" \\
 
         return "\n".join(md_parts)
 
-    def _render_troubleshooting_section(self, troubleshooting: Dict[str, Any]) -> str:
+    def _render_troubleshooting_section(self, troubleshooting: dict[str, Any]) -> str:
         """Render troubleshooting section of markdown."""
         md_parts = ["## Troubleshooting\n", "### Common Issues\n"]
 

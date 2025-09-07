@@ -268,9 +268,7 @@ class TestTemplateDiscoveryCustom:
         template_name = "test-template"
 
         # Create template in both directories
-        for i, (dir_path, version) in enumerate(
-            [(custom_dir, "2.0.0"), (builtin_dir, "1.0.0")]
-        ):
+        for dir_path, version in [(custom_dir, "2.0.0"), (builtin_dir, "1.0.0")]:
             template_dir = dir_path / template_name
             template_dir.mkdir()
             template_json = template_dir / "template.json"

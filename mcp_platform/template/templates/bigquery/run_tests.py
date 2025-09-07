@@ -136,7 +136,7 @@ def analyze_coverage(bigquery_dir):
         return False, 0.0
 
     try:
-        with open(coverage_file, "r") as f:
+        with open(coverage_file) as f:
             coverage_data = json.load(f)
 
         # Get overall coverage percentage

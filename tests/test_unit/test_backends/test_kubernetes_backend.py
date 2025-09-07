@@ -22,9 +22,7 @@ class TestKubernetesDeploymentService:
     @patch("mcp_platform.backends.kubernetes.client.AppsV1Api")
     @patch("mcp_platform.backends.kubernetes.client.CoreV1Api")
     @patch("mcp_platform.backends.kubernetes.client.AutoscalingV1Api")
-    def test_init_success(
-        self, mock_autoscaling, mock_core, mock_apps, mock_load_config
-    ):
+    def test_init_success(self, mock_autoscaling, mock_core, mock_apps, mock_load_config):
         """Test successful Kubernetes service initialization."""
         # Mock API resources call
         mock_core_instance = Mock()

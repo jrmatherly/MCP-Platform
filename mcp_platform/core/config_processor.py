@@ -8,7 +8,7 @@ and handle special properties like volume mounts and command arguments.
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 import yaml
 
@@ -30,11 +30,11 @@ class ValidationResult:
     def __init__(
         self,
         valid: bool = True,
-        errors: List[str] = None,
-        warnings: List[str] = None,
-        missing_required: Optional[List[str]] = None,
-        conditional_issues: Optional[List[Dict[str, Any]]] = None,
-        suggestions: Optional[List[str]] = None,
+        errors: list[str] = None,
+        warnings: list[str] = None,
+        missing_required: list[str] | None = None,
+        conditional_issues: list[dict[str, Any]] | None = None,
+        suggestions: list[str] | None = None,
     ):
         self.valid = valid
         self.errors = errors or []
@@ -44,7 +44,7 @@ class ValidationResult:
         self.conditional_issues = conditional_issues or []
         self.suggestions = suggestions or []
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary format."""
         return {
             "valid": self.valid,
@@ -64,8 +64,8 @@ class ConfigProcessor:
         pass
 
     def _convert_overrides_to_env_vars(
-        self, override_values: Dict[str, str]
-    ) -> Dict[str, str]:
+        self, override_values: dict[str, str]
+    ) -> dict[str, str]:
         """
         Convert override values to environment variables with OVERRIDE_ prefix.
 
@@ -88,8 +88,8 @@ class ConfigProcessor:
         return override_env_vars
 
     def _apply_template_overrides(
-        self, template_data: Dict[str, Any], override_values: Optional[Dict[str, str]]
-    ) -> Dict[str, Any]:
+        self, template_data: dict[str, Any], override_values: dict[str, str] | None
+    ) -> dict[str, Any]:
         """Apply template data overrides using double underscore notation."""
         import copy
 
@@ -158,8 +158,8 @@ class ConfigProcessor:
         return template_copy
 
     def _extract_config_overrides(
-        self, override_values: Dict[str, str], template_data: Dict[str, Any]
-    ) -> Dict[str, str]:
+        self, override_values: dict[str, str], template_data: dict[str, Any]
+    ) -> dict[str, str]:
         """
         Extract config-related overrides that should be converted to environment variables.
 
@@ -236,15 +236,15 @@ class ConfigProcessor:
 
     def prepare_configuration(
         self,
-        template: Dict[str, Any],
-        env_vars: Optional[Dict[str, str]] = None,
-        config_file: Optional[str] = None,
-        config_values: Optional[Dict[str, str]] = None,
-        session_config: Optional[Dict[str, Any]] = None,
-        inline_config: Optional[List[str]] = None,
-        env_var_list: Optional[List[str]] = None,
-        override_values: Optional[Dict[str, str]] = None,
-    ) -> Dict[str, Any]:
+        template: dict[str, Any],
+        env_vars: dict[str, str] | None = None,
+        config_file: str | None = None,
+        config_values: dict[str, str] | None = None,
+        session_config: dict[str, Any] | None = None,
+        inline_config: list[str] | None = None,
+        env_var_list: list[str] | None = None,
+        override_values: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
         """
         Prepare configuration from multiple sources with proper type conversion.
 
@@ -319,16 +319,16 @@ class ConfigProcessor:
 
     def validate_config(
         self,
-        config_or_template: Dict[str, Any],
-        schema: Optional[Dict[str, Any]] = None,
+        config_or_template: dict[str, Any],
+        schema: dict[str, Any] | None = None,
         *,
-        env_vars: Optional[Dict[str, str]] = None,
-        config_file: Optional[str] = None,
-        config_values: Optional[Dict[str, str]] = None,
-        session_config: Optional[Dict[str, Any]] = None,
-        inline_config: Optional[List[str]] = None,
-        env_var_list: Optional[List[str]] = None,
-        override_values: Optional[Dict[str, str]] = None,
+        env_vars: dict[str, str] | None = None,
+        config_file: str | None = None,
+        config_values: dict[str, str] | None = None,
+        session_config: dict[str, Any] | None = None,
+        inline_config: list[str] | None = None,
+        env_var_list: list[str] | None = None,
+        override_values: dict[str, str] | None = None,
     ) -> ValidationResult:
         """
         Validate configuration.
@@ -355,7 +355,7 @@ class ConfigProcessor:
                 config_schema = template_info.get("config_schema", {})
 
                 # session_config is expected to be property-keyed config provided by caller
-                session_env_config: Dict[str, Any] = {}
+                session_env_config: dict[str, Any] = {}
                 if session_config:
                     try:
                         session_env_config = self._convert_config_values(
@@ -377,7 +377,7 @@ class ConfigProcessor:
 
                 # Map prepared env-var keys back to property names for schema validation
                 properties = config_schema.get("properties", {})
-                effective_config: Dict[str, Any] = {}
+                effective_config: dict[str, Any] = {}
                 for prop_name, prop_info in properties.items():
                     env_mapping = prop_info.get("env_mapping", prop_name.upper())
                     if env_mapping in prepared_env:
@@ -454,11 +454,11 @@ class ConfigProcessor:
 
     def handle_volume_and_args_config_properties(
         self,
-        template: Dict[str, Any],
-        config: Dict[str, Any],
-        additional_volumes: Union[Dict[str, str], List, None] = None,
+        template: dict[str, Any],
+        config: dict[str, Any],
+        additional_volumes: dict[str, str] | list | None = None,
         default_mount_path: str = "/mnt",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Process properties that have volume_mount or command_arg set to True.
         These should not be treated as environment variables but as Docker volumes/commands.
@@ -611,7 +611,7 @@ class ConfigProcessor:
             "config": config,
         }
 
-    def _load_json_yaml_config_file(self, config_file: str) -> Dict[str, Any]:
+    def _load_json_yaml_config_file(self, config_file: str) -> dict[str, Any]:
         """Load configuration from JSON/YAML file and map to environment variables."""
         file_config = {}
 
@@ -622,10 +622,10 @@ class ConfigProcessor:
 
             # Load based on extension
             if config_path.suffix.lower() in [".yaml", ".yml"]:
-                with open(config_path, "r", encoding="utf-8") as f:
+                with open(config_path, encoding="utf-8") as f:
                     file_config = yaml.safe_load(f)
             else:
-                with open(config_path, "r", encoding="utf-8") as f:
+                with open(config_path, encoding="utf-8") as f:
                     file_config = json.load(f)
 
         except Exception as e:
@@ -635,8 +635,8 @@ class ConfigProcessor:
         return file_config
 
     def _load_config_file(
-        self, config_file: str, template: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, config_file: str, template: dict[str, Any]
+    ) -> dict[str, Any]:
         """Load configuration from JSON/YAML file and map to environment variables."""
         try:
             file_config = self._load_json_yaml_config_file(config_file)
@@ -647,8 +647,8 @@ class ConfigProcessor:
             raise
 
     def _map_file_config_to_env(
-        self, file_config: Dict[str, Any], template: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, file_config: dict[str, Any], template: dict[str, Any]
+    ) -> dict[str, Any]:
         """Map config file values to environment variables based on template schema."""
         env_config = {}
 
@@ -680,7 +680,7 @@ class ConfigProcessor:
         return env_config
 
     def _find_nested_config_value(
-        self, file_config: Dict[str, Any], prop_name: str, prop_config: Dict[str, Any]
+        self, file_config: dict[str, Any], prop_name: str, prop_config: dict[str, Any]
     ) -> Any:
         """Find config value using common nested patterns."""
         # Check if property config has a file_mapping hint
@@ -699,7 +699,7 @@ class ConfigProcessor:
 
         return None
 
-    def _generate_common_patterns(self, prop_name: str) -> List[str]:
+    def _generate_common_patterns(self, prop_name: str) -> list[str]:
         """Generate common nested configuration patterns for a property."""
         patterns = []
 
@@ -761,7 +761,7 @@ class ConfigProcessor:
         components = snake_str.split("_")
         return components[0] + "".join(word.capitalize() for word in components[1:])
 
-    def _get_nested_value(self, data: Dict[str, Any], path: str) -> Any:
+    def _get_nested_value(self, data: dict[str, Any], path: str) -> Any:
         """Get nested value from dictionary using dot notation."""
         keys = path.split(".")
         value = data
@@ -773,7 +773,7 @@ class ConfigProcessor:
         return value
 
     def _convert_value_to_env_string(
-        self, value: Any, prop_config: Dict[str, Any]
+        self, value: Any, prop_config: dict[str, Any]
     ) -> str:
         """Convert a value to environment variable string format."""
         if isinstance(value, list):
@@ -784,8 +784,8 @@ class ConfigProcessor:
             return str(value)
 
     def _convert_config_values(
-        self, config_values: Dict[str, str], template: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, config_values: dict[str, str], template: dict[str, Any]
+    ) -> dict[str, Any]:
         """Convert CLI config values to proper types based on template schema."""
         converted_config = {}
         # Get the config schema from template
@@ -857,8 +857,8 @@ class ConfigProcessor:
         return converted_config
 
     def _handle_nested_cli_config(
-        self, nested_key: str, value: str, properties: Dict[str, Any]
-    ) -> Optional[str]:
+        self, nested_key: str, value: str, properties: dict[str, Any]
+    ) -> str | None:
         """Handle nested CLI configuration using double underscore notation."""
         # Convert security__read_only to find read_only_mode in properties
         # Also supports template__property notation for template-level overrides
@@ -896,8 +896,8 @@ class ConfigProcessor:
 
     @staticmethod
     def validate_config_schema(
-        config_schema: Dict[str, Any], config: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        config_schema: dict[str, Any], config: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Validate config against JSON Schema with support for conditional requirements.
         Returns validation result with missing_required, conditional_issues, and suggestions.
@@ -1040,8 +1040,8 @@ class ConfigProcessor:
 
     @staticmethod
     def _check_condition(
-        condition: Dict[str, Any], config: Dict[str, Any], properties: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        condition: dict[str, Any], config: dict[str, Any], properties: dict[str, Any]
+    ) -> dict[str, Any]:
         """Check if a single condition (from anyOf/oneOf) is satisfied."""
         result = {"satisfied": True, "errors": [], "missing": []}
 
@@ -1098,10 +1098,10 @@ class ConfigProcessor:
 
     @staticmethod
     def _generate_config_suggestions(
-        config_schema: Dict[str, Any], config: Dict[str, Any]
-    ) -> List[str]:
+        config_schema: dict[str, Any], config: dict[str, Any]
+    ) -> list[str]:
         """Generate helpful suggestions based on conditional validation failures."""
-        suggestions: List[str] = []
+        suggestions: list[str] = []
         properties = config_schema.get("properties", {})
 
         # Generic suggestions based on anyOf/oneOf structure
@@ -1174,7 +1174,7 @@ class ConfigProcessor:
 
     @staticmethod
     def is_conditionally_required(
-        prop_name: str, config_schema: Dict[str, Any], current_config: Dict[str, Any]
+        prop_name: str, config_schema: dict[str, Any], current_config: dict[str, Any]
     ) -> bool:
         """Check if a property is conditionally required based on current config."""
         # Check anyOf conditions
@@ -1197,7 +1197,7 @@ class ConfigProcessor:
 
     @staticmethod
     def _prop_required_in_condition(
-        prop_name: str, condition: Dict[str, Any], current_config: Dict[str, Any]
+        prop_name: str, condition: dict[str, Any], current_config: dict[str, Any]
     ) -> bool:
         """Check if a property is required in a specific condition."""
         # First check if the condition applies to current config
@@ -1223,14 +1223,14 @@ class ConfigProcessor:
 
     def check_missing_config(
         self,
-        template_info: Dict[str, Any],
-        config: Dict[str, Any],
-        env_vars: Dict[str, str],
-        config_file: Optional[str] = None,
-        config_values: Optional[Dict[str, str]] = None,
-        inline_config: Optional[List[str]] = None,
-        env_var_list: Optional[List[str]] = None,
-        override_values: Optional[Dict[str, str]] = None,
+        template_info: dict[str, Any],
+        config: dict[str, Any],
+        env_vars: dict[str, str],
+        config_file: str | None = None,
+        config_values: dict[str, str] | None = None,
+        inline_config: list[str] | None = None,
+        env_var_list: list[str] | None = None,
+        override_values: dict[str, str] | None = None,
     ) -> ValidationResult:
         """Check for missing required configuration with conditional requirements support.
 
@@ -1246,7 +1246,7 @@ class ConfigProcessor:
 
         # The incoming `config` is property-keyed (e.g., {'api_key': 'x'}). The
         # prepare_configuration expects session_config to be env-var keyed.
-        session_env_config: Dict[str, Any] = {}
+        session_env_config: dict[str, Any] = {}
         if config:
             try:
                 session_env_config = self._convert_config_values(config, template_info)
@@ -1266,7 +1266,7 @@ class ConfigProcessor:
 
         # Map prepared env-var keys back to property names for schema validation
         properties = config_schema.get("properties", {})
-        effective_config: Dict[str, Any] = {}
+        effective_config: dict[str, Any] = {}
         for prop_name, prop_info in properties.items():
             env_mapping = prop_info.get("env_mapping", prop_name.upper())
             if env_mapping in prepared_env:

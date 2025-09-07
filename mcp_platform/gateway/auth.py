@@ -6,7 +6,7 @@ Provides JWT token authentication, API key management, and security utilities.
 
 import secrets
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 from fastapi import Depends, HTTPException, Security, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -47,7 +47,7 @@ class AuthManager:
         return pwd_context.hash(password)
 
     def create_access_token(
-        self, data: Dict[str, Any], expires_delta: Optional[timedelta] = None
+        self, data: dict[str, Any], expires_delta: timedelta | None = None
     ) -> str:
         """Create JWT access token."""
         to_encode = data.copy()
@@ -64,7 +64,7 @@ class AuthManager:
         )
         return encoded_jwt
 
-    def verify_token(self, token: str) -> Dict[str, Any]:
+    def verify_token(self, token: str) -> dict[str, Any]:
         """Verify and decode JWT token."""
         try:
             payload = jwt.decode(
@@ -86,7 +86,7 @@ class AuthManager:
         """Verify API key against its hash."""
         return pwd_context.verify(api_key, hashed_key)
 
-    async def authenticate_user(self, username: str, password: str) -> Optional[User]:
+    async def authenticate_user(self, username: str, password: str) -> User | None:
         """Authenticate user with username and password."""
         user = await self.user_crud.get_by_username(username)
         if not user:
@@ -95,7 +95,7 @@ class AuthManager:
             return None
         return user
 
-    async def authenticate_api_key(self, api_key: str) -> Optional[APIKey]:
+    async def authenticate_api_key(self, api_key: str) -> APIKey | None:
         """Authenticate user with API key."""
         # Extract the key part from "mcp_..." format
         if not api_key.startswith("mcp_"):
@@ -116,7 +116,7 @@ class AuthManager:
         return None
 
     async def create_user(
-        self, username: str, password: str, email: Optional[str] = None, **kwargs
+        self, username: str, password: str, email: str | None = None, **kwargs
     ) -> User:
         """Create a new user."""
         hashed_password = self.get_password_hash(password)
@@ -137,9 +137,9 @@ class AuthManager:
         self,
         user_id: int,
         name: str,
-        description: Optional[str] = None,
-        scopes: Optional[List[str]] = None,
-        expires_days: Optional[int] = None,
+        description: str | None = None,
+        scopes: list[str] | None = None,
+        expires_days: int | None = None,
     ) -> tuple[APIKey, str]:
         """Create a new API key for a user."""
         api_key = self.generate_api_key()
@@ -166,7 +166,7 @@ class AuthManager:
 
 
 # Global auth manager
-auth_manager: Optional[AuthManager] = None
+auth_manager: AuthManager | None = None
 
 
 def get_auth_manager() -> AuthManager:
@@ -187,8 +187,8 @@ def initialize_auth(config: AuthConfig, db: DatabaseManager) -> AuthManager:
 
 
 async def get_current_user_token(
-    credentials: Optional[HTTPAuthorizationCredentials] = Security(security),
-) -> Dict[str, Any]:
+    credentials: HTTPAuthorizationCredentials | None = Security(security),
+) -> dict[str, Any]:
     """Get current user from JWT token."""
     if not credentials:
         raise HTTPException(
@@ -210,7 +210,7 @@ async def get_current_user_token(
 
 
 async def get_current_user(
-    token_data: Dict[str, Any] = Depends(get_current_user_token),
+    token_data: dict[str, Any] = Depends(get_current_user_token),
     db: DatabaseManager = Depends(get_database),
 ) -> User:
     """Get current user from token."""
@@ -239,7 +239,7 @@ async def get_current_user(
 
 
 async def get_current_api_key(
-    credentials: Optional[HTTPAuthorizationCredentials] = Security(security),
+    credentials: HTTPAuthorizationCredentials | None = Security(security),
 ) -> APIKey:
     """Get current API key."""
     if not credentials:
@@ -263,9 +263,9 @@ async def get_current_api_key(
 
 
 async def get_current_user_or_api_key(
-    credentials: Optional[HTTPAuthorizationCredentials] = Security(security),
+    credentials: HTTPAuthorizationCredentials | None = Security(security),
     db: DatabaseManager = Depends(get_database),
-) -> Union[User, APIKey]:
+) -> User | APIKey:
     """Get current user from either JWT token or API key."""
     if not credentials:
         raise HTTPException(
@@ -302,11 +302,11 @@ async def get_current_user_or_api_key(
     )
 
 
-def require_scopes(required_scopes: List[str]):
+def require_scopes(required_scopes: list[str]):
     """Decorator to require specific scopes."""
 
     async def dependency(
-        auth_subject: Union[User, APIKey] = Depends(get_current_user_or_api_key),
+        auth_subject: User | APIKey = Depends(get_current_user_or_api_key),
     ):
         if isinstance(auth_subject, User):
             # Users have all scopes if they are superusers

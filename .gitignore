@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 *.so
 .Python
+.ruff_cache
 build/
 develop-eggs/
 dist/
@@ -235,3 +236,7 @@ docs/server-templates/*/
 
 # Secrets
 secrets/
+
+# Certificates
+mcp_platform/gateway/nginx/ssl/fullchain.pem
+mcp_platform/gateway/nginx/ssl/privkey.pem

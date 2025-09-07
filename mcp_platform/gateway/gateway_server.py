@@ -10,7 +10,7 @@ import os
 import secrets
 import time
 from contextlib import asynccontextmanager
-from typing import Any, Dict, Optional, Union
+from typing import Any
 
 import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, status
@@ -127,7 +127,7 @@ class MCPGatewayServer:
     - Backward compatibility with existing clients
     """
 
-    def __init__(self, config: Optional[GatewayConfig] = None):
+    def __init__(self, config: GatewayConfig | None = None):
         """
         Initialize enhanced MCP Gateway server.
 
@@ -168,7 +168,7 @@ class MCPGatewayServer:
 
         # Runtime state
         self._request_count = 0
-        self._start_time: Optional[float] = None
+        self._start_time: float | None = None
 
     def _setup_routes(self):
         """Setup FastAPI routes with authentication and validation."""
@@ -215,7 +215,7 @@ class MCPGatewayServer:
         )
         async def create_api_key(
             api_key_data: APIKeyCreate,
-            current_user: Union[User, APIKey] = Depends(get_current_user_or_api_key),
+            current_user: User | APIKey = Depends(get_current_user_or_api_key),
         ):
             """Create a new API key."""
             auth: AuthManager = self.app.state.auth
@@ -350,7 +350,7 @@ class MCPGatewayServer:
         @self.app.get("/mcp/{template_name}/tools/list")
         async def list_tools(
             template_name: str,
-            _auth: Union[User, APIKey] = Depends(get_current_user_or_api_key),
+            _auth: User | APIKey = Depends(get_current_user_or_api_key),
         ):
             """List tools for a specific template."""
             return await self._handle_mcp_request(template_name, "tools/list", {})
@@ -361,7 +361,7 @@ class MCPGatewayServer:
         async def call_tool(
             template_name: str,
             request: ToolCallRequest,
-            _auth: Union[User, APIKey] = Depends(require_tools_call),
+            _auth: User | APIKey = Depends(require_tools_call),
         ):
             """Call a tool through the gateway."""
             self._request_count += 1
@@ -374,7 +374,7 @@ class MCPGatewayServer:
         @self.app.get("/mcp/{template_name}/resources/list")
         async def list_resources(
             template_name: str,
-            _auth: Union[User, APIKey] = Depends(get_current_user_or_api_key),
+            _auth: User | APIKey = Depends(get_current_user_or_api_key),
         ):
             """List resources for a specific template."""
             return await self._handle_mcp_request(template_name, "resources/list", {})
@@ -382,8 +382,8 @@ class MCPGatewayServer:
         @self.app.post("/mcp/{template_name}/resources/read")
         async def read_resource(
             template_name: str,
-            request: Dict[str, Any],
-            _auth: Union[User, APIKey] = Depends(get_current_user_or_api_key),
+            request: dict[str, Any],
+            _auth: User | APIKey = Depends(get_current_user_or_api_key),
         ):
             """Read a resource through the gateway."""
             return await self._handle_mcp_request(
@@ -393,7 +393,7 @@ class MCPGatewayServer:
         @self.app.get("/mcp/{template_name}/prompts/list")
         async def list_prompts(
             template_name: str,
-            _auth: Union[User, APIKey] = Depends(get_current_user_or_api_key),
+            _auth: User | APIKey = Depends(get_current_user_or_api_key),
         ):
             """List prompts for a specific template."""
             return await self._handle_mcp_request(template_name, "prompts/list", {})
@@ -401,8 +401,8 @@ class MCPGatewayServer:
         @self.app.post("/mcp/{template_name}/prompts/get")
         async def get_prompt(
             template_name: str,
-            request: Dict[str, Any],
-            _auth: Union[User, APIKey] = Depends(get_current_user_or_api_key),
+            request: dict[str, Any],
+            _auth: User | APIKey = Depends(get_current_user_or_api_key),
         ):
             """Get a prompt through the gateway."""
             return await self._handle_mcp_request(template_name, "prompts/get", request)
@@ -439,8 +439,8 @@ class MCPGatewayServer:
             )
 
     async def _handle_mcp_request(
-        self, template_name: str, method: str, params: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, template_name: str, method: str, params: dict[str, Any]
+    ) -> dict[str, Any]:
         """Handle MCP request with load balancing and failover."""
         registry: ServerRegistry = self.app.state.registry
         load_balancer: LoadBalancer = self.app.state.load_balancer
@@ -487,8 +487,8 @@ class MCPGatewayServer:
             return await self._try_stdio_fallback(template_name, method, params)
 
     async def _route_http_request(
-        self, instance: "ServerInstance", method: str, params: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, instance: "ServerInstance", method: str, params: dict[str, Any]
+    ) -> dict[str, Any]:
         """Route request to HTTP MCP server."""
         connection = MCPConnection(timeout=60)
 
@@ -533,8 +533,8 @@ class MCPGatewayServer:
             await connection.disconnect()
 
     async def _route_stdio_request(
-        self, instance: "ServerInstance", method: str, params: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, instance: "ServerInstance", method: str, params: dict[str, Any]
+    ) -> dict[str, Any]:
         """Route request to stdio MCP server."""
         connection = MCPConnection(timeout=60)
 
@@ -570,8 +570,8 @@ class MCPGatewayServer:
             await connection.disconnect()
 
     async def _try_stdio_fallback(
-        self, template_name: str, method: str, params: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, template_name: str, method: str, params: dict[str, Any]
+    ) -> dict[str, Any]:
         """Try stdio fallback using MultiBackendManager."""
         backend_manager = self.app.state.backend_manager
 

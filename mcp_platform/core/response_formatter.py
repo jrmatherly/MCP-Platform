@@ -10,7 +10,7 @@ import datetime
 import json
 import logging
 import traceback
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 from rich.columns import Columns
 from rich.console import Console
@@ -86,7 +86,7 @@ def get_backend_indicator(backend_type: str, include_icon: bool = True) -> str:
         return f"[{color}] {name}[/]"
 
 
-def format_timestamp(timestamp: Union[str, datetime.datetime, None]) -> str:
+def format_timestamp(timestamp: str | datetime.datetime | None) -> str:
     """
     Format timestamp for display.
 
@@ -129,7 +129,7 @@ def format_timestamp(timestamp: Union[str, datetime.datetime, None]) -> str:
         return dt.strftime("%Y-%m-%d")
 
 
-def format_deployment_summary(deployments: List[Dict[str, Any]]) -> str:
+def format_deployment_summary(deployments: list[dict[str, Any]]) -> str:
     """
     Create a summary string for a list of deployments.
 
@@ -247,7 +247,7 @@ class ResponseFormatter:
         # Default to showing it if we're unsure
         return True
 
-    def _analyze_data_types(self, data: Any) -> Dict[str, Any]:
+    def _analyze_data_types(self, data: Any) -> dict[str, Any]:
         """Analyze data structure and return metadata about its composition."""
         ignore_keys = [
             "success",
@@ -273,7 +273,7 @@ class ResponseFormatter:
             analysis["element_types"] = {k: type(v).__name__ for k, v in data.items()}
 
             # Analyze value types for homogeneity
-            value_types = set(type(v).__name__ for v in data.values())
+            value_types = {type(v).__name__ for v in data.values()}
             analysis["is_homogeneous"] = len(value_types) == 1
             analysis["value_types"] = list(value_types)
 
@@ -307,7 +307,7 @@ class ResponseFormatter:
             if data:
                 element_types = [type(item).__name__ for item in data]
                 analysis["element_types"] = dict(
-                    zip(range(len(element_types)), element_types)
+                    zip(range(len(element_types)), element_types, strict=False)
                 )
                 analysis["is_homogeneous"] = len(set(element_types)) == 1
                 analysis["item_type"] = (
@@ -413,7 +413,7 @@ class ResponseFormatter:
 
         return False
 
-    def _has_consistent_keys(self, data: List[dict]) -> bool:
+    def _has_consistent_keys(self, data: list[dict]) -> bool:
         """Check if list of dicts has consistent keys for table display."""
         if not data or not isinstance(data[0], dict):
             return False
@@ -498,7 +498,7 @@ class ResponseFormatter:
         return table
 
     def _create_data_table(
-        self, data: Union[List[dict], dict], title: str = "Data"
+        self, data: list[dict] | dict, title: str = "Data"
     ) -> Table:
         """Create a dynamic table from list of dictionaries or tabular dict with intelligent column formatting."""
         if isinstance(data, dict) and self._is_tabular_dict(data):
@@ -615,7 +615,7 @@ class ResponseFormatter:
 
         # Add rows with intelligent value formatting
         max_rows = getattr(self, "max_display_rows", 25)
-        for i, item in enumerate(data[:max_rows]):
+        for item in data[:max_rows]:
             if not isinstance(item, dict):
                 continue
 
@@ -692,7 +692,7 @@ class ResponseFormatter:
 
     def _create_list_display(
         self, data: list, title: str = "Items"
-    ) -> Union[Table, Panel]:
+    ) -> Table | Panel:
         """Create display for simple lists."""
         max_items = getattr(self, "max_display_rows", 20)
         if len(data) <= 10 and all(
@@ -845,7 +845,7 @@ class ResponseFormatter:
                 if len(value) > 10:  # Large dicts get summary
                     branch = node.add(f"[yellow]{key}[/yellow] ({len(value)} items)")
                     # Show first few items
-                    for i, (k, v) in enumerate(list(value.items())[:3]):
+                    for k, v in list(value.items())[:3]:
                         add_to_tree(branch, k, v, max_depth, current_depth + 1)
                     if len(value) > 3:
                         branch.add("[dim]... more items[/dim]")
@@ -885,7 +885,7 @@ class ResponseFormatter:
         self.console.print(tree)
 
     def _display_json_syntax(
-        self, data: Any, title: str, analysis: Dict[str, Any] = None
+        self, data: Any, title: str, analysis: dict[str, Any] = None
     ) -> None:
         """Display data as syntax-highlighted JSON with optional analysis hints."""
         if isinstance(data, str):
@@ -976,7 +976,7 @@ class ResponseFormatter:
 
             if template_json_path.exists():
                 try:
-                    with open(template_json_path, "r") as f:
+                    with open(template_json_path) as f:
                         template_data = json.load(f)
                         formatter_config = template_data.get("response_formatter", {})
 
@@ -1061,7 +1061,7 @@ class ResponseFormatter:
 
         return None
 
-    def _extract_response_text(self, response: Dict[str, Any]) -> Optional[str]:
+    def _extract_response_text(self, response: dict[str, Any]) -> str | None:
         """Extract the actual response text from MCP response structure."""
         try:
             if "result" in response and response["result"]:
@@ -1112,7 +1112,7 @@ class ResponseFormatter:
             return
 
     def beautify_tool_response(
-        self, response: Dict[str, Any], template_name: str = None, tool_name: str = None
+        self, response: dict[str, Any], template_name: str = None, tool_name: str = None
     ) -> None:
         """Beautify tool execution response with enhanced formatting."""
         # First try template-specific formatter if available
@@ -1263,7 +1263,7 @@ class ResponseFormatter:
 
     def beautify_tools_list(
         self,
-        tools: List[Dict[str, Any]],
+        tools: list[dict[str, Any]],
         source: str = "Template",
         discovery_method: str = "unknown",
         backend: str = "unknown",
@@ -1351,7 +1351,7 @@ class ResponseFormatter:
                 f"[dim]💡 Using {backend} backend for container operations[/dim]"
             )
 
-    def beautify_deployed_servers(self, servers: List[Dict[str, Any]]) -> None:
+    def beautify_deployed_servers(self, servers: list[dict[str, Any]]) -> None:
         """Beautify deployed servers list."""
         if not servers:
             self.console.print("[yellow]⚠️  No deployed servers found[/yellow]")
@@ -1399,7 +1399,7 @@ class ResponseFormatter:
         self.console.print(table)
 
     def beautify_deployed_servers_grouped(
-        self, grouped_deployments: Dict[str, List[Dict]], show_empty: bool = False
+        self, grouped_deployments: dict[str, list[dict]], show_empty: bool = False
     ) -> None:
         """
         Render deployments grouped by backend with visual separation.
@@ -1472,7 +1472,7 @@ class ResponseFormatter:
 
     def beautify_logs(
         self,
-        logs: Union[str, Dict[str, List[Dict[str, str]]]],
+        logs: str | dict[str, list[dict[str, str]]],
         deployment_id: str = None,
         title: str = "Deployment Logs",
     ) -> None:
@@ -1532,7 +1532,7 @@ class ResponseFormatter:
             return
         self.console.print(Panel(str(logs), title=title, border_style="blue"))
 
-    def render_backend_health_status(self, health_data: Dict[str, Any]) -> None:
+    def render_backend_health_status(self, health_data: dict[str, Any]) -> None:
         """
         Render health status for all backends.
 

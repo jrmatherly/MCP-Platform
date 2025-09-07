@@ -5,6 +5,7 @@ Set up your development environment for MCP Templates and learn advanced templat
 ## Prerequisites
 
 - Python 3.10 or higher
+- [uv](https://docs.astral.sh/uv/) for fast package management
 - Docker and Docker Compose
 - Git
 - Make (optional, for convenience commands)
@@ -18,35 +19,31 @@ cd MCP-Platform
 
 ## Development Installation
 
-### Option 1: Using Make (Recommended)
+### Option 1: Using uv and Make (Recommended)
 
 ```bash
-# Complete development setup
+# Complete development setup with uv
 make dev-setup
 ```
 
 This command will:
-- Install all dependencies
+- Create virtual environment with uv
+- Install all dependencies including dev extras
 - Install in development mode
 - Set up the development environment
 
-### Option 2: Manual Setup
+### Option 2: Manual Setup with uv
 
 ```bash
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+# Create and activate virtual environment
+uv venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
-# Install dependencies
+# Install all dependencies with dev extras
+uv sync --all-extras
 make install
 # OR manually:
-pip install -r requirements.txt
-pip install -r requirements-dev.txt
-
-# Install in development mode
-make install-dev
-# OR manually:
-pip install -e .
+uv sync
 ```
 
 ## Developer Guide: Template.json Configuration

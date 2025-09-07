@@ -312,7 +312,7 @@ class TestMCPClientIntegration:
         ):
             # Setup multiple mock connections
             mock_connections = []
-            for i in range(3):
+            for _ in range(3):
                 mock_conn = MagicMock()
                 mock_conn.connect_stdio = AsyncMock(return_value=True)
                 mock_conn.disconnect = AsyncMock()

@@ -19,7 +19,7 @@ class TestSlackConfig:
         template_dir = Path(__file__).parent.parent
         template_json = template_dir / "template.json"
 
-        with open(template_json, "r") as f:
+        with open(template_json) as f:
             return json.load(f)
 
     def test_config_schema_validity(self, template_config):

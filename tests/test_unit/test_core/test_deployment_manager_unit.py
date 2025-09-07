@@ -221,9 +221,7 @@ class TestDeploymentManager:
                 mock_get_info.return_value = {"id": "demo-123", "status": "running"}
                 mock_stop.return_value = True
 
-                result = self.deployment_manager.stop_deployments_bulk(
-                    deployment_filters
-                )
+                result = self.deployment_manager.stop_deployments_bulk(deployment_filters)
 
         assert result["success"] is True
         assert len(result["stopped_deployments"]) >= 0
@@ -270,9 +268,7 @@ class TestDeploymentManager:
             # Test that the method calls the backend correctly
             callback = Mock()
 
-            self.deployment_manager.stream_deployment_logs(
-                "demo-123", callback, lines=50
-            )
+            self.deployment_manager.stream_deployment_logs("demo-123", callback, lines=50)
 
         mock_stream.assert_called_once_with("demo-123", callback, 50)
 
@@ -626,9 +622,7 @@ class TestDeploymentManagerVolumeMounting:
         }
 
         # Test configuration with list volumes
-        config = {
-            "volumes": ["/host/path:/container/path:ro", "/host/data:/app/data:rw"]
-        }
+        config = {"volumes": ["/host/path:/container/path:ro", "/host/data:/app/data:rw"]}
 
         deployment_options = DeploymentOptions()
 

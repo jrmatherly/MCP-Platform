@@ -2,7 +2,6 @@
 Core execptions for MCP Template system.
 """
 
-from typing import Optional
 
 
 class MCPException(Exception):
@@ -62,7 +61,7 @@ class InvalidConfigurationError(MCPException):
 class ToolNotFoundError(MCPException):
     """Exception raised when a requested tool is not found."""
 
-    def __init__(self, tool_name: str, template_id: Optional[str] = None):
+    def __init__(self, tool_name: str, template_id: str | None = None):
         """
         Args:
             tool_name: Name of the tool that was not found.
@@ -91,7 +90,7 @@ class DeploymentError(MCPException):
 class ToolCallError(MCPException):
     """Exception raised for errors during tool calls."""
 
-    def __init__(self, message: str, tool_name: Optional[str] = None):
+    def __init__(self, message: str, tool_name: str | None = None):
         """
         Args:
             message: Error message to display.

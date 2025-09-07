@@ -9,9 +9,9 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-pytestmark = pytest.mark.unit
-
 from mcp_platform.tools.mcp_client_probe import MCPClientProbe
+
+pytestmark = pytest.mark.unit
 
 
 class TestMCPClientProbe:
@@ -70,9 +70,7 @@ class TestMCPClientProbe:
         with patch(
             "asyncio.create_subprocess_exec", side_effect=OSError("Process failed")
         ):
-            result = await self.probe.discover_tools_from_command(
-                ["invalid", "command"]
-            )
+            result = await self.probe.discover_tools_from_command(["invalid", "command"])
 
             assert result is None
 
@@ -112,9 +110,7 @@ class TestMCPClientProbe:
                 "_initialize_mcp_session",
                 side_effect=asyncio.TimeoutError(),
             ):
-                result = await self.probe.discover_tools_from_command(
-                    ["slow", "server"]
-                )
+                result = await self.probe.discover_tools_from_command(["slow", "server"])
 
                 assert result is None
                 mock_process.terminate.assert_called_once()
