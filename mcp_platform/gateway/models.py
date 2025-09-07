@@ -11,8 +11,7 @@ from enum import Enum
 from typing import Any, Optional
 
 from pydantic import field_validator
-from sqlmodel import JSON, Column, Relationship, SQLModel
-from sqlmodel import Field as SQLField
+from sqlmodel import JSON, Column, Field as SQLField, Relationship, SQLModel
 
 
 class TransportType(str, Enum):
@@ -213,9 +212,7 @@ class ServerTemplate(ServerTemplateBase, table=True):
 
     # Relationships
     instances: list[ServerInstance] = Relationship(back_populates="template")
-    load_balancer: LoadBalancerConfig | None = Relationship(
-        back_populates="template"
-    )
+    load_balancer: LoadBalancerConfig | None = Relationship(back_populates="template")
 
     def get_healthy_instances(self) -> list[ServerInstance]:
         """Get all healthy instances for this template."""
@@ -224,8 +221,6 @@ class ServerTemplate(ServerTemplateBase, table=True):
 
 class ServerTemplateCreate(ServerTemplateBase):
     """Model for creating server templates."""
-
-    pass
 
 
 class ServerTemplateUpdate(SQLModel):

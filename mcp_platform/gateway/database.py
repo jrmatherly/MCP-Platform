@@ -400,9 +400,7 @@ class DatabaseManager:
             await session.refresh(load_balancer)
             return load_balancer
 
-    async def get_load_balancer_config(
-        self, lb_id: str
-    ) -> LoadBalancerConfig | None:
+    async def get_load_balancer_config(self, lb_id: str) -> LoadBalancerConfig | None:
         """Get load balancer config by ID."""
         async with self.get_session() as session:
             result = await session.get(LoadBalancerConfig, lb_id)
@@ -466,7 +464,6 @@ class ServerInstanceCRUD:
     async def get_active(self) -> list[ServerInstance]:
         """Get all active server instances."""
         async with self.db.get_session() as session:
-
             result = await session.execute(
                 select(ServerInstance).where(ServerInstance.is_active is True)
             )
@@ -605,9 +602,7 @@ class UserCRUD(BaseCRUD):
         async with self.db.get_session() as session:
             from sqlalchemy import select
 
-            result = await session.execute(
-                select(User).where(User.username == username)
-            )
+            result = await session.execute(select(User).where(User.username == username))
             return result.scalar_one_or_none()
 
     async def get_user_by_email(self, email: str) -> User | None:
@@ -700,9 +695,7 @@ _database_manager: DatabaseManager | None = None
 def get_database() -> DatabaseManager:
     """Get global database manager."""
     if _database_manager is None:
-        raise RuntimeError(
-            "Database not initialized. Call initialize_database() first."
-        )
+        raise RuntimeError("Database not initialized. Call initialize_database() first.")
     return _database_manager
 
 

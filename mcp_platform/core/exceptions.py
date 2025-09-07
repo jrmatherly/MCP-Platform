@@ -3,11 +3,8 @@ Core execptions for MCP Template system.
 """
 
 
-
 class MCPException(Exception):
     """Base exception for MCP Template system."""
-
-    pass
 
 
 class MCPServerError(MCPException):

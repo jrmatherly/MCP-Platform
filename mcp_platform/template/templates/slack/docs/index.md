@@ -356,6 +356,6 @@ This template extends the korotovsky/slack-mcp-server project. Please refer to t
 
 ## Support
 
-- **Template Issues**: [MCP Platform Repository](https://github.com/Data-Everything/MCP-Platform)
+- **Template Issues**: [MCP Platform Repository](https://github.com/jrmatherly/MCP-Platform)
 - **Slack Server Issues**: [korotovsky/slack-mcp-server](https://github.com/korotovsky/slack-mcp-server)
 - **Documentation**: [MCP Platform Docs](https://docs.mcp-platform.com)

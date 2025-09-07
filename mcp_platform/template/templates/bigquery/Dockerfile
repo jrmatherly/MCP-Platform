@@ -31,7 +31,7 @@ COPY . .
 
 # Create directories for credentials and data
 RUN mkdir -p /app/credentials /app/data && \
-    chown -R mcpuser:mcpuser /app
+  chown -R mcpuser:mcpuser /app
 
 # Switch to non-root user
 USER mcpuser
@@ -55,5 +55,5 @@ LABEL version="1.0.0"
 LABEL org.opencontainers.image.title="BigQuery MCP Server"
 LABEL org.opencontainers.image.description="Secure BigQuery MCP server for dataset querying and exploration"
 LABEL org.opencontainers.image.vendor="Data Everything"
-LABEL org.opencontainers.image.source="https://github.com/Data-Everything/MCP-Platform"
+LABEL org.opencontainers.image.source="https://github.com/jrmatherly/MCP-Platform"
 LABEL org.opencontainers.image.documentation="https://data-everything.github.io/MCP-Platform"

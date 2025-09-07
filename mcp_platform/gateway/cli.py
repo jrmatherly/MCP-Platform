@@ -141,9 +141,7 @@ def start_gateway(
 def create_user(
     username: str = typer.Argument(..., help="Username for the new user"),
     email: str | None = typer.Option(None, "--email", "-e", help="User email"),
-    password: str | None = typer.Option(
-        None, "--password", "-p", help="User password"
-    ),
+    password: str | None = typer.Option(None, "--password", "-p", help="User password"),
     superuser: bool = typer.Option(False, "--superuser", help="Create as superuser"),
     database_url: str | None = typer.Option(
         None, "--database", "-d", help="Database URL"
@@ -434,9 +432,7 @@ def gateway_status(
                         table.add_column("Status")
                         table.add_column("Details")
 
-                        table.add_row(
-                            "Gateway", health_data.get("status", "unknown"), ""
-                        )
+                        table.add_row("Gateway", health_data.get("status", "unknown"), "")
                         table.add_row(
                             "Database", health_data.get("database", "unknown"), ""
                         )
@@ -461,9 +457,7 @@ def gateway_status(
                         )
 
         except aiohttp.ClientError as e:
-            console.print(
-                f"[red]✗ Cannot connect to gateway at {gateway_url}: {e}[/red]"
-            )
+            console.print(f"[red]✗ Cannot connect to gateway at {gateway_url}: {e}[/red]")
         except Exception as e:
             console.print(f"[red]✗ Error checking gateway status: {e}[/red]")
 

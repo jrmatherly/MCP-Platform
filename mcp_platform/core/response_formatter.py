@@ -284,8 +284,7 @@ class ResponseFormatter:
                 analysis["structure_hints"].append("data_service_response")
             # Determine complexity and structure hints
             elif len(data) <= 6 and all(
-                isinstance(v, (str, int, float, bool, type(None)))
-                for v in data.values()
+                isinstance(v, (str, int, float, bool, type(None))) for v in data.values()
             ):
                 analysis["complexity"] = "simple"
                 analysis["best_display"] = "key_value"
@@ -393,7 +392,6 @@ class ResponseFormatter:
                 and isinstance(data[list_key], list)
                 and len(data[list_key]) > 0
             ):
-
                 # Check if the list contains dict objects (records)
                 first_item = data[list_key][0]
                 if isinstance(first_item, dict):
@@ -442,21 +440,15 @@ class ResponseFormatter:
             # Format value based on type with intelligent truncation
             if isinstance(value, (dict, list)):
                 if isinstance(value, dict):
-                    size_info = (
-                        f" ({len(value)} keys)" if len(value) > 0 else " (empty)"
-                    )
+                    size_info = f" ({len(value)} keys)" if len(value) > 0 else " (empty)"
                     preview = (
-                        "{"
-                        + ", ".join(f"{k}: ..." for k in list(value.keys())[:3])
-                        + "}"
+                        "{" + ", ".join(f"{k}: ..." for k in list(value.keys())[:3]) + "}"
                     )
                     if len(value) > 3:
                         preview += "..."
                     preview += size_info
                 else:  # list
-                    size_info = (
-                        f" ({len(value)} items)" if len(value) > 0 else " (empty)"
-                    )
+                    size_info = f" ({len(value)} items)" if len(value) > 0 else " (empty)"
                     if len(value) > 0:
                         preview = (
                             "["
@@ -497,9 +489,7 @@ class ResponseFormatter:
 
         return table
 
-    def _create_data_table(
-        self, data: list[dict] | dict, title: str = "Data"
-    ) -> Table:
+    def _create_data_table(self, data: list[dict] | dict, title: str = "Data") -> Table:
         """Create a dynamic table from list of dictionaries or tabular dict with intelligent column formatting."""
         if isinstance(data, dict) and self._is_tabular_dict(data):
             # Convert tabular dict to list of dicts
@@ -546,8 +536,7 @@ class ResponseFormatter:
                 "is_boolean_like": all(
                     isinstance(v, bool)
                     or (
-                        isinstance(v, str)
-                        and v.lower() in ["true", "false", "yes", "no"]
+                        isinstance(v, str) and v.lower() in ["true", "false", "yes", "no"]
                     )
                     for v in non_null_values
                 ),
@@ -577,9 +566,7 @@ class ResponseFormatter:
                 # Special handling for timestamps and dates
                 analysis["style"] = "blue"
                 analysis["width"] = min(22, max(15, analysis["max_length"] + 2))
-            elif (
-                header.lower().endswith(("_id", "_name")) or "dataset" in header.lower()
-            ):
+            elif header.lower().endswith(("_id", "_name")) or "dataset" in header.lower():
                 # Special handling for BigQuery-style fields
                 analysis["style"] = "cyan"
                 analysis["width"] = min(30, max(18, analysis["max_length"] + 2))
@@ -600,9 +587,7 @@ class ResponseFormatter:
             # Smart header formatting for common BigQuery/database fields
             if "_" in header:
                 # Convert snake_case to Title Case
-                display_header = " ".join(
-                    word.capitalize() for word in header.split("_")
-                )
+                display_header = " ".join(word.capitalize() for word in header.split("_"))
             else:
                 display_header = str(header).title()
 
@@ -690,14 +675,10 @@ class ResponseFormatter:
 
         return table
 
-    def _create_list_display(
-        self, data: list, title: str = "Items"
-    ) -> Table | Panel:
+    def _create_list_display(self, data: list, title: str = "Items") -> Table | Panel:
         """Create display for simple lists."""
         max_items = getattr(self, "max_display_rows", 20)
-        if len(data) <= 10 and all(
-            isinstance(item, (str, int, float)) for item in data
-        ):
+        if len(data) <= 10 and all(isinstance(item, (str, int, float)) for item in data):
             # Small list of simple values - use columns
             items = [str(item) for item in data]
             return Columns(items, equal=True, expand=True, title=title)
@@ -717,11 +698,7 @@ class ResponseFormatter:
         structure_type = analysis["best_display"]
 
         # Check for special cases first (before generic structure-based routing)
-        if (
-            isinstance(data, dict)
-            and "tools" in data
-            and isinstance(data["tools"], list)
-        ):
+        if isinstance(data, dict) and "tools" in data and isinstance(data["tools"], list):
             # Special case: handle tools lists (MCP-specific but common pattern)
             tools = data["tools"]
             if tools and isinstance(tools[0], dict) and "name" in tools[0]:
@@ -857,17 +834,13 @@ class ResponseFormatter:
                 if len(value) > 5:  # Large lists get summary
                     branch = node.add(f"[magenta]{key}[/magenta] [{len(value)} items]")
                     for i, item in enumerate(value[:3]):
-                        add_to_tree(
-                            branch, f"[{i}]", item, max_depth, current_depth + 1
-                        )
+                        add_to_tree(branch, f"[{i}]", item, max_depth, current_depth + 1)
                     if len(value) > 3:
                         branch.add("[dim]... more items[/dim]")
                 else:
                     branch = node.add(f"[magenta]{key}[/magenta]")
                     for i, item in enumerate(value):
-                        add_to_tree(
-                            branch, f"[{i}]", item, max_depth, current_depth + 1
-                        )
+                        add_to_tree(branch, f"[{i}]", item, max_depth, current_depth + 1)
             else:
                 # Format leaf values
                 if isinstance(value, bool):
@@ -1052,9 +1025,7 @@ class ResponseFormatter:
 
         # Look for any class ending with ResponseFormatter
         for attr_name in dir(module):
-            if attr_name.endswith("ResponseFormatter") and not attr_name.startswith(
-                "_"
-            ):
+            if attr_name.endswith("ResponseFormatter") and not attr_name.startswith("_"):
                 attr = getattr(module, attr_name)
                 if isinstance(attr, type):  # Check if it's a class
                     return attr
@@ -1123,9 +1094,7 @@ class ResponseFormatter:
                     # Extract the actual response text
                     response_text = self._extract_response_text(response)
                     if response_text:
-                        template_formatter.format_tool_response(
-                            tool_name, response_text
-                        )
+                        template_formatter.format_tool_response(tool_name, response_text)
                         return
             except Exception as e:
                 if self.verbose:
@@ -1182,9 +1151,7 @@ class ResponseFormatter:
                                         parsed_content = json.loads(text_content)
 
                                         # Check if parsed content is a data service response
-                                        if self._is_data_service_response(
-                                            parsed_content
-                                        ):
+                                        if self._is_data_service_response(parsed_content):
                                             self._display_data_service_response(
                                                 parsed_content,
                                                 f"{TOOL_RESULT_TITLE} {i + 1}",
@@ -1240,9 +1207,7 @@ class ResponseFormatter:
                     self.console.print(
                         f"[yellow]⚠️  Beautifier parsing error: {e}[/yellow]"
                     )
-                    self.console.print(
-                        f"[dim]Traceback: {traceback.format_exc()}[/dim]"
-                    )
+                    self.console.print(f"[dim]Traceback: {traceback.format_exc()}[/dim]")
                 # Fallback to raw output
                 self.console.print(
                     Panel(
@@ -1516,9 +1481,7 @@ class ResponseFormatter:
                         if backend_type == "docker":
                             self.console.print(f"[blue]docker logs -f {dep_id}[/blue]")
                         elif backend_type == "kubernetes":
-                            self.console.print(
-                                f"[green]kubectl logs -f {dep_id}[/green]"
-                            )
+                            self.console.print(f"[green]kubectl logs -f {dep_id}[/green]")
                         else:
                             self.console.print(
                                 f"[yellow]No follow command available for backend '{backend_type}'[/yellow]"

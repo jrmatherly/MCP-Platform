@@ -35,9 +35,9 @@ class TestSlackConfig:
         # Test that all properties have required fields
         for prop_name, prop_config in properties.items():
             assert "type" in prop_config, f"Property {prop_name} missing type"
-            assert (
-                "description" in prop_config
-            ), f"Property {prop_name} missing description"
+            assert "description" in prop_config, (
+                f"Property {prop_name} missing description"
+            )
 
     def test_authentication_config_options(self, template_config):
         """Test authentication configuration options."""
@@ -53,9 +53,9 @@ class TestSlackConfig:
             assert prop in properties, f"Missing OAuth property: {prop}"
             prop_config = properties[prop]
             assert prop_config["type"] == "string"
-            assert prop_config.get(
-                "sensitive", False
-            ), f"OAuth property {prop} should be sensitive"
+            assert prop_config.get("sensitive", False), (
+                f"OAuth property {prop} should be sensitive"
+            )
             assert "env_mapping" in prop_config
 
         # SSE authentication option
@@ -87,12 +87,12 @@ class TestSlackConfig:
         for prop_name, expected_env in expected_mappings.items():
             if prop_name in properties:
                 prop_config = properties[prop_name]
-                assert (
-                    "env_mapping" in prop_config
-                ), f"Missing env_mapping for {prop_name}"
-                assert (
-                    prop_config["env_mapping"] == expected_env
-                ), f"Incorrect env_mapping for {prop_name}: expected {expected_env}, got {prop_config['env_mapping']}"
+                assert "env_mapping" in prop_config, (
+                    f"Missing env_mapping for {prop_name}"
+                )
+                assert prop_config["env_mapping"] == expected_env, (
+                    f"Incorrect env_mapping for {prop_name}: expected {expected_env}, got {prop_config['env_mapping']}"
+                )
 
     def test_safety_configuration_defaults(self, template_config):
         """Test that safety-related configurations have secure defaults."""
@@ -101,23 +101,23 @@ class TestSlackConfig:
         # Message posting tool should not have a default (disabled by default)
         if "slack_mcp_add_message_tool" in properties:
             posting_config = properties["slack_mcp_add_message_tool"]
-            assert (
-                "default" not in posting_config
-            ), "Message posting should be disabled by default (no default value)"
+            assert "default" not in posting_config, (
+                "Message posting should be disabled by default (no default value)"
+            )
 
         # Custom TLS should be disabled by default
         if "slack_mcp_custom_tls" in properties:
             tls_config = properties["slack_mcp_custom_tls"]
-            assert (
-                tls_config["default"] is False
-            ), "Custom TLS should be disabled by default"
+            assert tls_config["default"] is False, (
+                "Custom TLS should be disabled by default"
+            )
 
         # Insecure CA should be disabled by default
         if "slack_mcp_server_ca_insecure" in properties:
             insecure_config = properties["slack_mcp_server_ca_insecure"]
-            assert (
-                insecure_config["default"] is False
-            ), "Insecure CA should be disabled by default"
+            assert insecure_config["default"] is False, (
+                "Insecure CA should be disabled by default"
+            )
 
     def test_performance_configuration_defaults(self, template_config):
         """Test performance-related configuration defaults."""
@@ -126,15 +126,15 @@ class TestSlackConfig:
         # Cache files should have reasonable defaults
         if "slack_mcp_users_cache" in properties:
             users_cache_config = properties["slack_mcp_users_cache"]
-            assert (
-                users_cache_config["default"] == ".users_cache.json"
-            ), "Users cache should have default filename"
+            assert users_cache_config["default"] == ".users_cache.json", (
+                "Users cache should have default filename"
+            )
 
         if "slack_mcp_channels_cache" in properties:
             channels_cache_config = properties["slack_mcp_channels_cache"]
-            assert (
-                channels_cache_config["default"] == ".channels_cache_v2.json"
-            ), "Channels cache should have default filename"
+            assert channels_cache_config["default"] == ".channels_cache_v2.json", (
+                "Channels cache should have default filename"
+            )
 
         # Port should have reasonable default
         if "slack_mcp_port" in properties:
@@ -176,9 +176,9 @@ class TestSlackConfig:
 
         for prop in sensitive_props:
             prop_config = properties[prop]
-            assert prop_config.get(
-                "sensitive", False
-            ), f"Property {prop} should be marked as sensitive"
+            assert prop_config.get("sensitive", False), (
+                f"Property {prop} should be marked as sensitive"
+            )
 
     def test_enum_configurations(self, template_config):
         """Test enumerated configuration options."""
@@ -226,12 +226,12 @@ class TestSlackConfig:
         for prop, expected_default in boolean_props.items():
             if prop in properties:
                 prop_config = properties[prop]
-                assert (
-                    prop_config["type"] == "boolean"
-                ), f"Property {prop} should be boolean type"
-                assert (
-                    prop_config["default"] == expected_default
-                ), f"Property {prop} has wrong default: expected {expected_default}, got {prop_config['default']}"
+                assert prop_config["type"] == "boolean", (
+                    f"Property {prop} should be boolean type"
+                )
+                assert prop_config["default"] == expected_default, (
+                    f"Property {prop} has wrong default: expected {expected_default}, got {prop_config['default']}"
+                )
 
     def test_integer_type_configurations(self, template_config):
         """Test integer configuration properties."""
@@ -241,12 +241,12 @@ class TestSlackConfig:
         for prop in integer_props:
             if prop in properties:
                 prop_config = properties[prop]
-                assert (
-                    prop_config["type"] == "integer"
-                ), f"Property {prop} should be integer type"
-                assert isinstance(
-                    prop_config["default"], int
-                ), f"Property {prop} should have integer default"
+                assert prop_config["type"] == "integer", (
+                    f"Property {prop} should be integer type"
+                )
+                assert isinstance(prop_config["default"], int), (
+                    f"Property {prop} should have integer default"
+                )
 
     def test_string_type_configurations(self, template_config):
         """Test string configuration properties."""
@@ -271,9 +271,9 @@ class TestSlackConfig:
         for prop in string_props:
             if prop in properties:
                 prop_config = properties[prop]
-                assert (
-                    prop_config["type"] == "string"
-                ), f"Property {prop} should be string type"
+                assert prop_config["type"] == "string", (
+                    f"Property {prop} should be string type"
+                )
 
     def test_required_fields_configuration(self, template_config):
         """Test required fields configuration."""
@@ -306,18 +306,18 @@ class TestSlackConfig:
             if prop in properties:
                 prop_config = properties[prop]
                 assert "title" in prop_config, f"Property {prop} should have a title"
-                assert (
-                    len(prop_config["title"]) > 0
-                ), f"Property {prop} title should not be empty"
+                assert len(prop_config["title"]) > 0, (
+                    f"Property {prop} title should not be empty"
+                )
 
         # All properties should have descriptions
         for prop_name, prop_config in properties.items():
-            assert (
-                "description" in prop_config
-            ), f"Property {prop_name} missing description"
-            assert (
-                len(prop_config["description"]) > 10
-            ), f"Property {prop_name} description too short"
+            assert "description" in prop_config, (
+                f"Property {prop_name} missing description"
+            )
+            assert len(prop_config["description"]) > 10, (
+                f"Property {prop_name} description too short"
+            )
 
     def test_docker_port_configuration(self, template_config):
         """Test Docker port configuration."""

@@ -91,14 +91,18 @@ test-templates:
 
 # Code quality
 lint:
-	@echo "🔍 Running code linting..."
-	uv run flake8 mcp_platform/ tests/ --max-line-length=90 --ignore=E203,W503
-	uv run bandit -r mcp_platform/ -f json -o bandit-report.json || true
+	@echo "🔍 Running code linting with Ruff..."
+	uv run ruff check mcp_platform/ tests/
+	uv run ruff format --check mcp_platform/ tests/
 
 format:
-	@echo "🎨 Formatting code..."
-	uv run black mcp_platform/ tests/
-	uv run isort mcp_platform/ tests/
+	@echo "🎨 Formatting code with Ruff..."
+	uv run ruff format mcp_platform/ tests/
+	uv run ruff check --fix mcp_platform/ tests/
+
+lint-fix:
+	@echo "🔧 Auto-fixing linting issues..."
+	uv run ruff check --fix mcp_platform/ tests/
 
 type-check:
 	@echo "🔬 Running type checking..."

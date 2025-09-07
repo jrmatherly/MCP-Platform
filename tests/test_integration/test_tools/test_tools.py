@@ -252,7 +252,6 @@ class TestToolsIntegrationErrorHandling:
 
     def setup_method(self):
         """Set up test fixtures."""
-        pass
 
     def test_network_isolation_scenario(self):
         """Test tool discovery in network-isolated environments."""
@@ -339,7 +338,6 @@ class TestToolsIntegrationPerformance:
 
     def setup_method(self):
         """Set up test fixtures."""
-        pass
 
     def test_discovery_timeout_handling(self):
         """Test handling of discovery timeouts."""

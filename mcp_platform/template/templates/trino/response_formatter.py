@@ -262,9 +262,7 @@ class TrinoResponseFormatter:
         # If rows are list of lists with separate columns metadata, attempt to map
         if rows and isinstance(rows[0], list) and columns:
             # Map positional rows to dicts using columns names
-            headers = [
-                c.get("name") if isinstance(c, dict) else str(c) for c in columns
-            ]
+            headers = [c.get("name") if isinstance(c, dict) else str(c) for c in columns]
             mapped = []
             for r in rows:
                 mapped.append(
@@ -325,9 +323,7 @@ class TrinoResponseFormatter:
             return
 
         # Fallback to panel
-        self.console.print(
-            Panel(text, title=f"{tool_name} Output", border_style="blue")
-        )
+        self.console.print(Panel(text, title=f"{tool_name} Output", border_style="blue"))
 
     def _format_cluster_info(self, response: str) -> None:
         text = self._clean(response)
@@ -361,9 +357,7 @@ class TrinoResponseFormatter:
             except Exception:
                 pass
 
-        self.console.print(
-            Panel(text or "", title="Tool Response", border_style="blue")
-        )
+        self.console.print(Panel(text or "", title="Tool Response", border_style="blue"))
 
     def _format_cell(self, val: Any) -> str:
         if val is None:

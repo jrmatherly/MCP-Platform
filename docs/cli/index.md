@@ -227,7 +227,7 @@ asyncio.run(main())
 For common issues and troubleshooting:
 - Check [Troubleshooting Guide](../guides/troubleshooting.md)
 - Review [FAQ](../faq.md)
-- Visit [GitHub Issues](https://github.com/Data-Everything/MCP-Platform/issues)
+- Visit [GitHub Issues](https://github.com/jrmatherly/MCP-Platform/issues)
 
 ## Next Steps
 

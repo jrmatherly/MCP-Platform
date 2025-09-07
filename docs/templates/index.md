@@ -234,7 +234,7 @@ Every template includes a `template.json` file with:
 
 ### Getting Help
 - **Documentation**: Check individual template documentation
-- **Issues**: [GitHub Issues](https://github.com/Data-Everything/MCP-Platform/issues)
+- **Issues**: [GitHub Issues](https://github.com/jrmatherly/MCP-Platform/issues)
 - **Community**: [Join our Discord server](https://discord.gg/55Cfxe9gnr)
 
 ### Contributing Templates

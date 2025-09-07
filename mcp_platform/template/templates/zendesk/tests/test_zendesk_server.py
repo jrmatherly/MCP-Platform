@@ -105,9 +105,7 @@ class TestZendeskMCPServer:
                 "name": "test-server",
                 "version": "1.0.0",
             }
-            mock_config_instance.get_zendesk_url.return_value = (
-                "https://test.zendesk.com"
-            )
+            mock_config_instance.get_zendesk_url.return_value = "https://test.zendesk.com"
             mock_config_instance.get_auth_headers.return_value = {
                 "Authorization": "Basic test"
             }

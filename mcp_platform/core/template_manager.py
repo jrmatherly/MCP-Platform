@@ -30,9 +30,7 @@ class TemplateManager:
         # Use default initialization to get all template directories (built-in + custom)
         self.template_discovery = TemplateDiscovery()
         self.backend = get_backend(backend_type)
-        self.cache_manager = CacheManager(
-            max_age_hours=6.0
-        )  # 6-hour cache for templates
+        self.cache_manager = CacheManager(max_age_hours=6.0)  # 6-hour cache for templates
         self._template_cache = {}
         self._cache_valid = False
 
@@ -98,9 +96,7 @@ class TemplateManager:
                             templates[template_name]["deployment_count"] = len(
                                 running_deployments
                             )
-                            templates[template_name][
-                                "deployments"
-                            ] = template_deployments
+                            templates[template_name]["deployments"] = template_deployments
                         except Exception as e:
                             logger.warning(
                                 f"Failed to process deployment status for {template_name}: {e}"

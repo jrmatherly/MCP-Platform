@@ -10,9 +10,9 @@ keywords:
   - model-context-protocol
   - ai
   - server
-home: https://github.com/Data-Everything/MCP-Platform
+home: https://github.com/jrmatherly/MCP-Platform
 sources:
-  - https://github.com/Data-Everything/MCP-Platform
+  - https://github.com/jrmatherly/MCP-Platform
 maintainers:
   - name: Data Everything
     email: tooling@dataeverything.com

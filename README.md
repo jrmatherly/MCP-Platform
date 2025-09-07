@@ -21,7 +21,7 @@ Zero-configuration deployment of production-ready MCP servers with Docker contai
 
 # MCP Server Templates (Legacy)
 
-> **⚠️ This version is in maintenance mode. Please migrate to [MCP Platform](https://github.com/Data-Everything/MCP-Platform) for latest features and updates.**
+> **⚠️ This version is in maintenance mode. Please migrate to [MCP Platform](https://github.com/jrmatherly/MCP-Platform) for latest features and updates.**
 
 [![Version](https://img.shields.io/pypi/v/mcp-templates.svg)](https://pypi.org/project/mcp-templates/)
 [![Python Versions](https://img.shields.io/pypi/pyversions/mcp-templates.svg)](https://pypi.org/project/mcp-templates/)
@@ -30,7 +30,7 @@ Zero-configuration deployment of production-ready MCP servers with Docker contai
 
 <div align="center">
 
-**� [Migrate to MCP Platform](https://github.com/Data-Everything/MCP-Platform)** • **[💬 Discord Community](https://discord.gg/55Cfxe9gnr)** • **[� Legacy Docs](#-quick-start)**
+**� [Migrate to MCP Platform](https://github.com/jrmatherly/MCP-Platform)** • **[💬 Discord Community](https://discord.gg/55Cfxe9gnr)** • **[� Legacy Docs](#-quick-start)**
 
 </div>
 
@@ -117,7 +117,7 @@ docker run --privileged -it dataeverything/mcp-server-templates:latest deploy de
 
 ### From Source
 ```bash
-git clone https://github.com/Data-Everything/MCP-Platform.git
+git clone https://github.com/jrmatherly/MCP-Platform.git
 cd MCP-Platform
 uv sync --all-extras
 ```
@@ -303,7 +303,7 @@ mcpp deploy filesystem --config-file myconfig.json
 
 3. **Update documentation bookmarks:**
    - New docs: https://data-everything.github.io/MCP-Platform/
-   - New repository: https://github.com/Data-Everything/MCP-Platform
+   - New repository: https://github.com/jrmatherly/MCP-Platform
 
 ### Support Timeline
 
@@ -311,7 +311,7 @@ mcpp deploy filesystem --config-file myconfig.json
 - **New Platform**: Active development, new features, full support
 - **Migration Support**: Available through Discord and GitHub issues
 
-**🚀 [Start your migration now →](https://github.com/Data-Everything/MCP-Platform)**
+**🚀 [Start your migration now →](https://github.com/jrmatherly/MCP-Platform)**
 
 ---
 

@@ -162,11 +162,11 @@ class DeploymentManager:
                 template=template_info,
                 config_values=config_sources.get("config_values", {}),
                 env_vars=config_sources.get("env_vars", {}),
-                config_file=config_sources.get("config_file", None),
-                override_values=config_sources.get("override_values", None),
+                config_file=config_sources.get("config_file"),
+                override_values=config_sources.get("override_values"),
             )
 
-            backend_config = config_sources.get("backend_config", None)
+            backend_config = config_sources.get("backend_config")
             if not backend_config and config_sources.get("backend_config_file"):
                 backend_config = self.config_processor._load_json_yaml_config_file(
                     config_sources.get("backend_config_file")
@@ -509,9 +509,7 @@ class DeploymentManager:
 
             return DeploymentResult(
                 success=success,
-                deployment_id=result.get(
-                    "deployment_id", result.get("deployment_name")
-                ),
+                deployment_id=result.get("deployment_id", result.get("deployment_name")),
                 template=result.get("template", result.get("template_id")),
                 status=result.get("status"),
                 container_id=result.get("container_id"),

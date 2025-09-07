@@ -72,9 +72,7 @@ class ToolManager:
             Dictionary containing tools and metadata
         """
         # Check if this looks like a deployment ID vs template name
-        is_template = self.template_manager.template_discovery.is_template(
-            template_or_id
-        )
+        is_template = self.template_manager.template_discovery.is_template(template_or_id)
         tools = []
         discovery_method_used = None
 
@@ -216,9 +214,7 @@ class ToolManager:
             )
 
             # Find first running deployment
-            running_deployments = [
-                d for d in deployments if d.get("status") == "running"
-            ]
+            running_deployments = [d for d in deployments if d.get("status") == "running"]
             if running_deployments:
                 deployment = running_deployments[0]
                 tools = self._discover_from_running_deployment(deployment, timeout)
@@ -324,9 +320,7 @@ class ToolManager:
                 return []
 
             # Get Docker image info
-            docker_image = template_info.get("docker_image") or template_info.get(
-                "image"
-            )
+            docker_image = template_info.get("docker_image") or template_info.get("image")
             if not docker_image:
                 logger.debug("No docker_image specified for template %s", template_name)
                 return []
@@ -449,9 +443,7 @@ class ToolManager:
             # Generate a simple array with one dummy element
             items_config = prop_config.get("items", {})
             if items_config:
-                dummy_item = self._generate_dummy_value(
-                    f"{prop_name}_item", items_config
-                )
+                dummy_item = self._generate_dummy_value(f"{prop_name}_item", items_config)
                 return [dummy_item]
             else:
                 return [f"dummy_{prop_name}_item"]
@@ -464,9 +456,7 @@ class ToolManager:
             # Fallback for unknown types
             return f"dummy_{prop_name}_value"
 
-    def _discover_via_http(
-        self, template_or_deployment: str, timeout: int
-    ) -> list[dict]:
+    def _discover_via_http(self, template_or_deployment: str, timeout: int) -> list[dict]:
         """Helper method to discover tools via MCP JSON-RPC (for already deployed services)."""
         try:
             # Get deployment manager to find running deployments
@@ -558,9 +548,7 @@ class ToolManager:
         """
         try:
             # First try to get deployment info directly (if it's a deployment ID)
-            deployment_info = self.backend.get_deployment_info(
-                template_or_deployment_id
-            )
+            deployment_info = self.backend.get_deployment_info(template_or_deployment_id)
 
             # If not found, try to find deployment by template name
             if not deployment_info:
@@ -589,9 +577,7 @@ class ToolManager:
                 "HTTP discovery failed, trying stdio for %s", template_or_deployment_id
             )
             try:
-                stdio_tools = self._discover_via_stdio(
-                    template_or_deployment_id, timeout
-                )
+                stdio_tools = self._discover_via_stdio(template_or_deployment_id, timeout)
                 if stdio_tools:
                     return stdio_tools
             except Exception as e:
@@ -829,9 +815,7 @@ class ToolManager:
                         template_or_deployment
                     )
                     if not deployment_info:
-                        deployment_manager = DeploymentManager(
-                            self.backend.backend_type
-                        )
+                        deployment_manager = DeploymentManager(self.backend.backend_type)
                         running_deployments = (
                             deployment_manager.find_deployments_by_criteria(
                                 template_name=template_or_deployment, status="running"

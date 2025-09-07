@@ -314,12 +314,12 @@ class TestGitLabToolValidation:
 
         for env_var, category in expected_env_vars.items():
             # Environment variable should be uppercase with underscores
-            assert (
-                env_var.isupper()
-            ), f"Environment variable {env_var} should be uppercase"
-            assert (
-                "_" in env_var or env_var.isalpha()
-            ), f"Environment variable {env_var} should use underscores"
+            assert env_var.isupper(), (
+                f"Environment variable {env_var} should be uppercase"
+            )
+            assert "_" in env_var or env_var.isalpha(), (
+                f"Environment variable {env_var} should use underscores"
+            )
 
             # Category should be valid
             valid_categories = [
@@ -329,9 +329,9 @@ class TestGitLabToolValidation:
                 "transport",
                 "networking",
             ]
-            assert (
-                category in valid_categories
-            ), f"Invalid category {category} for {env_var}"
+            assert category in valid_categories, (
+                f"Invalid category {category} for {env_var}"
+            )
 
     def test_tool_naming_conventions(self):
         """Test GitLab tools follow proper naming conventions."""
@@ -407,9 +407,9 @@ class TestGitLabToolValidation:
 
         for concept, tools in gitlab_concepts.items():
             # Each concept should have at least one tool
-            assert (
-                len(tools) >= 1
-            ), f"GitLab concept {concept} should have associated tools"
+            assert len(tools) >= 1, (
+                f"GitLab concept {concept} should have associated tools"
+            )
 
             # Tools should include the concept name or related terms
             for tool in tools:
@@ -431,6 +431,4 @@ class TestGitLabToolValidation:
                         )
                     )
                 )
-                assert (
-                    concept_in_name
-                ), f"Tool {tool} should relate to concept {concept}"
+                assert concept_in_name, f"Tool {tool} should relate to concept {concept}"

@@ -61,7 +61,6 @@ class ConfigProcessor:
 
     def __init__(self):
         """Initialize the configuration processor."""
-        pass
 
     def _convert_overrides_to_env_vars(
         self, override_values: dict[str, str]
@@ -930,15 +929,14 @@ class ConfigProcessor:
                 if condition_result["satisfied"]:
                     any_of_satisfied = True
                     break
-                else:
-                    conditional_errors.append(
-                        {
-                            "condition_index": i,
-                            "condition": condition,
-                            "errors": condition_result["errors"],
-                            "missing": condition_result["missing"],
-                        }
-                    )
+                conditional_errors.append(
+                    {
+                        "condition_index": i,
+                        "condition": condition,
+                        "errors": condition_result["errors"],
+                        "missing": condition_result["missing"],
+                    }
+                )
 
             if not any_of_satisfied:
                 result["valid"] = False
@@ -1055,9 +1053,7 @@ class ConfigProcessor:
                 if "const" in constraint:
                     if current_value != constraint["const"]:
                         result["satisfied"] = False
-                        result["errors"].append(
-                            f"{prop} must be '{constraint['const']}'"
-                        )
+                        result["errors"].append(f"{prop} must be '{constraint['const']}'")
                 elif "enum" in constraint:
                     if current_value not in constraint["enum"]:
                         result["satisfied"] = False
@@ -1115,7 +1111,7 @@ class ConfigProcessor:
                             current_value = config.get(prop)
                             if current_value != constraint["const"]:
                                 suggestions.append(
-                                    f"Option {i+1}: Set '{prop_title}' to '{constraint['const']}'"
+                                    f"Option {i + 1}: Set '{prop_title}' to '{constraint['const']}'"
                                 )
                                 if "required" in condition:
                                     required_props = [
@@ -1141,8 +1137,7 @@ class ConfigProcessor:
             # Check authentication
             has_api_key = "elasticsearch_api_key" in config
             has_basic_auth = (
-                "elasticsearch_username" in config
-                and "elasticsearch_password" in config
+                "elasticsearch_username" in config and "elasticsearch_password" in config
             )
 
             if not has_api_key and not has_basic_auth:
@@ -1160,9 +1155,7 @@ class ConfigProcessor:
                 missing_opensearch.append("opensearch_password")
 
             if missing_opensearch:
-                suggestions.append(
-                    f"For OpenSearch: set {', '.join(missing_opensearch)}"
-                )
+                suggestions.append(f"For OpenSearch: set {', '.join(missing_opensearch)}")
 
         elif "engine_type" in properties:
             # Only suggest engine_type if it's actually a property in this template

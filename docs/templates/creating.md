@@ -1173,7 +1173,7 @@ mcpp deploy my-template \
 ### Community Support
 
 - **Documentation**: [Template documentation](index.md)
-- **GitHub Issues**: [Report problems](https://github.com/Data-Everything/MCP-Platform/issues)
+- **GitHub Issues**: [Report problems](https://github.com/jrmatherly/MCP-Platform/issues)
 - **Discord Community**: [Join discussions](https://discord.gg/55Cfxe9gnr)
 
 ### Professional Services

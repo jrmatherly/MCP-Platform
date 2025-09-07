@@ -203,9 +203,7 @@ class HealthChecker:
                 return True
 
             # 3. Try simple connectivity check
-            connectivity_healthy = await self._check_http_connectivity(
-                instance.endpoint
-            )
+            connectivity_healthy = await self._check_http_connectivity(instance.endpoint)
             return connectivity_healthy
 
         except Exception as e:

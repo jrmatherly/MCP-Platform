@@ -13,7 +13,7 @@ Set up your development environment for MCP Templates and learn advanced templat
 ## Clone Repository
 
 ```bash
-git clone https://github.com/Data-Everything/MCP-Platform.git
+git clone https://github.com/jrmatherly/MCP-Platform.git
 cd MCP-Platform
 ```
 

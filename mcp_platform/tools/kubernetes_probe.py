@@ -96,9 +96,7 @@ class KubernetesProbe(BaseProbe):
                     timeout,
                 )
             else:
-                logger.error(
-                    "Failed to discover tools from image %s: %s", image_name, e
-                )
+                logger.error("Failed to discover tools from image %s: %s", image_name, e)
             return None
 
     @retry(
@@ -453,8 +451,7 @@ class KubernetesProbe(BaseProbe):
                     # Check if all containers are ready
                     if pod.status.container_statuses:
                         all_ready = all(
-                            container.ready
-                            for container in pod.status.container_statuses
+                            container.ready for container in pod.status.container_statuses
                         )
                         if all_ready:
                             logger.debug("Pod %s is ready", pod_name)
@@ -479,9 +476,7 @@ class KubernetesProbe(BaseProbe):
         )
         return False
 
-    def _extract_mcp_tools_from_job_logs(
-        self, job_name: str
-    ) -> dict[str, Any] | None:
+    def _extract_mcp_tools_from_job_logs(self, job_name: str) -> dict[str, Any] | None:
         """Extract MCP tools information from job logs."""
         try:
             # Get pods for this job
@@ -607,7 +602,6 @@ class KubernetesProbe(BaseProbe):
     ) -> dict[str, Any] | None:
         """Execute MCP protocol handshake via kubectl attach to pod's stdin."""
         try:
-
             # Use kubectl attach to connect to the pod's stdin/stdout
             kubectl_cmd = ["kubectl", "attach", "-i", pod_name, "-n", self.namespace]
 
@@ -671,7 +665,6 @@ class KubernetesProbe(BaseProbe):
     def _parse_mcp_responses(self, output: str) -> dict[str, Any] | None:
         """Parse MCP server responses from kubectl exec output."""
         try:
-
             lines = output.strip().split("\n")
             tools = []
 

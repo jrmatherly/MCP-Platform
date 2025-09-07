@@ -302,7 +302,7 @@ docker run -p 7090:7090 \
 
 ```bash
 # Clone and build
-git clone https://github.com/Data-Everything/MCP-Platform
+git clone https://github.com/jrmatherly/MCP-Platform
 cd MCP-Platform/mcp_platform/template/templates/bigquery
 docker build -t mcp-bigquery .
 
@@ -494,6 +494,6 @@ This template is part of the MCP Platform and is licensed under the Elastic Lice
 
 ## Support
 
-- 📝 [Report Issues](https://github.com/Data-Everything/MCP-Platform/issues)
-- 💬 [Discussion Forum](https://github.com/Data-Everything/MCP-Platform/discussions)
+- 📝 [Report Issues](https://github.com/jrmatherly/MCP-Platform/issues)
+- 💬 [Discussion Forum](https://github.com/jrmatherly/MCP-Platform/discussions)
 - 📚 [Documentation](https://data-everything.github.io/MCP-Platform)

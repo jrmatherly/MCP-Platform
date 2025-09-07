@@ -1571,7 +1571,7 @@ make security      # Security checks
 ### Community Resources
 
 - **Documentation**: [Testing guides](../guides/testing.md)
-- **GitHub Issues**: [Report test issues](https://github.com/Data-Everything/MCP-Platform/issues)
+- **GitHub Issues**: [Report test issues](https://github.com/jrmatherly/MCP-Platform/issues)
 - **Discord Community**: [Join testing discussions](https://discord.gg/55Cfxe9gnr)
 
 ### Professional Support

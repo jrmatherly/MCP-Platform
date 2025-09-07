@@ -695,6 +695,6 @@ Deploy gateways across multiple regions for global availability.
 ## Support and Community
 
 - **Documentation**: [MCP Platform Docs](https://docs.mcpplatform.com)
-- **Issues**: [GitHub Issues](https://github.com/Data-Everything/MCP-Platform/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/Data-Everything/MCP-Platform/discussions)
-- **Examples**: [Gateway Examples](https://github.com/Data-Everything/MCP-Platform/tree/main/examples/gateway)
+- **Issues**: [GitHub Issues](https://github.com/jrmatherly/MCP-Platform/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/jrmatherly/MCP-Platform/discussions)
+- **Examples**: [Gateway Examples](https://github.com/jrmatherly/MCP-Platform/tree/main/examples/gateway)

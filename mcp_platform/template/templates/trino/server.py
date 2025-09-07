@@ -59,7 +59,7 @@ except ImportError:
                         "MockResult",
                         (),
                         {
-                            "fetchall": lambda: [],
+                            "fetchall": list,
                             "fetchone": lambda: None,
                             "rowcount": 0,
                         },
@@ -558,9 +558,7 @@ class TrinoMCPServer:
                         "query_id": query_id,
                         "state": query_info[2],  # Assuming state is at index 2
                         "query": query_info[1],  # Assuming query text is at index 1
-                        "created": query_info[
-                            3
-                        ],  # Assuming creation time is at index 3
+                        "created": query_info[3],  # Assuming creation time is at index 3
                     }
                 else:
                     return {

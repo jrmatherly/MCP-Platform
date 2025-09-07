@@ -348,7 +348,7 @@ docker run -i --rm \
 ### Local Development Setup
 ```bash
 # Clone and setup
-git clone https://github.com/Data-Everything/MCP-Platform.git
+git clone https://github.com/jrmatherly/MCP-Platform.git
 cd MCP-Platform
 
 # Install dependencies
@@ -434,7 +434,7 @@ mcpp> call filesystem tree '{"path": "/large-dir", "max_depth": 2}'
 ## Support
 
 For issues, questions, or contributions:
-- **GitHub Issues**: [MCP-Platform/issues](https://github.com/Data-Everything/MCP-Platform/issues)
+- **GitHub Issues**: [MCP-Platform/issues](https://github.com/jrmatherly/MCP-Platform/issues)
 - **Discord Community**: [Join our Discord](https://discord.gg/55Cfxe9gnr)
 - **Documentation**: [Full Documentation](https://data-everything.github.io/MCP-Platform/)
 

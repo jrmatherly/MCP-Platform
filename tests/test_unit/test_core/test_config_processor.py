@@ -57,9 +57,7 @@ class TestConfigProcessorPrepareConfiguration:
         assert result["LOG_LEVEL"] == "WARNING"
         assert result["ALLOWED_DIRS"] == "/tmp"
 
-    def test_prepare_configuration_with_env_vars(
-        self, config_processor, sample_template
-    ):
+    def test_prepare_configuration_with_env_vars(self, config_processor, sample_template):
         """Test configuration preparation with environment variables."""
         env_vars = {"LOG_LEVEL": "ERROR", "CUSTOM_ENV": "env_value"}
 
@@ -946,9 +944,7 @@ class TestConfigProcessorTemplateOverrides:
             template_data, override_values
         )
 
-        assert (
-            result["config"]["database"]["connection"]["host"] == "remote.example.com"
-        )
+        assert result["config"]["database"]["connection"]["host"] == "remote.example.com"
         assert result["config"]["database"]["connection"]["port"] == 5432  # unchanged
         assert result["config"]["database"]["connection"]["timeout"] == 30  # new field
 
@@ -1337,9 +1333,7 @@ class TestConditionalConfigValidator:
         # Test with token mode - auth_token should be conditionally required
         config = {"auth_mode": "token"}
         assert (
-            self.validator.is_conditionally_required(
-                "auth_token", config_schema, config
-            )
+            self.validator.is_conditionally_required("auth_token", config_schema, config)
             is True
         )
         assert (
@@ -1364,18 +1358,14 @@ class TestConditionalConfigValidator:
             is True
         )
         assert (
-            self.validator.is_conditionally_required(
-                "auth_token", config_schema, config
-            )
+            self.validator.is_conditionally_required("auth_token", config_schema, config)
             is False
         )
 
         # Test with none mode - nothing should be conditionally required
         config = {"auth_mode": "none"}
         assert (
-            self.validator.is_conditionally_required(
-                "auth_token", config_schema, config
-            )
+            self.validator.is_conditionally_required("auth_token", config_schema, config)
             is False
         )
         assert (

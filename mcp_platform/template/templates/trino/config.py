@@ -134,9 +134,7 @@ class TrinoServerConfig(ServerConfig):
             else:
                 cast_to = str
 
-            properties_dict[key] = self._get_config(
-                key, env_var, default_value, cast_to
-            )
+            properties_dict[key] = self._get_config(key, env_var, default_value, cast_to)
 
         return properties_dict
 
@@ -176,9 +174,7 @@ class TrinoServerConfig(ServerConfig):
         if oauth_enabled:
             oauth_provider = config.get("oauth_provider")
             if not oauth_provider:
-                raise ValueError(
-                    "oauth_provider is required when oauth_enabled is true"
-                )
+                raise ValueError("oauth_provider is required when oauth_enabled is true")
 
             valid_providers = ["hmac", "okta", "google", "azure"]
             if oauth_provider not in valid_providers:
@@ -223,9 +219,7 @@ class TrinoServerConfig(ServerConfig):
         log_level = config.get("log_level", "info")
         valid_log_levels = ["debug", "info", "warning", "error"]
         if log_level not in valid_log_levels:
-            self.logger.warning(
-                "Invalid log_level '%s', defaulting to 'info'", log_level
-            )
+            self.logger.warning("Invalid log_level '%s', defaulting to 'info'", log_level)
             config["log_level"] = "info"
 
     def _parse_duration(self, duration_str: str) -> int:
@@ -396,9 +390,7 @@ class TrinoServerConfig(ServerConfig):
             with open(template_path, encoding="utf-8") as template_file:
                 return json.load(template_file)
         except (FileNotFoundError, json.JSONDecodeError) as e:
-            self.logger.warning(
-                f"Failed to load template data from {template_path}: {e}"
-            )
+            self.logger.warning(f"Failed to load template data from {template_path}: {e}")
             # Return minimal template data as fallback
             return {
                 "name": "Trino MCP Server",

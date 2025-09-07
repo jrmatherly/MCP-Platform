@@ -2,7 +2,7 @@
 
 We kindly request that any public use of the MCP Platform include a visible attribution to:
 
-**MCP Platform** by [Data Everything](https://mcp-platform.dataeverything.io)
+**MCP Platform** forked from: [Data Everything](https://mcp-platform.dataeverything.io)
 GitHub: https://github.com/Data-Everything/MCP-Platform
 
 ### Why it matters

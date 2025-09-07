@@ -23,31 +23,31 @@ Join our [Discord Community](https://discord.gg/55Cfxe9gnr) for support, discuss
 
 <div class="grid cards" markdown>
 
--   ⚡ **[Getting Started](getting-started/installation.md)**
+- ⚡ **[Getting Started](getting-started/installation.md)**
 
     Install MCP Platform and deploy your first server in under 2 minutes
 
--   💻 **[CLI Reference](cli/index.md)**
+- 💻 **[CLI Reference](cli/index.md)**
 
     Complete command reference for the `mcpp` CLI tool
 
--   🌐 **[Gateway](gateway/index.md)**
+- 🌐 **[Gateway](gateway/index.md)**
 
     Unified load balancer and proxy for accessing all MCP server instances
 
--   📦 **[Server Templates](templates/index.md)**
+- 📦 **[Server Templates](templates/index.md)**
 
     Browse available templates with advanced configuration properties and deployment options
 
--   📖 **[Template.json Reference](templates/template-json-reference.md)**
+- 📖 **[Template.json Reference](templates/template-json-reference.md)**
 
     Complete guide to template configuration including volume_mount, command_arg, and transport options
 
--   🛠️ **[Creating Templates](templates/creating.md)**
+- 🛠️ **[Creating Templates](templates/creating.md)**
 
     Step-by-step guide to creating custom MCP templates with best practices
 
--   📖 **[User Guide](user-guide/)**
+- 📖 **[User Guide](user-guide/)**
 
     In-depth guides for configuration, deployment, and management
 
@@ -367,8 +367,8 @@ mcpp deploy filesystem --config-file backup.json
 ### 🤝 Community & Support
 
 - **📖 Documentation**: Comprehensive guides and API reference
-- **🐛 Issue Tracker**: [GitHub Issues](https://github.com/Data-Everything/MCP-Platform/issues)
-- **💬 Discussions**: [GitHub Discussions](https://github.com/Data-Everything/MCP-Platform/discussions)
+- **🐛 Issue Tracker**: [GitHub Issues](https://github.com/jrmatherly/MCP-Platform/issues)
+- **💬 Discussions**: [GitHub Discussions](https://github.com/jrmatherly/MCP-Platform/discussions)
 - **� Community Slack**: [Join mcp-platform workspace](https://join.slack.com/t/mcp-platform/shared_invite/zt-39z1p559j-8aWEML~IsSPwFFgr7anHRA)
 - **�📧 Enterprise Support**: [Contact us](mailto:support@dataeverything.ai) for commercial support
 
@@ -510,8 +510,8 @@ Each template includes:
 
 ## Community
 
-- **[GitHub Issues](https://github.com/Data-Everything/MCP-Platform/issues)** - Bug reports and feature requests
-- **[Discussions](https://github.com/Data-Everything/MCP-Platform/discussions)** - Community questions and sharing
+- **[GitHub Issues](https://github.com/jrmatherly/MCP-Platform/issues)** - Bug reports and feature requests
+- **[Discussions](https://github.com/jrmatherly/MCP-Platform/discussions)** - Community questions and sharing
 - **Contributing** - See our [contribution guidelines](guides/contributing.md)
 
 ## Commercial Services
@@ -527,7 +527,7 @@ Need help with custom MCP servers or enterprise deployment?
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](https://github.com/Data-Everything/MCP-Platform/blob/main/LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](https://github.com/jrmatherly/MCP-Platform/blob/main/LICENSE) file for details.
 
 ---
 

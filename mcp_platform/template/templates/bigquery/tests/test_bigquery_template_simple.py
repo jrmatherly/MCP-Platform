@@ -31,9 +31,9 @@ class TestBigQueryTemplateValidation:
         # Test required fields
         required_fields = ["id", "name", "description", "version"]
         for field in required_fields:
-            assert (
-                field in template_data
-            ), f"Required field '{field}' missing from template.json"
+            assert field in template_data, (
+                f"Required field '{field}' missing from template.json"
+            )
 
         # Test specific BigQuery template fields
         assert template_data["id"] == "bigquery"
@@ -99,9 +99,9 @@ class TestBigQueryTemplateValidation:
         ]
 
         for expected_tool in expected_tools:
-            assert (
-                expected_tool in tool_names
-            ), f"Expected tool '{expected_tool}' not found"
+            assert expected_tool in tool_names, (
+                f"Expected tool '{expected_tool}' not found"
+            )
 
         # Test tool structure
         for tool in tools:
@@ -137,9 +137,9 @@ class TestBigQueryTemplateValidation:
         ]
 
         for expected_cap in expected_capabilities:
-            assert (
-                expected_cap in capability_names
-            ), f"Expected capability '{expected_cap}' not found"
+            assert expected_cap in capability_names, (
+                f"Expected capability '{expected_cap}' not found"
+            )
 
         # Test capability structure
         for capability in capabilities:
@@ -196,9 +196,9 @@ class TestBigQueryTemplateValidation:
         for config_key, expected_env in expected_env_mappings.items():
             if config_key in properties and "env_mapping" in properties[config_key]:
                 actual_env = properties[config_key]["env_mapping"]
-                assert (
-                    actual_env == expected_env
-                ), f"Environment mapping for '{config_key}' should be '{expected_env}', got '{actual_env}'"
+                assert actual_env == expected_env, (
+                    f"Environment mapping for '{config_key}' should be '{expected_env}', got '{actual_env}'"
+                )
 
     def test_security_defaults(self):
         """Test security-related defaults are safe."""
@@ -238,9 +238,9 @@ class TestBigQueryTemplateValidation:
 
         for required_file in required_files:
             file_path = os.path.join(template_dir, required_file)
-            assert os.path.exists(
-                file_path
-            ), f"Required file '{required_file}' is missing"
+            assert os.path.exists(file_path), (
+                f"Required file '{required_file}' is missing"
+            )
 
     def test_readme_completeness(self):
         """Test README.md has essential sections."""
@@ -264,9 +264,9 @@ class TestBigQueryTemplateValidation:
         ]
 
         for section in essential_sections:
-            assert (
-                section in readme_content
-            ), f"README missing essential section: {section}"
+            assert section in readme_content, (
+                f"README missing essential section: {section}"
+            )
 
         # Test security warnings are present
         assert "WARNING" in readme_content.upper()
@@ -312,9 +312,9 @@ class TestBigQueryTemplateValidation:
         ]
 
         for dep in essential_deps:
-            assert (
-                dep in requirements_content.lower()
-            ), f"Missing essential dependency: {dep}"
+            assert dep in requirements_content.lower(), (
+                f"Missing essential dependency: {dep}"
+            )
 
 
 class TestBigQueryToolCategorization:
@@ -374,9 +374,9 @@ class TestBigQueryToolCategorization:
                 expected_required = tool_requirements[tool_name]
                 actual_required = sum(1 for p in tool["parameters"] if p["required"])
 
-                assert (
-                    actual_required >= expected_required
-                ), f"Tool '{tool_name}' should have at least {expected_required} required parameters, has {actual_required}"
+                assert actual_required >= expected_required, (
+                    f"Tool '{tool_name}' should have at least {expected_required} required parameters, has {actual_required}"
+                )
 
     def test_query_tool_safety(self):
         """Test that query execution tool has proper safety parameters."""
@@ -403,9 +403,9 @@ class TestBigQueryToolCategorization:
         assert "query" in param_names, "execute_query must have query parameter"
 
         # Test it has dry_run option for safety
-        assert (
-            "dry_run" in param_names
-        ), "execute_query should have dry_run parameter for safety"
+        assert "dry_run" in param_names, (
+            "execute_query should have dry_run parameter for safety"
+        )
 
         # Find dry_run parameter
         dry_run_param = None
@@ -439,9 +439,7 @@ class TestBigQueryToolCategorization:
 
         # Should have proper port configuration
         assert transport["port"] == 7090, "Should use port 7090"
-        assert (
-            template_data["ports"]["7090"] == 7090
-        ), "Port mapping should be consistent"
+        assert template_data["ports"]["7090"] == 7090, "Port mapping should be consistent"
 
     def test_authentication_method_coverage(self):
         """Test that all major Google Cloud authentication methods are supported."""
@@ -463,9 +461,9 @@ class TestBigQueryToolCategorization:
         ]
 
         for method in required_methods:
-            assert (
-                method in supported_methods
-            ), f"Authentication method '{method}' should be supported"
+            assert method in supported_methods, (
+                f"Authentication method '{method}' should be supported"
+            )
 
     def test_example_configurations(self):
         """Test that example configurations are provided and valid."""
@@ -485,9 +483,9 @@ class TestBigQueryToolCategorization:
 
         # Test basic deployment example
         basic_example = cli_examples[0]
-        assert (
-            "project_id" in basic_example
-        ), "Basic example should show project_id configuration"
+        assert "project_id" in basic_example, (
+            "Basic example should show project_id configuration"
+        )
 
         # Test service account example
         service_account_example = None
@@ -496,9 +494,7 @@ class TestBigQueryToolCategorization:
                 service_account_example = example
                 break
 
-        assert (
-            service_account_example is not None
-        ), "Should have service account example"
+        assert service_account_example is not None, "Should have service account example"
 
         # Test client integration examples
         assert "client_integration" in examples

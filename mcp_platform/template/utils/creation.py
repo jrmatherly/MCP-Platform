@@ -26,9 +26,7 @@ console = Console()
 class TemplateCreator:
     """Create new MCP server templates with complete structure."""
 
-    def __init__(
-        self, templates_dir: Path | None = None, tests_dir: Path | None = None
-    ):
+    def __init__(self, templates_dir: Path | None = None, tests_dir: Path | None = None):
         self.template_data = {}
         self.template_dir = None
         self.templates_dir = templates_dir or TEMPLATES_DIR
@@ -133,9 +131,7 @@ class TemplateCreator:
         # Create the template structure
         return self._create_template_structure()
 
-    def _create_from_config_file(
-        self, config_file: str, template_id: str = None
-    ) -> bool:
+    def _create_from_config_file(self, config_file: str, template_id: str = None) -> bool:
         """Create template from configuration file."""
         try:
             config_path = Path(config_file)
@@ -414,9 +410,7 @@ class TemplateCreator:
         config_properties = self.template_data.get("config_schema", {}).get(
             "properties", {}
         )
-        required_config = self.template_data.get("config_schema", {}).get(
-            "required", []
-        )
+        required_config = self.template_data.get("config_schema", {}).get("required", [])
 
         readme_content = f"""# {self.template_data["name"]}
 
@@ -427,9 +421,7 @@ class TemplateCreator:
 """
 
         for capability in capabilities:
-            readme_content += (
-                f"- **{capability['name']}**: {capability['description']}\n"
-            )
+            readme_content += f"- **{capability['name']}**: {capability['description']}\n"
 
         if not capabilities:
             readme_content += "- Basic MCP server functionality\n"
@@ -717,9 +709,7 @@ if __name__ == "__main__":
                 in self.template_data.get("config_schema", {}).get("required", [])
                 else ""
             )
-            usage_content += (
-                f"- `{env_name}`: {param_config['description']}{required}\n"
-            )
+            usage_content += f"- `{env_name}`: {param_config['description']}{required}\n"
 
         if not config_properties:
             usage_content += "- No environment variables required\n"

@@ -201,15 +201,15 @@ class ZendeskServerConfig:
             raise ValueError(
                 f"Field '{key}' must be a string, got {type(value).__name__}"
             )
-        elif expected_type == "integer" and not isinstance(value, int):
+        if expected_type == "integer" and not isinstance(value, int):
             raise ValueError(
                 f"Field '{key}' must be an integer, got {type(value).__name__}"
             )
-        elif expected_type == "boolean" and not isinstance(value, bool):
+        if expected_type == "boolean" and not isinstance(value, bool):
             raise ValueError(
                 f"Field '{key}' must be a boolean, got {type(value).__name__}"
             )
-        elif expected_type == "array" and not isinstance(value, (list, tuple)):
+        if expected_type == "array" and not isinstance(value, (list, tuple)):
             raise ValueError(
                 f"Field '{key}' must be an array, got {type(value).__name__}"
             )

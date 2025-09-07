@@ -4,8 +4,8 @@ LABEL org.opencontainers.image.title="Slack MCP Server"
 LABEL org.opencontainers.image.description="Enhanced Slack MCP server for comprehensive workspace integration"
 LABEL org.opencontainers.image.version="1.0.0"
 LABEL org.opencontainers.image.authors="Data Everything (extends korotovsky/slack-mcp-server)"
-LABEL org.opencontainers.image.source="https://github.com/Data-Everything/MCP-Platform"
-LABEL org.opencontainers.image.documentation="https://github.com/Data-Everything/MCP-Platform/tree/main/mcp_platform/template/templates/slack"
+LABEL org.opencontainers.image.source="https://github.com/jrmatherly/MCP-Platform"
+LABEL org.opencontainers.image.documentation="https://github.com/jrmatherly/MCP-Platform/tree/main/mcp_platform/template/templates/slack"
 
 # Set working directory
 WORKDIR /app

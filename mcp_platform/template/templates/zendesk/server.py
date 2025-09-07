@@ -135,9 +135,7 @@ class ZendeskMCPServer:
             ),
         )
 
-        logger.info(
-            "Zendesk MCP server %s created for %s", self.mcp.name, self.base_url
-        )
+        logger.info("Zendesk MCP server %s created for %s", self.mcp.name, self.base_url)
         self.register_tools()
 
     async def __aenter__(self):
@@ -716,9 +714,7 @@ class ZendeskMCPServer:
             "article_count": len(articles),
         }
 
-    async def get_article(
-        self, article_id: int, locale: str = "en-us"
-    ) -> dict[str, Any]:
+    async def get_article(self, article_id: int, locale: str = "en-us") -> dict[str, Any]:
         """
         Retrieve a specific knowledge base article.
 

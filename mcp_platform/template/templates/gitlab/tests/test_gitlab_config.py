@@ -69,8 +69,7 @@ class TestGitLabTemplateConfiguration:
         assert "gitlab_read_only_mode" in properties
         assert properties["gitlab_read_only_mode"]["default"] is False
         assert (
-            properties["gitlab_read_only_mode"]["env_mapping"]
-            == "GITLAB_READ_ONLY_MODE"
+            properties["gitlab_read_only_mode"]["env_mapping"] == "GITLAB_READ_ONLY_MODE"
         )
 
     def test_feature_toggle_configuration_schema(self):
@@ -172,9 +171,9 @@ class TestGitLabTemplateConfiguration:
 
         for prop in expected_properties:
             assert prop in properties, f"Property {prop} missing from schema"
-            assert (
-                "env_mapping" in properties[prop]
-            ), f"Environment mapping missing for {prop}"
+            assert "env_mapping" in properties[prop], (
+                f"Environment mapping missing for {prop}"
+            )
 
     def test_capability_examples(self):
         """Test that template includes capability examples."""

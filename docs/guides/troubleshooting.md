@@ -466,7 +466,7 @@ mcpp connect deployment --debug
    mcpp logs deployment | grep -i error
 
    # Check GitHub issues
-   # Visit: https://github.com/data-everything/MCP-Platform/issues
+   # Visit: https://github.com/jrmatherly/MCP-Platform/issues
    ```
 
 3. **Community Resources**

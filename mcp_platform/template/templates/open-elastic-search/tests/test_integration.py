@@ -291,9 +291,7 @@ class TestOpenElasticSearchMCPIntegration:
         for k, v in mapping.items():
             if k in config:
                 val = config[k]
-                if isinstance(val, bool):
-                    val = str(val)
-                elif isinstance(val, int):
+                if isinstance(val, bool) or isinstance(val, int):
                     val = str(val)
                 env[v] = val
 

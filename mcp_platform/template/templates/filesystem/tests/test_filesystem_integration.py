@@ -43,9 +43,9 @@ class TestFilesystemIntegration:
             if prop_config.get("volume_mount") is True
         }
 
-        assert (
-            len(volume_mount_props) > 0
-        ), "Template should have at least one volume mount property"
+        assert len(volume_mount_props) > 0, (
+            "Template should have at least one volume mount property"
+        )
 
         # Check that allowed_dirs is configured as volume mount
         assert "allowed_dirs" in volume_mount_props
@@ -67,9 +67,9 @@ class TestFilesystemIntegration:
             if prop_config.get("command_arg") is True
         }
 
-        assert (
-            len(command_arg_props) > 0
-        ), "Template should have at least one command arg property"
+        assert len(command_arg_props) > 0, (
+            "Template should have at least one command arg property"
+        )
 
         # Check that allowed_dirs is configured as command arg
         assert "allowed_dirs" in command_arg_props

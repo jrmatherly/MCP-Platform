@@ -153,9 +153,7 @@ class DockerProbe(BaseProbe):
         ),
         reraise=True,
     )
-    def _try_http_discovery(
-        self, image_name: str, timeout: int
-    ) -> dict[str, Any] | None:
+    def _try_http_discovery(self, image_name: str, timeout: int) -> dict[str, Any] | None:
         """Try to discover tools using HTTP endpoints with proper MCP protocol."""
         container_name = None
         try:
@@ -293,9 +291,7 @@ class DockerProbe(BaseProbe):
                     result = sock.connect_ex(("localhost", port))
                     sock.close()
                     if result == 0:  # Port is open
-                        logger.debug(
-                            "Container %s port %d is open", container_name, port
-                        )
+                        logger.debug("Container %s port %d is open", container_name, port)
                         return True
                 except OSError:
                     pass

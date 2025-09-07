@@ -99,7 +99,9 @@ class ElasticsearchResponseFormatter:
                 health_style = (
                     "green"
                     if index["Health"] == "green"
-                    else "yellow" if index["Health"] == "yellow" else "red"
+                    else "yellow"
+                    if index["Health"] == "yellow"
+                    else "red"
                 )
                 table.add_row(
                     f"[{health_style}]{index['Health']}[/{health_style}]",
@@ -116,9 +118,7 @@ class ElasticsearchResponseFormatter:
             self.console.print(table)
         else:
             self.console.print(
-                Panel(
-                    clean_response, title="Elasticsearch Response", border_style="blue"
-                )
+                Panel(clean_response, title="Elasticsearch Response", border_style="blue")
             )
 
     def _format_get_index(self, response: str) -> None:
@@ -160,9 +160,7 @@ class ElasticsearchResponseFormatter:
                                 field_type = field_info.get("type", "unknown")
                                 table.add_row(f"Field: {field_name}", field_type)
                             elif i == 5:
-                                table.add_row(
-                                    "...", f"and {field_count - 5} more fields"
-                                )
+                                table.add_row("...", f"and {field_count - 5} more fields")
                                 break
 
             self.console.print(table)

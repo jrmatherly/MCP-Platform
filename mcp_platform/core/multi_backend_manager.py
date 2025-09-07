@@ -316,9 +316,7 @@ class MultiBackendManager:
                 templates = template_manager.list_templates()
 
                 if template_name:
-                    templates = {
-                        k: v for k, v in templates.items() if k == template_name
-                    }
+                    templates = {k: v for k, v in templates.items() if k == template_name}
 
                 for template_id, template_info in templates.items():
                     # Use first available backend for static discovery

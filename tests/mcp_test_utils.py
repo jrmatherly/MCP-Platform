@@ -26,7 +26,6 @@ class MCPTestClient:
     async def start(self):
         """Start the MCP server process."""
         # TODO: Implement MCP server startup
-        pass
 
     async def stop(self):
         """Stop the MCP server process."""
@@ -130,7 +129,7 @@ def get_container_logs(container_id: str) -> str:
 def template_base():
     """Fixture providing TemplateTestBase for current template."""
     # This will be overridden in specific template conftest.py files
-    return None
+    return
 
 
 @pytest.fixture

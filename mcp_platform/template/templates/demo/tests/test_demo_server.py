@@ -29,9 +29,9 @@ async def test_list_tools():
             "demonstrate_overrides",
         ]
         for expected_tool in expected_tools:
-            assert (
-                expected_tool in tool_names
-            ), f"Tool {expected_tool} not found in {tool_names}"
+            assert expected_tool in tool_names, (
+                f"Tool {expected_tool} not found in {tool_names}"
+            )
 
 
 @pytest.mark.asyncio
@@ -45,9 +45,9 @@ async def test_echo_tool():
     async with client:
         result = await client.call_tool("echo_message", {"message": "Hi There"})
         expected = "Echo from Demo Hello MCP Server: Hi There"
-        assert (
-            result.data == expected
-        ), f"Echo message did not match expected output. Got: {result.data}, Expected: {expected}"
+        assert result.data == expected, (
+            f"Echo message did not match expected output. Got: {result.data}, Expected: {expected}"
+        )
 
 
 @pytest.mark.asyncio
@@ -61,15 +61,15 @@ async def test_greet_tool():
     async with client:
         result = await client.call_tool("say_hello", {"name": "World"})
         expected = "Hello World! Greetings from MCP Platform!"
-        assert (
-            result.data == expected
-        ), f"Greeting message did not match expected output. Got: {result.data}, Expected: {expected}"
+        assert result.data == expected, (
+            f"Greeting message did not match expected output. Got: {result.data}, Expected: {expected}"
+        )
 
         result2 = await client.call_tool("say_hello", {"name": "Test"})
         expected2 = "Hello Test! Greetings from MCP Platform!"
-        assert (
-            result2.data == expected2
-        ), f"Greeting message did not match expected output. Got: {result2.data}, Expected: {expected2}"
+        assert result2.data == expected2, (
+            f"Greeting message did not match expected output. Got: {result2.data}, Expected: {expected2}"
+        )
 
 
 @pytest.mark.asyncio
@@ -83,12 +83,12 @@ async def test_get_server_info():
     async with client:
         result = await client.call_tool("get_server_info")
         assert isinstance(result.data, dict), "Server info should be a dictionary"
-        assert (
-            "standard_config" in result.data
-        ), "Server info should contain 'standard_config' key"
-        assert (
-            "hello_from" in result.data["standard_config"]
-        ), "Server info standard_config should contain 'hello_from' key"
-        assert (
-            result.data["standard_config"]["hello_from"] == "MCP Platform"
-        ), "Server info hello_from did not match expected value"
+        assert "standard_config" in result.data, (
+            "Server info should contain 'standard_config' key"
+        )
+        assert "hello_from" in result.data["standard_config"], (
+            "Server info standard_config should contain 'hello_from' key"
+        )
+        assert result.data["standard_config"]["hello_from"] == "MCP Platform", (
+            "Server info hello_from did not match expected value"
+        )

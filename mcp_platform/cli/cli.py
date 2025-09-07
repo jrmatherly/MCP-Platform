@@ -390,7 +390,7 @@ def deploy(
                 f"💡[dim]  echo 'mcpp {template} call <tool> | mcpp interactive               # Start interactive shell[/dim]\n"
             )
             raise typer.Exit(1)
-        elif actual_transport not in supported_transports:
+        if actual_transport not in supported_transports:
             console.print(
                 f"[red]❌ Unsupported transport '{actual_transport}' for template '{template}'[/red]"
             )
@@ -713,9 +713,7 @@ def list(
 
             # Add running counts for each backend
             for backend_type in available_backends:
-                count = (
-                    info.get("deployments", {}).get(backend_type, {}).get("count", 0)
-                )
+                count = info.get("deployments", {}).get(backend_type, {}).get("count", 0)
                 total_running += count
                 row_data.append(str(count) if count > 0 else "-")
 
@@ -885,9 +883,7 @@ def list_deployments(
 def stop(
     target: Annotated[
         str | None,
-        typer.Argument(
-            help="Deployment ID, template name, or 'all' to stop deployments"
-        ),
+        typer.Argument(help="Deployment ID, template name, or 'all' to stop deployments"),
     ] = None,
     backend: Annotated[
         str | None,
@@ -963,9 +959,7 @@ def stop(
 
     is_dry_run = dry_run or cli_state.get("dry_run")
     if is_dry_run:
-        console.print(
-            "[yellow]🔍 DRY RUN MODE - No actual stopping will occur[/yellow]"
-        )
+        console.print("[yellow]🔍 DRY RUN MODE - No actual stopping will occur[/yellow]")
 
     try:
         if deployment_id:
@@ -1044,9 +1038,7 @@ def stop(
                                 f"[yellow]⚠️ Failed to stop {failed} deployment(s)[/yellow]"
                             )
                         else:
-                            console.print(
-                                "[red]❌ Failed to stop any deployments[/red]"
-                            )
+                            console.print("[red]❌ Failed to stop any deployments[/red]")
                     else:
                         console.print("[yellow]No deployments found to stop[/yellow]")
 

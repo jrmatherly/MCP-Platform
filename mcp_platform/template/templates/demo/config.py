@@ -202,9 +202,7 @@ class DemoServerConfig:
             # For config properties, check if the final part is a known config property
             final_key = parts[-1]
             if self._is_config_property(final_key):
-                self.logger.debug(
-                    "Processed config property: %s = %s", final_key, value
-                )
+                self.logger.debug("Processed config property: %s = %s", final_key, value)
                 return final_key, value
             else:
                 # For non-config properties, create nested structure
@@ -509,9 +507,7 @@ class DemoServerConfig:
 
         return template_data
 
-    def _apply_nested_override(
-        self, data: dict[str, Any], key: str, value: Any
-    ) -> None:
+    def _apply_nested_override(self, data: dict[str, Any], key: str, value: Any) -> None:
         """
         Apply a nested override using double underscore notation.
 

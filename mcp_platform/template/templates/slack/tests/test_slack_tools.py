@@ -146,9 +146,7 @@ class TestSlackTools:
         """Test search_messages capability definition."""
         capabilities = template_config["capabilities"]
 
-        search_cap = next(
-            cap for cap in capabilities if cap["name"] == "search_messages"
-        )
+        search_cap = next(cap for cap in capabilities if cap["name"] == "search_messages")
 
         # Verify capability structure
         assert "description" in search_cap

@@ -77,7 +77,7 @@ COMMANDS = [
 def setup_completion():
     """Setup readline completion if available."""
     if not READLINE_AVAILABLE:
-        return
+        return None
 
     def completer(text, state):
         """Custom completer for interactive CLI."""
@@ -581,9 +581,7 @@ def configure_template(
                 key, value = pair.split("=", 1)
                 config_values[key] = value
             else:
-                console.print(
-                    f"[yellow]⚠️  Ignoring invalid config pair: {pair}[/yellow]"
-                )
+                console.print(f"[yellow]⚠️  Ignoring invalid config pair: {pair}[/yellow]")
 
         if not config_values:
             console.print("[red]❌ No valid configuration pairs provided[/red]")
@@ -592,9 +590,7 @@ def configure_template(
         # Update session config
         session.update_template_config(template, config_values)
 
-        console.print(
-            f"[green]✅ Configuration saved for template '{template}'[/green]"
-        )
+        console.print(f"[green]✅ Configuration saved for template '{template}'[/green]")
 
         # Display current config
         show_config(template)
@@ -724,14 +720,10 @@ def show_config(
         required_count = len(required_props)
         missing_required = len([p for p in required_props if p not in current_config])
 
-        console.print(
-            f"\n[dim]Summary: {set_props}/{total_props} properties configured"
-        )
+        console.print(f"\n[dim]Summary: {set_props}/{total_props} properties configured")
 
         if missing_required > 0:
-            console.print(
-                f"[red]⚠️  {missing_required} required properties missing[/red]"
-            )
+            console.print(f"[red]⚠️  {missing_required} required properties missing[/red]")
         else:
             console.print(
                 f"[green]✅ All {required_count} required properties are set[/green]"
@@ -908,9 +900,7 @@ def show_help(
             )
             cmd_ctx = click.Context(click_cmd, info_name=click_cmd.name)
             help_text = click_cmd.get_help(cmd_ctx)
-            console.print(
-                Panel(help_text, title=f"Help: {command}", border_style="blue")
-            )
+            console.print(Panel(help_text, title=f"Help: {command}", border_style="blue"))
         except Exception:
             console.print(f"[red]Unknown command: {command}[/red]")
     else:
@@ -1002,9 +992,7 @@ def get_logs(
 def stop_server(
     target: Annotated[
         str | None,
-        typer.Argument(
-            help="Deployment ID, template name, or 'all' to stop deployments"
-        ),
+        typer.Argument(help="Deployment ID, template name, or 'all' to stop deployments"),
     ] = None,
     backend: Annotated[
         str | None,
@@ -1085,9 +1073,7 @@ def remove_server(
     all: Annotated[bool, typer.Option("--all", help="Remove all deployments")] = False,
     template: Annotated[
         str | None,
-        typer.Option(
-            "--template", help="Remove all deployments for a specific template"
-        ),
+        typer.Option("--template", help="Remove all deployments for a specific template"),
     ] = None,
     force: Annotated[
         bool, typer.Option("--force", help="Force removal without confirmation")
@@ -1272,9 +1258,7 @@ def _prompt_for_engine_config(
             "enum", ["elasticsearch", "opensearch"]
         )
 
-        console.print(
-            "[cyan]🔍 Which search engine would you like to configure?[/cyan]"
-        )
+        console.print("[cyan]🔍 Which search engine would you like to configure?[/cyan]")
         for i, engine in enumerate(available_engines, 1):
             console.print(f"  {i}. {engine.title()}")
 
@@ -1287,10 +1271,9 @@ def _prompt_for_engine_config(
                 engine_type = choice
                 new_config["engine_type"] = choice
                 break
-            else:
-                console.print(
-                    f"[red]Please choose from: {', '.join(available_engines)}[/red]"
-                )
+            console.print(
+                f"[red]Please choose from: {', '.join(available_engines)}[/red]"
+            )
 
     # Configure based on engine type
     if engine_type == "elasticsearch":
@@ -1310,9 +1293,7 @@ def _prompt_for_engine_config(
         console.print("  1. API Key (recommended)")
         console.print("  2. Username & Password")
 
-        auth_choice = Prompt.ask(
-            "[cyan]Authentication method (1/2)[/cyan]", default="1"
-        )
+        auth_choice = Prompt.ask("[cyan]Authentication method (1/2)[/cyan]", default="1")
 
         if auth_choice == "1":
             api_key = Prompt.ask("[cyan]Elasticsearch API key[/cyan]", password=True)
@@ -1327,9 +1308,7 @@ def _prompt_for_engine_config(
                 new_config["elasticsearch_password"] = password
 
         # SSL verification
-        verify_certs = Confirm.ask(
-            "[cyan]Verify SSL certificates?[/cyan]", default=False
-        )
+        verify_certs = Confirm.ask("[cyan]Verify SSL certificates?[/cyan]", default=False)
         new_config["elasticsearch_verify_certs"] = verify_certs
 
     elif engine_type == "opensearch":
@@ -1353,9 +1332,7 @@ def _prompt_for_engine_config(
             new_config["opensearch_password"] = password
 
         # SSL verification
-        verify_certs = Confirm.ask(
-            "[cyan]Verify SSL certificates?[/cyan]", default=False
-        )
+        verify_certs = Confirm.ask("[cyan]Verify SSL certificates?[/cyan]", default=False)
         new_config["opensearch_verify_certs"] = verify_certs
 
     return new_config

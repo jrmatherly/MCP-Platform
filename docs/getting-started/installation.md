@@ -46,7 +46,7 @@ For development or to get the latest features:
 
 ```bash
 # Clone the repository
-git clone https://github.com/Data-Everything/MCP-Platform
+git clone https://github.com/jrmatherly/MCP-Platform
 cd MCP-Platform
 
 # Install dependencies and project

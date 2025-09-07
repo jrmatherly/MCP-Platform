@@ -51,7 +51,6 @@ class BaseDeploymentBackend(ABC):
         Returns:
             Dict containing deployment information including name, status, etc.
         """
-        pass
 
     @abstractmethod
     def list_deployments(self, template: str = None) -> list[dict[str, Any]]:
@@ -60,7 +59,6 @@ class BaseDeploymentBackend(ABC):
         Returns:
             List of deployment information dictionaries
         """
-        pass
 
     @abstractmethod
     def delete_deployment(self, deployment_name: str) -> bool:
@@ -72,7 +70,6 @@ class BaseDeploymentBackend(ABC):
         Returns:
             True if deletion was successful, False otherwise
         """
-        pass
 
     @abstractmethod
     def stop_deployment(self, deployment_name: str, force: bool = False) -> bool:
@@ -85,7 +82,6 @@ class BaseDeploymentBackend(ABC):
         Returns:
             True if stop was successful, False otherwise
         """
-        pass
 
     @abstractmethod
     def get_deployment_info(
@@ -101,7 +97,6 @@ class BaseDeploymentBackend(ABC):
         Returns:
             Dictionary with deployment information, or None if not found
         """
-        pass
 
     @abstractmethod
     def connect_to_deployment(self, deployment_id: str):
@@ -113,7 +108,6 @@ class BaseDeploymentBackend(ABC):
         Returns:
             None - Gives access to deployment shell
         """
-        pass
 
     @abstractmethod
     def cleanup_stopped_containers(
@@ -128,7 +122,6 @@ class BaseDeploymentBackend(ABC):
         Returns:
             Dict with cleanup results
         """
-        pass
 
     @abstractmethod
     def cleanup_dangling_images(self) -> dict[str, Any]:
@@ -138,7 +131,6 @@ class BaseDeploymentBackend(ABC):
         Returns:
             Dict with cleanup results
         """
-        pass
 
     def set_config(self, config: dict[str, Any]) -> None:
         """SSet backend config.

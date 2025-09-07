@@ -355,9 +355,7 @@ class MCPGatewayServer:
             """List tools for a specific template."""
             return await self._handle_mcp_request(template_name, "tools/list", {})
 
-        @self.app.post(
-            "/mcp/{template_name}/tools/call", response_model=ToolCallResponse
-        )
+        @self.app.post("/mcp/{template_name}/tools/call", response_model=ToolCallResponse)
         async def call_tool(
             template_name: str,
             request: ToolCallRequest,

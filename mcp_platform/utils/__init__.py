@@ -65,6 +65,5 @@ class SubProcessRunDummyResult:
     def check_returncode(self):
         if self.returncode != 0:
             raise RuntimeError(
-                f"Command '{self.args}' returned non-zero exit status "
-                f"{self.returncode}."
+                f"Command '{self.args}' returned non-zero exit status {self.returncode}."
             )

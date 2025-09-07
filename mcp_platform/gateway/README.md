@@ -1239,7 +1239,7 @@ The Gateway leverages Pydantic's validation, SQLModel's ORM capabilities, and Fa
 
 ```bash
 # Clone repository
-git clone https://github.com/Data-Everything/MCP-Platform.git
+git clone https://github.com/jrmatherly/MCP-Platform.git
 cd MCP-Platform
 
 # Install dependencies

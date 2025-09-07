@@ -179,7 +179,6 @@ class ToolCaller:
             if transport == "http":
                 # Use MCPConnection for unified HTTP protocol handling
                 try:
-
                     parsed = urlparse(endpoint)
                     base_url = f"{parsed.scheme}://{parsed.netloc}"
 

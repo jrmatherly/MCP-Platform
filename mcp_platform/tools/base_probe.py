@@ -55,7 +55,6 @@ class BaseProbe(ABC):
         Returns:
             Dictionary containing discovered tools and metadata, or None if failed
         """
-        pass
 
     def _get_default_endpoints(self) -> list[str]:
         """Get default endpoints to probe for MCP tools."""
@@ -226,9 +225,7 @@ class BaseProbe(ABC):
             logger.debug(f"Direct tools/list failed: {e}")
             return []
 
-    async def _try_mcp_connection_smart(
-        self, base_url: str, timeout: int
-    ) -> list[dict]:
+    async def _try_mcp_connection_smart(self, base_url: str, timeout: int) -> list[dict]:
         """Try MCP connection with smart endpoint discovery using MCPConnection."""
         try:
             logger.debug(f"Trying smart MCP connection to {base_url}")
@@ -295,9 +292,7 @@ class BaseProbe(ABC):
             logger.debug(f"MCP handshake failed for {endpoint}: {e}")
             return []
 
-    async def _parse_mcp_response(
-        self, response: aiohttp.ClientResponse
-    ) -> dict | None:
+    async def _parse_mcp_response(self, response: aiohttp.ClientResponse) -> dict | None:
         """Parse MCP response handling both JSON and SSE formats."""
         try:
             content_type = response.headers.get("content-type", "")
@@ -501,9 +496,7 @@ class BaseProbe(ABC):
 
             # For Kubernetes probe, try to get ClusterIP from the backend
             if hasattr(self, "core_v1") and hasattr(self, "namespace"):
-                deployment_name = deployment_info.get("name") or deployment_info.get(
-                    "id"
-                )
+                deployment_name = deployment_info.get("name") or deployment_info.get("id")
                 if deployment_name:
                     try:
                         from kubernetes.client.rest import ApiException
@@ -576,9 +569,7 @@ class BaseProbe(ABC):
 
         return endpoints
 
-    def _try_endpoint_with_patterns(
-        self, base_endpoint: str, timeout: int
-    ) -> list[dict]:
+    def _try_endpoint_with_patterns(self, base_endpoint: str, timeout: int) -> list[dict]:
         """
         Try an endpoint with smart MCPConnection discovery.
 

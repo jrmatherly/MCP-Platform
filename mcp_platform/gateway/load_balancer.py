@@ -36,9 +36,7 @@ class BaseBalancingStrategy(ABC):
         self._lock = threading.RLock()
 
     @abstractmethod
-    def select_instance(
-        self, instances: list[ServerInstance]
-    ) -> ServerInstance | None:
+    def select_instance(self, instances: list[ServerInstance]) -> ServerInstance | None:
         """
         Select a server instance from the available instances.
 
@@ -48,17 +46,14 @@ class BaseBalancingStrategy(ABC):
         Returns:
             Selected server instance or None if no instances available
         """
-        pass
 
     @abstractmethod
     def record_request(self, instance: ServerInstance):
         """Record that a request was sent to an instance."""
-        pass
 
     @abstractmethod
     def record_completion(self, instance: ServerInstance, success: bool):
         """Record that a request completed (successfully or not)."""
-        pass
 
 
 class RoundRobinStrategy(BaseBalancingStrategy):
@@ -68,9 +63,7 @@ class RoundRobinStrategy(BaseBalancingStrategy):
         super().__init__("round_robin")
         self._counters: dict[str, int] = defaultdict(int)  # template_name -> counter
 
-    def select_instance(
-        self, instances: list[ServerInstance]
-    ) -> ServerInstance | None:
+    def select_instance(self, instances: list[ServerInstance]) -> ServerInstance | None:
         if not instances:
             return None
 
@@ -100,9 +93,7 @@ class LeastConnectionsStrategy(BaseBalancingStrategy):
             int
         )  # instance_id -> count
 
-    def select_instance(
-        self, instances: list[ServerInstance]
-    ) -> ServerInstance | None:
+    def select_instance(self, instances: list[ServerInstance]) -> ServerInstance | None:
         if not instances:
             return None
 
@@ -144,9 +135,7 @@ class WeightedRoundRobinStrategy(BaseBalancingStrategy):
             return 1
         return instance.instance_metadata.get("weight", 1)
 
-    def select_instance(
-        self, instances: list[ServerInstance]
-    ) -> ServerInstance | None:
+    def select_instance(self, instances: list[ServerInstance]) -> ServerInstance | None:
         if not instances:
             return None
 
@@ -169,9 +158,7 @@ class WeightedRoundRobinStrategy(BaseBalancingStrategy):
             template_name = instances[0].template_name
             counter = self._current_weights.get(template_name, 0)
             selected = weighted_instances[counter % len(weighted_instances)]
-            self._current_weights[template_name] = (counter + 1) % len(
-                weighted_instances
-            )
+            self._current_weights[template_name] = (counter + 1) % len(weighted_instances)
 
             return selected
 
@@ -194,9 +181,7 @@ class HealthBasedStrategy(BaseBalancingStrategy):
         )  # instance_id -> recent_failures
         self._last_cleanup = time.time()
 
-    def select_instance(
-        self, instances: list[ServerInstance]
-    ) -> ServerInstance | None:
+    def select_instance(self, instances: list[ServerInstance]) -> ServerInstance | None:
         if not instances:
             return None
 
@@ -238,9 +223,7 @@ class RandomStrategy(BaseBalancingStrategy):
     def __init__(self):
         super().__init__("random")
 
-    def select_instance(
-        self, instances: list[ServerInstance]
-    ) -> ServerInstance | None:
+    def select_instance(self, instances: list[ServerInstance]) -> ServerInstance | None:
         if not instances:
             return None
         return random.choice(instances)
@@ -375,9 +358,7 @@ class LoadBalancer:
         if balancing_strategy:
             balancing_strategy.record_completion(instance, success)
 
-        logger.debug(
-            f"Request completed for instance {instance.id}, success: {success}"
-        )
+        logger.debug(f"Request completed for instance {instance.id}, success: {success}")
 
     def get_load_balancer_stats(self) -> dict[str, any]:
         """Get load balancer statistics."""

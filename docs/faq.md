@@ -535,6 +535,7 @@ mcpp --backend kubernetes --kubeconfig ~/.kube/config deploy github-server
 ```
 
 **Docker vs Kubernetes:**
+
 | Feature | Docker | Kubernetes |
 |---------|--------|------------|
 | Orchestration | Manual | Automatic |
@@ -651,6 +652,6 @@ The template ecosystem encourages both open source and commercial contributions.
 **Still have questions?**
 
 - 📖 Check the [full documentation](index.md)
-- 💬 Join our [community discussions](https://github.com/data-everything/MCP-Platform/discussions)
-- 🐛 [Report issues](https://github.com/data-everything/MCP-Platform/issues)
+- 💬 Join our [community discussions](https://github.com/jrmatherly/MCP-Platform/discussions)
+- 🐛 [Report issues](https://github.com/jrmatherly/MCP-Platform/issues)
 - 📧 Contact us: support@dataeverything.ai

@@ -85,9 +85,7 @@ class TestDatabaseManager:
         # Mock the asyncpg import to avoid the ImportError
         with (
             patch("mcp_platform.gateway.database.create_async_engine") as mock_engine,
-            patch(
-                "mcp_platform.gateway.database.async_sessionmaker"
-            ),
+            patch("mcp_platform.gateway.database.async_sessionmaker"),
             patch.object(db_manager, "_create_tables"),
             patch("mcp_platform.gateway.database._validate_postgresql_driver"),
         ):
@@ -103,9 +101,7 @@ class TestDatabaseManager:
         """Test that initialize can be called multiple times safely."""
         with (
             patch("mcp_platform.gateway.database.create_async_engine") as mock_engine,
-            patch(
-                "mcp_platform.gateway.database.async_sessionmaker"
-            ),
+            patch("mcp_platform.gateway.database.async_sessionmaker"),
             patch.object(self.db_manager, "_create_tables"),
         ):
             await self.db_manager.initialize()

@@ -52,7 +52,6 @@ class TestEndToEndScenarios:
         """Test a complete shell connection scenario."""
         # This test is complex to mock properly due to os.execvp behavior
         # The functionality is covered by unit tests in test_docker_connect.py
-        pass
 
     def test_config_display_scenario(self):
         """Test a complete config display scenario."""

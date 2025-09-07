@@ -16,7 +16,7 @@ Production-ready deployment guide for the MCP Platform Gateway using Docker and 
 
 ```bash
 # Clone the repository
-git clone https://github.com/Data-Everything/MCP-Platform.git
+git clone https://github.com/jrmatherly/MCP-Platform.git
 cd MCP-Platform/mcp_platform/gateway
 
 # Copy environment template

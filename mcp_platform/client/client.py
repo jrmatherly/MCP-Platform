@@ -440,9 +440,7 @@ class MCPClient:
                                 "Invalid volume format. Expected dict or list"
                             )
                     except json.JSONDecodeError as exception:
-                        raise ValueError(
-                            "Invalid JSON format for volumes"
-                        ) from exception
+                        raise ValueError("Invalid JSON format for volumes") from exception
                 else:
                     raise ValueError("Invalid volume format. Expected dict or list")
 
@@ -526,9 +524,7 @@ class MCPClient:
             self._multi_manager = self.multi_manager
 
         try:
-            targets = self.list_servers(
-                template_name=template, all_backends=all_backends
-            )
+            targets = self.list_servers(template_name=template, all_backends=all_backends)
 
             if not targets:
                 return {None: {"success": True}}
@@ -539,9 +535,7 @@ class MCPClient:
                 deployment_id = deployment.get(
                     "id", deployment.get("deployment_id", deployment.get("name", None))
                 )
-                deployment_manager = self._multi_manager.deployment_managers.get(
-                    backend
-                )
+                deployment_manager = self._multi_manager.deployment_managers.get(backend)
                 result = {"success": False}
                 if backend and deployment_id and deployment_manager:
                     try:
@@ -770,7 +764,6 @@ class MCPClient:
             self._multi_manager = self.multi_manager
 
         try:
-
             # Get template info for configuration processing
             template_info = self.get_template_info(template_id)
             if not template_info:
@@ -1019,9 +1012,7 @@ class MCPClient:
         if self.gateway_url:
             try:
                 gateway_client = self._get_gateway_client()
-                return await gateway_client.call_tool(
-                    template_name, tool_name, arguments
-                )
+                return await gateway_client.call_tool(template_name, tool_name, arguments)
             except Exception as e:
                 logger.warning("Gateway call failed, falling back to direct: %s", e)
 

@@ -469,9 +469,7 @@ class KubernetesDeploymentService(BaseDeploymentBackend):
                                                         ],
                                                         protocol=port["protocol"],
                                                     )
-                                                    for port in container.get(
-                                                        "ports", []
-                                                    )
+                                                    for port in container.get("ports", [])
                                                 ],
                                                 resources=client.V1ResourceRequirements(
                                                     requests=container["resources"].get(
@@ -483,9 +481,9 @@ class KubernetesDeploymentService(BaseDeploymentBackend):
                                                 ),
                                                 command=container.get("command"),
                                             )
-                                            for container in manifest["spec"][
-                                                "template"
-                                            ]["spec"]["containers"]
+                                            for container in manifest["spec"]["template"][
+                                                "spec"
+                                            ]["containers"]
                                         ]
                                     ),
                                 ),
@@ -621,9 +619,7 @@ class KubernetesDeploymentService(BaseDeploymentBackend):
                     )
                 logger.info(f"Cleaned up {resource_type} {resource_name}")
             except ApiException as e:
-                logger.warning(
-                    f"Failed to cleanup {resource_type} {resource_name}: {e}"
-                )
+                logger.warning(f"Failed to cleanup {resource_type} {resource_name}: {e}")
 
     def _get_deployment_details(self, deployment_name: str) -> dict[str, Any]:
         """Get detailed deployment information."""
@@ -717,9 +713,7 @@ class KubernetesDeploymentService(BaseDeploymentBackend):
                 logger.info(f"Deleted deployment {deployment_name}")
             except ApiException as e:
                 if e.status != 404:
-                    logger.warning(
-                        f"Failed to delete deployment {deployment_name}: {e}"
-                    )
+                    logger.warning(f"Failed to delete deployment {deployment_name}: {e}")
 
             # Delete service
             try:

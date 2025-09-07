@@ -516,7 +516,7 @@ class TestBigQueryIntegration:
         results = []
         for i in range(5):
             result = server.execute_query(
-                f"SELECT {i+1} as query_id, 'result_{i+1}' as result"
+                f"SELECT {i + 1} as query_id, 'result_{i + 1}' as result"
             )
             results.append(result)
 

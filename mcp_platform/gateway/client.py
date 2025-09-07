@@ -22,8 +22,6 @@ logger = logging.getLogger(__name__)
 class GatewayClientError(Exception):
     """Gateway client related errors."""
 
-    pass
-
 
 class GatewayClient:
     """Async client for MCP Gateway with connection pooling and session management."""
@@ -99,9 +97,7 @@ class GatewayClient:
         if self._closed:
             raise GatewayClientError("Client is closed")
 
-    async def _request(
-        self, method: str, path: str, **kwargs
-    ) -> aiohttp.ClientResponse:
+    async def _request(self, method: str, path: str, **kwargs) -> aiohttp.ClientResponse:
         """Make HTTP request to gateway."""
         self._check_closed()
         await self._ensure_session()

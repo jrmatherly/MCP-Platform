@@ -25,17 +25,17 @@ class TestGitLabTemplate:
         required_files = ["template.json", "README.md", "USAGE.md", "docs/index.md"]
 
         for file_path in required_files:
-            assert (
-                template_dir / file_path
-            ).exists(), f"Missing required file: {file_path}"
+            assert (template_dir / file_path).exists(), (
+                f"Missing required file: {file_path}"
+            )
 
         # Required directories
         required_dirs = ["docs", "tests"]
 
         for dir_path in required_dirs:
-            assert (
-                template_dir / dir_path
-            ).is_dir(), f"Missing required directory: {dir_path}"
+            assert (template_dir / dir_path).is_dir(), (
+                f"Missing required directory: {dir_path}"
+            )
 
     def test_template_json_validity(self, template_dir):
         """Test template.json is valid JSON with required fields."""

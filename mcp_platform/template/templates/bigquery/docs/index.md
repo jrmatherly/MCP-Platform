@@ -881,8 +881,8 @@ See [CONTRIBUTING.md](../../../../CONTRIBUTING.md) for detailed guidelines.
 
 ## Support
 
-- **Template Issues**: [MCP Platform Repository](https://github.com/Data-Everything/MCP-Platform)
-- **Feature Requests**: [GitHub Discussions](https://github.com/Data-Everything/MCP-Platform/discussions)
+- **Template Issues**: [MCP Platform Repository](https://github.com/jrmatherly/MCP-Platform)
+- **Feature Requests**: [GitHub Discussions](https://github.com/jrmatherly/MCP-Platform/discussions)
 - **Documentation**: [MCP Platform Docs](https://data-everything.github.io/MCP-Platform)
 - **Community**: [Discord Server](https://discord.gg/mcp-platform)
 

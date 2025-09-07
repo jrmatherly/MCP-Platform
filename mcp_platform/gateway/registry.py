@@ -28,8 +28,6 @@ logger = logging.getLogger(__name__)
 class RegistryError(Exception):
     """Registry related errors."""
 
-    pass
-
 
 class ServerRegistry:
     """
@@ -135,9 +133,7 @@ class ServerRegistry:
             data = {
                 "servers": {
                     name: {
-                        "instances": [
-                            instance.dict() for instance in template.instances
-                        ],
+                        "instances": [instance.dict() for instance in template.instances],
                         "load_balancer": (
                             template.load_balancer.dict()
                             if template.load_balancer
@@ -363,9 +359,7 @@ class ServerRegistry:
         else:
             all_instances = await self.list_all_instances()
             total_instances = len(all_instances)
-            healthy_instances = len(
-                [inst for inst in all_instances if inst.is_healthy()]
-            )
+            healthy_instances = len([inst for inst in all_instances if inst.is_healthy()])
 
             templates = await self.template_crud.list_all()
             templates_stats = {}

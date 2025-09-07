@@ -257,9 +257,9 @@ class TestTrinoServerTools:
         assert len(execute_calls) >= 2
         # Verify one of the execute calls included a USE statement
         called_sqls = [str(c.args[0]).upper() for c in execute_calls]
-        assert any(
-            "USE" in s for s in called_sqls
-        ), f"No USE statement found in calls: {called_sqls}"
+        assert any("USE" in s for s in called_sqls), (
+            f"No USE statement found in calls: {called_sqls}"
+        )
 
     def test_execute_query_max_results_limit(self):
         """Test that execute_query respects max_results limit."""

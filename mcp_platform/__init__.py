@@ -27,8 +27,11 @@ from mcp_platform.__version__ import __version__
 from mcp_platform.backends.docker import DockerDeploymentService
 from mcp_platform.cli import app
 from mcp_platform.client import MCPClient
-from mcp_platform.core import DeploymentManager as CommonDeploymentManager
-from mcp_platform.core import TemplateManager, ToolManager
+from mcp_platform.core import (
+    DeploymentManager as CommonDeploymentManager,
+    TemplateManager,
+    ToolManager,
+)
 from mcp_platform.core.deployment_manager import DeploymentManager
 
 # from mcp_platform.gateway import (

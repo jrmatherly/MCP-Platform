@@ -31,17 +31,17 @@ class TestSlackTemplate:
         ]
 
         for file_path in required_files:
-            assert (
-                template_dir / file_path
-            ).exists(), f"Missing required file: {file_path}"
+            assert (template_dir / file_path).exists(), (
+                f"Missing required file: {file_path}"
+            )
 
         # Required directories
         required_dirs = ["tests"]
 
         for dir_path in required_dirs:
-            assert (
-                template_dir / dir_path
-            ).is_dir(), f"Missing required directory: {dir_path}"
+            assert (template_dir / dir_path).is_dir(), (
+                f"Missing required directory: {dir_path}"
+            )
 
     def test_template_json_validity(self, template_dir):
         """Test template.json is valid JSON with required fields."""
@@ -251,9 +251,9 @@ class TestSlackTemplate:
         for prop in sensitive_props:
             if prop in properties:
                 prop_config = properties[prop]
-                assert prop_config.get(
-                    "sensitive", False
-                ), f"Property {prop} should be marked as sensitive"
+                assert prop_config.get("sensitive", False), (
+                    f"Property {prop} should be marked as sensitive"
+                )
 
         # Test boolean defaults using actual properties
         boolean_props = {
@@ -266,9 +266,9 @@ class TestSlackTemplate:
         for prop, expected_default in boolean_props.items():
             if prop in properties:
                 prop_config = properties[prop]
-                assert (
-                    prop_config.get("default") == expected_default
-                ), f"Property {prop} has incorrect default"
+                assert prop_config.get("default") == expected_default, (
+                    f"Property {prop} has incorrect default"
+                )
 
     def test_docker_configuration(self, template_dir):
         """Test Docker configuration is present and valid."""
@@ -289,9 +289,9 @@ class TestSlackTemplate:
         ]
 
         for requirement in dockerfile_requirements:
-            assert (
-                requirement in dockerfile_content
-            ), f"Missing Dockerfile requirement: {requirement}"
+            assert requirement in dockerfile_content, (
+                f"Missing Dockerfile requirement: {requirement}"
+            )
 
         # Check script.sh exists and is executable
         assert script_file.exists()
@@ -303,9 +303,9 @@ class TestSlackTemplate:
         script_requirements = ["#!/bin/bash", "set -e", "MCP_TRANSPORT"]
 
         for requirement in script_requirements:
-            assert (
-                requirement in script_content
-            ), f"Missing script requirement: {requirement}"
+            assert requirement in script_content, (
+                f"Missing script requirement: {requirement}"
+            )
 
     def test_template_origin_and_metadata(self, template_dir):
         """Test template metadata and origin information."""
@@ -338,17 +338,17 @@ class TestSlackTemplate:
         # Message posting should be disabled by default
         assert "slack_mcp_add_message_tool" in properties
         posting_config = properties["slack_mcp_add_message_tool"]
-        assert (
-            "default" not in posting_config
-        ), "Message posting should be disabled by default (no default)"
+        assert "default" not in posting_config, (
+            "Message posting should be disabled by default (no default)"
+        )
 
         # Security features should be available
         security_fields = ["slack_mcp_custom_tls", "slack_mcp_server_ca_insecure"]
         for field in security_fields:
             if field in properties:
-                assert (
-                    properties[field]["default"] is False
-                ), f"{field} should default to False for security"
+                assert properties[field]["default"] is False, (
+                    f"{field} should default to False for security"
+                )
 
         # Sensitive tokens should be marked
         sensitive_fields = [

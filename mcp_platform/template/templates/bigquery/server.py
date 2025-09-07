@@ -134,9 +134,7 @@ class BigQueryMCPServer:
         project_id = self.config_data.get("project_id")
 
         if not project_id:
-            raise ValueError(
-                "project_id is required for BigQuery client initialization"
-            )
+            raise ValueError("project_id is required for BigQuery client initialization")
         try:
             if auth_method == "service_account":
                 service_account_path = self.config_data.get("service_account_path")
@@ -157,9 +155,7 @@ class BigQueryMCPServer:
                         service_account_path
                     )
 
-                self.client = bigquery.Client(
-                    credentials=credentials, project=project_id
-                )
+                self.client = bigquery.Client(credentials=credentials, project=project_id)
                 self.logger.info(
                     "BigQuery client initialized with service account authentication"
                 )
@@ -167,12 +163,8 @@ class BigQueryMCPServer:
             elif auth_method == "oauth2":
                 # For OAuth2, we rely on the user having set up credentials via gcloud auth
                 credentials, _ = default()
-                self.client = bigquery.Client(
-                    credentials=credentials, project=project_id
-                )
-                self.logger.info(
-                    "BigQuery client initialized with OAuth2 authentication"
-                )
+                self.client = bigquery.Client(credentials=credentials, project=project_id)
+                self.logger.info("BigQuery client initialized with OAuth2 authentication")
 
             elif auth_method == "application_default":
                 # Use Application Default Credentials
@@ -519,9 +511,7 @@ def setup_health_check(server_instance: BigQueryMCPServer):
                     "server": "BigQuery MCP Server",
                     "version": server_instance.template_data.get("version", "1.0.0"),
                     "bigquery_connection": "ok",
-                    "read_only_mode": server_instance.config_data.get(
-                        "read_only", True
-                    ),
+                    "read_only_mode": server_instance.config_data.get("read_only", True),
                     "project_id": server_instance.config_data.get("project_id"),
                     "auth_method": server_instance.config_data.get(
                         "auth_method", "application_default"

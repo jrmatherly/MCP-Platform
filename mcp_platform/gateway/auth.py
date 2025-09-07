@@ -26,8 +26,6 @@ security = HTTPBearer(auto_error=False)
 class AuthenticationError(Exception):
     """Authentication related errors."""
 
-    pass
-
 
 class AuthManager:
     """Manages authentication and authorization."""

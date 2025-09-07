@@ -180,9 +180,7 @@ class TemplateDiscovery:
                 return template_dir
         return None
 
-    def _get_docker_image(
-        self, template_data: dict[str, Any], template_name: str
-    ) -> str:
+    def _get_docker_image(self, template_data: dict[str, Any], template_name: str) -> str:
         """Get Docker image name for template."""
         if "docker_image" in template_data:
             docker_tag = template_data.get("docker_tag", "latest")
@@ -232,10 +230,7 @@ class TemplateDiscovery:
 
         # Look for directory-type configurations
         for prop_name, prop_config in properties.items():
-            if (
-                prop_config.get("type") == "array"
-                and "directories" in prop_name.lower()
-            ):
+            if prop_config.get("type") == "array" and "directories" in prop_name.lower():
                 # This is likely a directory configuration
                 default_dirs = prop_config.get("default", [])
                 for i, directory in enumerate(default_dirs):

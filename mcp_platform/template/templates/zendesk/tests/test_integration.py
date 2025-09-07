@@ -386,9 +386,7 @@ class TestZendeskMCPIntegration:
 
         # Test missing required parameters
         with pytest.raises(ValueError):
-            asyncio.run(
-                server.update_ticket(ticket_id=123)
-            )  # No update fields provided
+            asyncio.run(server.update_ticket(ticket_id=123))  # No update fields provided
 
         # Test invalid user lookup
         with pytest.raises(ValueError):

@@ -74,9 +74,7 @@ class DockerDeploymentService(BaseDeploymentBackend):
             ["docker", "network", "inspect", MCP_PLATFORM_NETWORK_NAME], check=False
         )
         if result.returncode == 0:
-            logger.debug(
-                "Docker network '%s' already exists", MCP_PLATFORM_NETWORK_NAME
-            )
+            logger.debug("Docker network '%s' already exists", MCP_PLATFORM_NETWORK_NAME)
             return MCP_PLATFORM_NETWORK_NAME
 
         logger.info(
@@ -280,9 +278,7 @@ class DockerDeploymentService(BaseDeploymentBackend):
             RuntimeError: If Docker daemon is not available or not running
         """
         try:
-            result = self._run_command(
-                [self.backend_name, "version", "--format", "json"]
-            )
+            result = self._run_command([self.backend_name, "version", "--format", "json"])
             version_info = json.loads(result.stdout)
             logger.debug(
                 "Docker client version: %s",
@@ -351,9 +347,7 @@ class DockerDeploymentService(BaseDeploymentBackend):
                     tools = discovery_result.get("tools", [])
                     tool_names = [tool.get("name", "unknown") for tool in tools]
                 except Exception as e:
-                    logger.warning(
-                        "Failed to discover tools for %s: %s", template_id, e
-                    )
+                    logger.warning("Failed to discover tools for %s: %s", template_id, e)
 
             # Create error message with available tools
             console.line()
@@ -957,7 +951,7 @@ EOF""",
                 raw_status = state.get("Status", "unknown")
             elif isinstance(state, str):
                 # Docker 'ps' output sometimes sets State as a string like 'running'
-                raw_status = container.get("Status", None) or state
+                raw_status = container.get("Status") or state
 
             # Determine running boolean robustly for both docker and podman formats
             if isinstance(state, dict):
@@ -1222,9 +1216,7 @@ EOF""",
             )
             raise ValueError(f"Internal template {template_id} missing Dockerfile")
 
-        logger.info(
-            "Building image %s for internal template %s", image_name, template_id
-        )
+        logger.info("Building image %s for internal template %s", image_name, template_id)
 
         # Build the Docker image
         build_command = [

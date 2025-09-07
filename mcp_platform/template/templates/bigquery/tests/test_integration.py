@@ -212,9 +212,7 @@ class TestBigQueryIntegration:
 
         # Mock result iterator
         mock_results = Mock()
-        mock_results.__iter__ = Mock(
-            return_value=iter([{"id": i} for i in range(1000)])
-        )
+        mock_results.__iter__ = Mock(return_value=iter([{"id": i} for i in range(1000)]))
         mock_query_job.result.return_value = mock_results
 
         server.client.query.return_value = mock_query_job
@@ -254,9 +252,7 @@ class TestBigQueryIntegration:
         datasets_result = server.list_datasets()
         assert datasets_result["success"] is True
         # Should match: analytics_prod, analytics_dev, public_data, public_demo
-        assert (
-            len(datasets_result["datasets"]) >= 2
-        )  # Allowing for regex filtering logic
+        assert len(datasets_result["datasets"]) >= 2  # Allowing for regex filtering logic
 
     def test_health_check_integration(self):
         """Test basic health check functionality."""

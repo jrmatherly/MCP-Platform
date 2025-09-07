@@ -37,9 +37,9 @@ class TestDemoServerConfig:
 
         config_dict = {"hello_from": "Config Dict Server"}
         config = DemoServerConfig(config_dict).get_template_config()
-        assert (
-            config.get("hello_from") == "Config Dict Server"
-        ), "Config dict should override"
+        assert config.get("hello_from") == "Config Dict Server", (
+            "Config dict should override"
+        )
 
     def test_invalid_log_level_validation(self):
         """Test validation of invalid log level."""
@@ -274,9 +274,7 @@ class TestProcessNestedConfig:
 
             # Should process nested keys and apply type coercion for schema properties
             assert config.config_dict["debug_mode"] is True  # schema property, coerced
-            assert (
-                config.config_dict["max_connections"] == 50
-            )  # schema property, coerced
+            assert config.config_dict["max_connections"] == 50  # schema property, coerced
             assert (
                 config.config_dict["log_level"] == "warning"
             )  # schema property, no coercion needed
@@ -382,9 +380,7 @@ class TestTemplateOverrides:
 
             assert template_data["metadata"]["author"] == "New Author"
             assert template_data["metadata"]["custom"]["field"] == "custom_value"
-            assert (
-                template_data["metadata"]["nested"]["deep"]["property"] == "deep_value"
-            )
+            assert template_data["metadata"]["nested"]["deep"]["property"] == "deep_value"
 
     def test_array_creation_override(self):
         """Test creating new array elements through overrides."""
