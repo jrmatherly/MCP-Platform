@@ -33,6 +33,7 @@ staticfiles/
 .env
 .venv
 .venv*
+.serena
 env/
 venv/
 ENV/
