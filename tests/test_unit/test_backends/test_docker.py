@@ -168,7 +168,7 @@ class TestDockerDeploymentService:
             "Expected an IPAM create attempt with --subnet"
         )
         assert any(
-            "172.30.0.0/24" in c or "172.31.0.0/24" in c or "172.28.0.0/24" in c
+            "10.100.0.0/24" in c or "10.101.0.0/24" in c or "10.102.0.0/24" in c
             for c in called_cmds
         ), "Expected one of the candidate subnets"
 
@@ -237,11 +237,11 @@ class TestDockerDeploymentService:
         # Provide inspect responses that include all candidate subnets so no candidate is free
         inspect_responses = []
         candidate_subnets = [
-            "172.30.0.0/24",
-            "172.31.0.0/24",
-            "172.28.0.0/24",
-            "172.29.0.0/24",
-            "172.32.0.0/24",
+            "10.100.0.0/24",
+            "10.101.0.0/24",
+            "10.102.0.0/24",
+            "10.103.0.0/24",
+            "10.104.0.0/24",
         ]
         for s in candidate_subnets:
             inspect_responses.append(

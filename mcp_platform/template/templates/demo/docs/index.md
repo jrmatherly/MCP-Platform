@@ -33,21 +33,21 @@ python server.py --transport stdio
 
 ```bash
 # Build the image
-docker build -t dataeverything/mcp-demo:latest .
+docker build -t mcp-platform/mcp-demo:latest .
 
 # Run with defaults
-docker run -p 7071:7071 dataeverything/mcp-demo:latest
+docker run -p 7071:7071 mcp-platform/mcp-demo:latest
 
 # Run with custom configuration
 docker run -p 7071:7071 \
   -e MCP_HELLO_FROM="Docker Server" \
   -e MCP_LOG_LEVEL=debug \
-  dataeverything/mcp-demo:latest
+  mcp-platform/mcp-demo:latest
 
 # Join MCP Platform network
 docker network create mcp-platform
 docker run --network mcp-platform --name demo \
-  -p 7071:7071 dataeverything/mcp-demo:latest
+  -p 7071:7071 mcp-platform/mcp-demo:latest
 ```
 
 ### Using MCP Template CLI
@@ -367,7 +367,7 @@ Enable debug logging to see detailed information:
 python server.py --log-level debug
 
 # Docker
-docker run -e MCP_LOG_LEVEL=debug dataeverything/mcp-demo:latest
+docker run -e MCP_LOG_LEVEL=debug mcp-platform/mcp-demo:latest
 
 # CLI deployment
 mcpp deploy demo --config log_level=debug

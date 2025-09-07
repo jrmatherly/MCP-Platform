@@ -247,14 +247,18 @@ mcpp> tools github --verbose
 git clone <repository-url>
 cd github-template
 
-# Install dependencies
-pip install -r requirements.txt
+# Modern uv setup (recommended)
+uv sync                    # Install dependencies from pyproject.toml
 
 # Set environment variables
 export GITHUB_PERSONAL_ACCESS_TOKEN="your_token"
 export LOG_LEVEL="DEBUG"
 
 # Run the server locally
+uv run python -m server
+
+# Legacy pip setup (if needed)
+pip install -r requirements.txt
 python -m server
 ```
 

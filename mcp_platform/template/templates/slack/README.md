@@ -390,7 +390,7 @@ Perfect for Claude Desktop and other MCP clients:
 python server.py --slack-token xoxb-your-token
 
 # Docker stdio
-docker run -i --rm -e SLACK_TOKEN=xoxb-your-token dataeverything/mcp-slack
+docker run -i --rm -e SLACK_TOKEN=xoxb-your-token mcp-platform/mcp-slack
 ```
 
 ### Server-Sent Events (SSE)
@@ -448,7 +448,7 @@ Enable debug logging for detailed information:
 python server.py --log-level DEBUG
 
 # Docker
-docker run -e LOG_LEVEL=DEBUG dataeverything/mcp-slack
+docker run -e LOG_LEVEL=DEBUG mcp-platform/mcp-slack
 
 # CLI deployment
 python -m mcp_platform deploy slack --config log_level=DEBUG

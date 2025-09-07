@@ -1,18 +1,26 @@
-FROM python:3.11-slim
+# Multi-stage build using official uv base image
+FROM ghcr.io/astral-sh/uv:python3.11-bookworm as builder
 
-# Set working directory
 WORKDIR /app
+COPY pyproject.toml uv.lock ./
 
-# Install system dependencies
+# Install dependencies with caching
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --no-install-project
+
+# Runtime stage - using same base as builder for consistency
+FROM python:3.11-bookworm-slim as runtime
+
+# Install runtime dependencies
 RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy dependencies first for better layer caching
-COPY pyproject.toml uv.lock ./
+# Copy virtual environment from builder
+COPY --from=builder /app/.venv /app/.venv
+ENV PATH="/app/.venv/bin:$PATH"
 
-# Install Python dependencies
-RUN pip install uv && uv sync --frozen --no-dev
+WORKDIR /app
 
 # Copy application code
 COPY . .
@@ -25,8 +33,8 @@ USER app
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD \
-  python -c "import sys, urllib.request; \
-  sys.exit(0) if urllib.request.urlopen('http://127.0.0.1:7072/health').getcode() == 200 else sys.exit(1)"
+    python -c "import sys, urllib.request; \
+    sys.exit(0) if urllib.request.urlopen('http://127.0.0.1:7072/health').getcode() == 200 else sys.exit(1)"
 
 # Expose port
 EXPOSE 7072

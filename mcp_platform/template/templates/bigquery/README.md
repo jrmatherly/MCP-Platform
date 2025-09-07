@@ -295,7 +295,7 @@ docker run -p 7090:7090 \
   -e GOOGLE_CLOUD_PROJECT=my-project \
   -e GOOGLE_APPLICATION_CREDENTIALS=/creds/service-account.json \
   -v /path/to/service-account.json:/creds/service-account.json:ro \
-  dataeverything/mcp-bigquery:latest
+  mcp-platform/mcp-bigquery:latest
 ```
 
 ### Building Locally
@@ -353,7 +353,7 @@ Add to your Claude Desktop configuration:
         "-e", "GOOGLE_CLOUD_PROJECT=my-project",
         "-e", "GOOGLE_APPLICATION_CREDENTIALS=/creds/service-account.json",
         "-v", "/path/to/service-account.json:/creds/service-account.json:ro",
-        "dataeverything/mcp-bigquery:latest",
+        "mcp-platform/mcp-bigquery:latest",
         "mcp-server",
         "--transport", "stdio"
       ]

@@ -63,7 +63,7 @@ curl -X POST http://localhost:3003/call \
 
 Most secure and feature-complete method using official Slack OAuth tokens.
 
-#### Setup Steps:
+#### Setup Steps
 
 1. **Create Slack App**
    - Go to https://api.slack.com/apps
@@ -91,7 +91,7 @@ python -m mcp_platform deploy slack \
   --config slack_token=xoxb-your-bot-token
 ```
 
-#### Advanced OAuth Setup:
+#### Advanced OAuth Setup
 
 ```bash
 # With user token for enhanced permissions
@@ -109,7 +109,7 @@ python -m mcp_platform deploy slack \
 
 Access Slack without creating a bot or requiring workspace admin approval.
 
-#### Setup Steps:
+#### Setup Steps
 
 1. **Extract Browser Cookies**
    - Open Slack in browser and log in
@@ -126,7 +126,7 @@ python -m mcp_platform deploy slack \
   --config slack_workspace=yourteam
 ```
 
-#### Cookie Management:
+#### Cookie Management
 
 ```bash
 # With multiple cookie values
@@ -360,20 +360,20 @@ mcp_port: 3003
 
 ```bash
 # Build the image
-docker build -t dataeverything/mcp-slack:latest .
+docker build -t mcp-platform/mcp-slack:latest .
 
 # Run with OAuth token
 docker run -p 3003:3003 \
   -e SLACK_TOKEN=xoxb-your-token \
   -e LOG_LEVEL=INFO \
-  dataeverything/mcp-slack:latest
+  mcp-platform/mcp-slack:latest
 
 # Run with stealth mode
 docker run -p 3003:3003 \
   -e STEALTH_MODE=true \
   -e SLACK_COOKIE="d=xoxd-your-cookie" \
   -e SLACK_WORKSPACE=yourteam \
-  dataeverything/mcp-slack:latest
+  mcp-platform/mcp-slack:latest
 ```
 
 ### Docker Compose
@@ -382,7 +382,7 @@ docker run -p 3003:3003 \
 version: '3.8'
 services:
   slack-mcp:
-    image: dataeverything/mcp-slack:latest
+    image: mcp-platform/mcp-slack:latest
     ports:
       - "3003:3003"
     environment:
@@ -407,14 +407,14 @@ networks:
 docker run -p 3003:3003 \
   -v /path/to/config:/app/config \
   -e SLACK_TOKEN=xoxb-your-token \
-  dataeverything/mcp-slack:latest
+  mcp-platform/mcp-slack:latest
 
 # Mount logs directory
 docker run -p 3003:3003 \
   -v /path/to/logs:/app/logs \
   -e SLACK_TOKEN=xoxb-your-token \
   -e LOG_LEVEL=DEBUG \
-  dataeverything/mcp-slack:latest
+  mcp-platform/mcp-slack:latest
 ```
 
 ## Integration Examples
@@ -431,7 +431,7 @@ Add to Claude Desktop configuration:
       "args": [
         "run", "-i", "--rm",
         "-e", "SLACK_TOKEN=xoxb-your-token",
-        "dataeverything/mcp-slack:latest"
+        "mcp-platform/mcp-slack:latest"
       ]
     }
   }

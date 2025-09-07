@@ -1,39 +1,210 @@
-# AI Agent Instructions for MCP Platform
+# AGENTS.md
+This file provides guidance to AI coding assistants working in this repository.
 
-**AI agents and development tools working on this codebase should follow these guidelines to maintain consistency, quality, and project alignment.**
+**Note:** CLAUDE.md, .clinerules, .cursorrules, .windsurfrules, .replit.md, GEMINI.md, .github/copilot-instructions.md, and .idx/airules.md are symlinks to AGENTS.md in this project.
 
-## Project Overview
+# MCP Platform
 
-**MCP Platform** is a production-ready deployment system for Model Context Protocol (MCP) servers. It provides a unified architecture for deploying, configuring, and managing MCP server templates with extensive configuration support and multiple deployment backends.
+**MCP Platform** is a production-ready Python deployment system for Model Context Protocol (MCP) servers. It provides comprehensive infrastructure for deploying, configuring, and managing MCP server templates with multiple deployment backends (Docker, Kubernetes, Mock).
 
-### Core Architecture
-- **CLI Layer**: Rich interface with Typer-based CLI (`mcp_platform/cli/`)
-- **Management Layer**: DeploymentManager and TemplateManager orchestration (`mcp_platform/core/`)
-- **Backend Layer**: Pluggable deployment services - Docker, Kubernetes, Mock (`mcp_platform/backends/`)
-- **Gateway Layer**: FastAPI-based unified gateway with auth, load balancing (`mcp_platform/gateway/`)
-- **Template Layer**: Dynamic template discovery and configuration (`mcp_platform/template/`)
-- **Discovery Layer**: Dynamic template detection and tool management (`mcp_platform/tools/`)
+## Build & Commands
 
-## Development Standards
+### Core Development Commands
 
-### Code Quality Requirements
-- **Python Version**: 3.10+ (supports 3.10, 3.11, 3.12, 3.13)
-- **Type Hints**: Required for all public functions and classes
-- **Documentation**: Comprehensive docstrings following Google style
-- **Testing**: 80%+ code coverage with comprehensive unit and integration tests
-- **Error Handling**: Use custom exception classes from `mcp_platform.core.exceptions`
-
-### Code Style and Formatting
+**Installation & Setup:**
 ```bash
-# Required tools (configured in pyproject.toml [tool.uv.dev-dependencies])
-black mcp_platform/ tests/           # Code formatting (line length: 90)
-isort mcp_platform/ tests/           # Import sorting (profile: black)
-flake8 mcp_platform/ tests/          # Linting (max-line-length: 90)
-bandit -r mcp_platform/              # Security scanning
-mypy mcp_platform/                   # Type checking
+make install          # Install dependencies with uv sync
+make install-dev      # Install in development mode with uv
+make dev-setup        # Complete development environment setup
+make uv-setup         # Install uv package manager
 ```
 
-### Project Structure Patterns
+**Testing Commands:**
+```bash
+make test-quick       # Fast validation tests
+make test-unit        # Unit tests (no external dependencies)
+make test-integration # Integration tests (requires Docker)
+make test-all         # Complete test suite
+make test-template TEMPLATE=demo  # Test specific template
+make test-templates   # Test all templates
+```
+
+**Code Quality (Ruff-based):**
+```bash
+make lint            # Run Ruff linting
+make format          # Format code with Ruff
+make lint-fix        # Auto-fix linting issues
+make type-check      # Run mypy type checking
+```
+
+**CI/CD Simulation:**
+```bash
+make ci-quick        # Quick validation (linting + unit tests)
+make ci-full         # Complete CI pipeline simulation
+make pre-release     # Pre-release validation
+```
+
+**Documentation & Build:**
+```bash
+make docs            # Build documentation
+make docs-serve      # Serve documentation locally
+make build           # Build package
+make clean           # Clean build artifacts
+```
+
+### CLI Commands (mcpp/mcp-platform)
+```bash
+# Template management
+mcpp list                           # List available templates
+mcpp deploy demo                    # Deploy demo template
+mcpp deploy filesystem --config allowed_dirs="/path/to/data"
+
+# Deployment management
+mcpp list --deployed               # List deployments
+mcpp stop demo                     # Stop deployment
+mcpp logs demo --follow           # View logs
+
+# Template development
+mcpp create my-template            # Create new template
+mcpp deploy my-template --backend mock  # Test with mock backend
+```
+
+### Script Command Consistency
+**Important**: The project has migrated from npm to Python/uv tooling. All commands are now make-based or mcpp CLI commands, not npm scripts.
+
+## Code Style
+
+### Formatting & Linting (Ruff-based - UPDATED)
+- **Line Length**: 90 characters
+- **Target Python Version**: 3.10+
+- **Formatting**: Ruff format (replaces Black)
+- **Import Sorting**: Ruff (replaces isort)
+- **Linting**: Ruff with comprehensive rules (replaces flake8)
+- **Security**: Bandit for security scanning
+- **Type Checking**: mypy with strict configuration
+
+**Key Style Rules:**
+```python
+# Import organization (enforced by Ruff)
+# 1. Standard library imports
+import logging
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+# 2. Third-party imports
+import aiohttp
+from rich.console import Console
+from fastapi import FastAPI
+
+# 3. Local imports
+from mcp_platform.core import DeploymentManager, TemplateManager
+from mcp_platform.backends import get_backend
+from mcp_platform.core.exceptions import MCPException
+```
+
+### Naming Conventions
+- **Functions/Variables**: `snake_case`
+- **Classes**: `PascalCase`
+- **Constants**: `UPPER_SNAKE_CASE`
+- **Private attributes**: `_leading_underscore`
+- **Template IDs**: `kebab-case` (e.g., "big-query", "open-elastic-search")
+
+### Type Usage Patterns
+- **Required**: Type hints for all public functions and classes
+- **Optional parameters**: Use `Optional[Type]` explicitly
+- **Return types**: Always specify, use `-> None` for procedures
+- **Complex types**: Use `typing` module imports
+
+### Error Handling Patterns
+```python
+# Use specific custom exceptions
+from mcp_platform.core.exceptions import (
+    TemplateNotFoundError,
+    DeploymentError,
+    InvalidConfigurationError
+)
+
+# Structured logging with context
+logger = logging.getLogger(__name__)
+logger.info(
+    "Operation completed",
+    extra={
+        "operation": "deploy",
+        "template_id": template_id,
+        "success": result.success
+    }
+)
+```
+
+## Testing
+
+### Framework & Tools
+- **Framework**: pytest with comprehensive markers
+- **Coverage Tool**: pytest-cov with 80% target, 50% minimum (CI enforced)
+- **Markers**: `@pytest.mark.unit`, `@pytest.mark.integration`, `@pytest.mark.docker`, `@pytest.mark.kubernetes`
+
+### Test File Patterns
+- **Unit Tests**: `tests/test_unit/test_*.py`
+- **Integration Tests**: `tests/test_integration/test_*.py`
+- **Template Tests**: `templates/*/tests/test_*.py`
+
+### Testing Conventions
+```python
+import pytest
+from unittest.mock import Mock, patch
+
+class TestDeploymentManager:
+    @pytest.fixture
+    def manager(self):
+        return DeploymentManager(backend_type="mock")
+    
+    @pytest.mark.unit
+    def test_deploy_success(self, manager):
+        result = manager.deploy("demo", {})
+        assert result.success is True
+        assert result.template == "demo"
+```
+
+### Testing Philosophy
+**When tests fail, fix the code, not the test.**
+
+Key principles:
+- **Tests should be meaningful** - Test actual functionality, not just side effects
+- **Comprehensive coverage** - Unit tests for logic, integration tests for workflows
+- **Proper isolation** - Use mock backend for unit tests, real backends for integration
+- **Edge case testing** - Test error conditions and boundary cases
+- **Template validation** - Each template must have its own test suite
+
+## Security
+
+### Input Validation
+```python
+from pydantic import BaseModel, validator
+
+class DeploymentConfig(BaseModel):
+    template_id: str
+    config: Dict[str, Any]
+    
+    @validator('template_id')
+    def validate_template_id(cls, v):
+        if not v or not v.replace('-', '').replace('_', '').isalnum():
+            raise ValueError('Template ID must be alphanumeric with hyphens/underscores')
+        return v
+```
+
+### Environment Variable Security
+- **Reserved Variables**: `MCP_TEMPLATE_ID`, `MCP_TEMPLATE_NAME`, `MCP_TEMPLATE_VERSION`, `MCP_IMAGE_NAME`, `MCP_CONTAINER_NAME`, `MCP_DEPLOYMENT_ID`
+- **Variable Substitution**: `${DATABASE_URL}`, `${PORT:-8080}`
+- **Configuration Validation**: All user inputs validated through Pydantic models
+
+### Container Security
+- **Isolation**: Each deployment runs in isolated containers
+- **Volume Mounting**: Secure file system access patterns
+- **Network Security**: Controlled port exposure and networking
+
+## Directory Structure & File Organization
+
+### Project Architecture
 ```
 mcp_platform/
 ├── __init__.py                      # Main exports and version
@@ -47,56 +218,126 @@ mcp_platform/
 │   └── config_processor.py         # Configuration handling
 ├── gateway/                        # FastAPI gateway server
 ├── template/                       # Template utilities and discovery
+│   └── templates/                  # Built-in templates (demo, gitlab, etc.)
 ├── tools/                          # Tool management and probes
 └── utils/                          # Shared utilities
 ```
 
-## Development Workflow
+### Available Templates
+- **demo**: Hello world MCP server for testing
+- **filesystem**: Secure file operations
+- **gitlab**: GitLab API integration
+- **github**: GitHub API integration  
+- **trino**: Trino database connectivity
+- **bigquery**: Google BigQuery integration
+- **zendesk**: Customer support tools
+- **slack**: Slack API integration
+- **open-elastic-search**: Elasticsearch integration
 
-### Setup and Installation
-```bash
-# Development environment setup with uv
-make install          # Install dependencies with uv sync
-make install-dev      # Install in development mode with uv
-make dev-setup        # Complete development setup using uv
+### Reports Directory
+ALL project reports and documentation should be saved to the `reports/` directory:
 
-# Verify setup
-python tests/runner.py --unit
-make lint
+```
+mcp-platform/
+├── reports/              # All project reports and documentation
+│   └── *.md             # Various report types
+├── temp/                # Temporary files and debugging
+└── [other directories]
 ```
 
-### Testing Strategy
-```bash
-# Test execution patterns
-make test-quick       # Fast validation tests
-make test-unit        # Unit tests (no external dependencies)
-make test-integration # Integration tests (requires Docker)
-make test-all         # Complete test suite
+### Report Generation Guidelines
+**Important**: ALL reports should be saved to the `reports/` directory with descriptive names:
 
-# Coverage requirements
-pytest tests/ --cov=mcp_platform --cov-fail-under=80
+**Implementation Reports:**
+- Phase validation: `PHASE_X_VALIDATION_REPORT.md`
+- Implementation summaries: `IMPLEMENTATION_SUMMARY_[FEATURE].md`
+- Feature completion: `FEATURE_[NAME]_REPORT.md`
+
+**Testing & Analysis Reports:**
+- Test results: `TEST_RESULTS_[DATE].md`
+- Coverage reports: `COVERAGE_REPORT_[DATE].md`
+- Performance analysis: `PERFORMANCE_ANALYSIS_[SCENARIO].md`
+- Security scans: `SECURITY_SCAN_[DATE].md`
+
+### Temporary Files & Debugging
+All temporary files, debugging scripts, and test artifacts should be organized in a `/temp` folder:
+
+**Guidelines:**
+- Never commit files from `/temp` directory
+- Use `/temp` for all debugging and analysis scripts created during development
+- Clean up `/temp` directory regularly or use automated cleanup
+- Include `/temp/` in `.gitignore` to prevent accidental commits
+
+## Configuration
+
+### Environment Setup
+- **Python Version**: 3.10+ (supports 3.10, 3.11, 3.12, 3.13)
+- **Package Manager**: uv (modern Python package manager)
+- **Build System**: Hatch with setuptools_scm for versioning
+
+### Required Dependencies
+**Core:**
+- **rich**: Terminal UI and console output
+- **typer**: CLI framework
+- **fastapi**: Web framework for gateway
+- **pydantic**: Data validation
+- **aiohttp**: Async HTTP client
+
+**Development:**
+- **pytest**: Testing framework with plugins
+- **ruff**: Linting and formatting
+- **mypy**: Type checking
+- **bandit**: Security scanning
+
+### Configuration Management
+```python
+# Template override pattern (double underscore notation)
+config_overrides = {
+    "database__host": "localhost",      # database.host = "localhost"
+    "auth__providers__oauth__enabled": True  # auth.providers.oauth.enabled = True
+}
+
+# Environment variable substitution
+config = {
+    "database_url": "${DATABASE_URL}",
+    "api_key": "${API_KEY}",
+    "port": "${PORT:-8080}"
+}
 ```
 
-### Test Organization
-- **Unit Tests**: `tests/test_unit/` - Fast, isolated tests
-- **Integration Tests**: `tests/test_integration/` - External dependencies
-- **Template Tests**: Template-specific validation
-- **Markers**: Use pytest markers (`@pytest.mark.unit`, `@pytest.mark.docker`, etc.)
+## Agent Delegation & Tool Execution
 
-### Quality Gates
-```bash
-# Pre-commit requirements
-make format           # Black + isort formatting
-make lint            # flake8 + bandit security
-make type-check      # mypy type validation
-make test-all        # Full test suite
-```
+### ⚠️ MANDATORY: Always Delegate to Specialists & Execute in Parallel
+
+**When specialized agents are available, you MUST use them instead of attempting tasks yourself.**
+
+#### Architecture Analysis Specialists
+- **system-architect**: For backend architecture and deployment patterns
+- **performance-engineer**: For optimization and resource management
+- **security-engineer**: For security analysis and vulnerability assessment
+- **database-expert**: For data persistence and management patterns
+
+#### Implementation Specialists
+- **python-expert**: For Python-specific coding patterns and best practices
+- **backend-architect**: For API design and service architecture
+- **testing-expert**: For comprehensive testing strategies
+- **refactoring-expert**: For code quality improvements
+
+#### DevOps & Infrastructure
+- **devops-expert**: For Docker, Kubernetes, and deployment strategies
+- **docker-expert**: For container optimization and security
+- **git-expert**: For version control and branching strategies
+
+#### Key Principles
+- **Agent Delegation**: Always check if a specialized agent exists for your task domain
+- **Parallel Execution**: Send multiple Task tool calls in a single message for concurrent execution
+- **Domain Expertise**: Use specialists for their deep knowledge of patterns and edge cases
+- **Comprehensive Solutions**: Specialists provide more thorough, production-ready solutions
 
 ## Architecture Patterns
 
 ### Backend Abstraction Pattern
 ```python
-# Use backend abstraction for deployment operations
 from mcp_platform.backends import get_backend
 
 backend = get_backend("docker")  # or "kubernetes", "mock"
@@ -105,7 +346,6 @@ result = backend.deploy(template_id, config)
 
 ### Template Management Pattern
 ```python
-# Centralized template operations
 from mcp_platform.core import TemplateManager
 
 manager = TemplateManager(backend_type="docker")
@@ -113,34 +353,35 @@ templates = manager.list_templates()
 result = manager.validate_template(template_id)
 ```
 
-### Error Handling Pattern
-```python
-# Use specific exception types
-from mcp_platform.core.exceptions import (
-    TemplateNotFoundError,
-    DeploymentError,
-    InvalidConfigurationError
-)
-
-try:
-    template = manager.get_template(template_id)
-except TemplateNotFoundError:
-    logger.error(f"Template {template_id} not found")
-    raise
-```
-
 ### Configuration Processing Pattern
 ```python
-# Process configurations with validation
 from mcp_platform.core.config_processor import ConfigProcessor
 
 processor = ConfigProcessor(template_config)
 processed_config = processor.process_config(user_config)
 ```
 
+### Async Resource Management
+```python
+from contextlib import asynccontextmanager
+import aiohttp
+
+@asynccontextmanager
+async def http_client():
+    """Managed HTTP client context."""
+    async with aiohttp.ClientSession() as session:
+        yield session
+
+async def deploy_multiple_templates(templates: List[str]):
+    """Deploy multiple templates concurrently."""
+    tasks = [deploy_template_async(template) for template in templates]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    return results
+```
+
 ## API Design Principles
 
-### Function and Class Design
+### Function Documentation Standard
 ```python
 def deploy_template(
     template_id: str,
@@ -166,128 +407,7 @@ def deploy_template(
     """
 ```
 
-### Import Patterns
-```python
-# Standard library imports
-import logging
-import json
-from pathlib import Path
-from typing import Any, Dict, List, Optional
-
-# Third-party imports
-import aiohttp
-from rich.console import Console
-from fastapi import FastAPI
-
-# Local imports
-from mcp_platform.core import DeploymentManager, TemplateManager
-from mcp_platform.backends import get_backend
-from mcp_platform.core.exceptions import MCPException
-```
-
-## Template Development
-
-### Template Structure Requirements
-```
-templates/template-name/
-├── template.json          # Schema and configuration
-├── Dockerfile            # Container definition
-├── src/                  # Source code
-├── tests/               # Template-specific tests
-├── README.md            # Documentation
-└── examples/            # Usage examples
-```
-
-### Template Configuration Schema
-```json
-{
-  "id": "template-name",
-  "name": "Human-readable Template Name",
-  "description": "Template functionality description",
-  "version": "1.0.0",
-  "author": "Author Name",
-  "mcp_version": "0.4.0",
-  "image": "dataeverything/mcp-template-name",
-  "config_schema": {},
-  "example_config": {}
-}
-```
-
-## Testing Patterns
-
-### Unit Test Example
-```python
-import pytest
-from unittest.mock import Mock, patch
-
-from mcp_platform.core.deployment_manager import DeploymentManager
-from mcp_platform.core.exceptions import DeploymentError
-
-class TestDeploymentManager:
-    @pytest.fixture
-    def manager(self):
-        return DeploymentManager(backend_type="mock")
-    
-    @pytest.mark.unit
-    def test_deploy_success(self, manager):
-        result = manager.deploy("demo", {})
-        assert result.success is True
-        assert result.template == "demo"
-    
-    @pytest.mark.unit  
-    def test_deploy_invalid_template_raises_error(self, manager):
-        with pytest.raises(TemplateNotFoundError):
-            manager.deploy("nonexistent", {})
-```
-
-### Integration Test Example
-```python
-@pytest.mark.integration
-@pytest.mark.docker
-def test_docker_deployment_lifecycle():
-    """Test complete Docker deployment lifecycle."""
-    manager = DeploymentManager(backend_type="docker")
-    
-    # Deploy
-    result = manager.deploy("demo", {"port": 8080})
-    assert result.success is True
-    
-    # Verify running
-    status = manager.get_deployment_status(result.deployment_id)
-    assert status.is_running is True
-    
-    # Cleanup
-    manager.undeploy(result.deployment_id)
-```
-
-## Gateway Development
-
-### FastAPI Pattern
-```python
-from fastapi import FastAPI, HTTPException, Depends
-from mcp_platform.gateway.auth import get_current_user
-from mcp_platform.gateway.models import DeploymentRequest
-
-app = FastAPI()
-
-@app.post("/deploy")
-async def deploy_template(
-    request: DeploymentRequest,
-    user = Depends(get_current_user)
-):
-    try:
-        result = await deployment_manager.deploy(
-            request.template_id, 
-            request.config
-        )
-        return result
-    except TemplateNotFoundError:
-        raise HTTPException(status_code=404, detail="Template not found")
-```
-
-## CLI Development
-
-### Typer Pattern
+### CLI Pattern (Typer)
 ```python
 import typer
 from rich.console import Console
@@ -316,293 +436,56 @@ def deploy(
         raise typer.Exit(1)
 ```
 
-## Configuration Management
-
-### Environment Variables
+### FastAPI Pattern (Gateway)
 ```python
-# Reserved environment variables (see config_processor.py)
-RESERVED_ENV_VARS = {
-    'MCP_TEMPLATE_ID', 'MCP_TEMPLATE_NAME', 'MCP_TEMPLATE_VERSION',
-    'MCP_IMAGE_NAME', 'MCP_CONTAINER_NAME', 'MCP_DEPLOYMENT_ID'
-}
+from fastapi import FastAPI, HTTPException, Depends
+from mcp_platform.gateway.auth import get_current_user
+from mcp_platform.gateway.models import DeploymentRequest
 
-# Configuration processing
-config = {
-    "database_url": "${DATABASE_URL}",
-    "api_key": "${API_KEY}",
-    "port": "${PORT:-8080}"
-}
-```
+app = FastAPI()
 
-### Template Override Pattern
-```python
-# Double underscore notation for nested overrides
-config_overrides = {
-    "database__host": "localhost",      # database.host = "localhost"
-    "auth__providers__oauth__enabled": True  # auth.providers.oauth.enabled = True
-}
-```
-
-## Performance and Resource Management
-
-### Async Patterns
-```python
-import asyncio
-import aiohttp
-from contextlib import asynccontextmanager
-
-@asynccontextmanager
-async def http_client():
-    """Managed HTTP client context."""
-    async with aiohttp.ClientSession() as session:
-        yield session
-
-async def deploy_multiple_templates(templates: List[str]):
-    """Deploy multiple templates concurrently."""
-    tasks = [deploy_template_async(template) for template in templates]
-    results = await asyncio.gather(*tasks, return_exceptions=True)
-    return results
-```
-
-### Resource Management
-```python
-from contextlib import contextmanager
-
-@contextmanager
-def deployment_context(deployment_id: str):
-    """Ensure proper cleanup of deployment resources."""
-    try:
-        yield deployment_id
-    finally:
-        # Cleanup logic
-        cleanup_deployment(deployment_id)
-```
-
-## Security Considerations
-
-### Input Validation
-```python
-from pydantic import BaseModel, validator
-
-class DeploymentConfig(BaseModel):
-    template_id: str
-    config: Dict[str, Any]
-    
-    @validator('template_id')
-    def validate_template_id(cls, v):
-        if not v or not v.isalnum():
-            raise ValueError('Template ID must be alphanumeric')
-        return v
-```
-
-### Authentication Pattern
-```python
-from mcp_platform.gateway.auth import verify_token
-
-async def protected_endpoint(
-    authorization: str = Header(...),
-    user_info = Depends(verify_token)
+@app.post("/deploy")
+async def deploy_template(
+    request: DeploymentRequest,
+    user = Depends(get_current_user)
 ):
-    # Protected endpoint logic
-    pass
-```
-
-## Troubleshooting and Debugging
-
-### Logging Pattern
-```python
-import logging
-
-# Use structured logging
-logger = logging.getLogger(__name__)
-
-def deploy_template(template_id: str, config: Dict[str, Any]):
-    logger.info(
-        "Starting deployment", 
-        extra={
-            "template_id": template_id,
-            "config_keys": list(config.keys()),
-            "operation": "deploy"
-        }
-    )
-    
     try:
-        result = perform_deployment(template_id, config)
-        logger.info(
-            "Deployment completed", 
-            extra={
-                "template_id": template_id,
-                "success": result.success,
-                "deployment_id": result.deployment_id
-            }
+        result = await deployment_manager.deploy(
+            request.template_id, 
+            request.config
         )
         return result
-        
-    except Exception as e:
-        logger.error(
-            "Deployment failed",
-            extra={
-                "template_id": template_id,
-                "error": str(e),
-                "error_type": type(e).__name__
-            },
-            exc_info=True
-        )
-        raise
+    except TemplateNotFoundError:
+        raise HTTPException(status_code=404, detail="Template not found")
 ```
 
-### Error Handling Best Practices
-```python
-def handle_deployment_error(e: Exception, template_id: str) -> DeploymentResult:
-    """Standardized error handling for deployment operations."""
-    if isinstance(e, TemplateNotFoundError):
-        return DeploymentResult(
-            success=False,
-            error=f"Template '{template_id}' not found",
-            error_type="template_not_found"
-        )
-    elif isinstance(e, InvalidConfigurationError):
-        return DeploymentResult(
-            success=False,
-            error=f"Invalid configuration: {e}",
-            error_type="invalid_config"
-        )
-    else:
-        logger.exception("Unexpected deployment error")
-        return DeploymentResult(
-            success=False,
-            error="Internal deployment error",
-            error_type="internal_error"
-        )
-```
+## Migration Notes
 
-## Integration Points
+### Recent Updates (Important for AI Agents)
+The project has recently migrated from legacy tooling to modern alternatives:
 
-### MCP Client Integration
-```python
-from mcp_platform.client import MCPClient
+**Package Management:**
+- **OLD**: pip/pip-tools → **NEW**: uv
+- **Commands**: All `pip install` → `uv sync`
 
-async def test_deployed_server(deployment_result: DeploymentResult):
-    """Validate deployed MCP server functionality."""
-    client = MCPClient(
-        base_url=f"http://localhost:{deployment_result.port}",
-        timeout=30
-    )
-    
-    try:
-        tools = await client.list_tools()
-        logger.info(f"Server has {len(tools)} tools available")
-        
-        # Test tool execution
-        if tools:
-            result = await client.call_tool(tools[0]["name"], {})
-            logger.info(f"Tool execution successful: {result}")
-            
-    finally:
-        await client.close()
-```
+**Code Quality:**
+- **OLD**: black + isort + flake8 → **NEW**: ruff (unified tool)
+- **Commands**: `make format` now uses `ruff format`, `make lint` uses `ruff check`
 
-### Docker Integration Pattern
-```python
-from mcp_platform.backends.docker import DockerDeploymentService
-
-def deploy_with_custom_volumes(template_id: str, config: Dict[str, Any]):
-    """Deploy with custom volume mounting."""
-    backend = DockerDeploymentService()
-    
-    # Add volume mounts to config
-    config.setdefault("volumes", {})
-    config["volumes"].update({
-        "/host/data": "/container/data",
-        "/host/logs": "/container/logs"
-    })
-    
-    return backend.deploy(template_id, config)
-```
-
-## Continuous Integration
-
-### GitHub Actions Integration
-The project uses a comprehensive CI/CD pipeline with multiple stages:
-
-1. **Quick Validation**: Basic imports and fast unit tests
-2. **Code Quality**: Black, isort, flake8, bandit
-3. **Unit Tests**: Fast, isolated tests
-4. **Docker Tests**: Docker-specific functionality
-5. **Kubernetes Tests**: K8s deployment validation
-6. **Template Tests**: Individual template validation
-7. **Integration Tests**: Full system integration
-8. **Coverage Check**: Minimum 50% coverage requirement
-9. **Multi-Python Tests**: Python 3.10, 3.11, 3.12 compatibility
-
-### Local CI Simulation
-```bash
-# Simulate CI pipeline locally
-make ci-quick          # Quick validation
-make ci-full           # Complete CI simulation
-make pre-release       # Pre-release validation
-```
-
-## Documentation Standards
-
-### Code Documentation
-```python
-class TemplateManager:
-    """
-    Centralized template management operations.
-    
-    Provides unified interface for template discovery, validation, and metadata
-    operations that can be shared between CLI and MCPClient implementations.
-    
-    Attributes:
-        template_discovery: Template discovery service
-        backend: Deployment backend instance
-        cache_manager: Template metadata caching
-        
-    Example:
-        >>> manager = TemplateManager(backend_type="docker")
-        >>> templates = manager.list_templates()
-        >>> result = manager.validate_template("demo")
-    """
-```
-
-### API Documentation
-- Use comprehensive docstrings with Args, Returns, Raises sections
-- Include usage examples in docstrings
-- Document exception conditions and error handling
-- Provide type hints for all parameters and return values
-
-## Migration and Compatibility
-
-### Version Compatibility
-- Maintain backward compatibility within major versions
-- Use deprecation warnings for breaking changes
-- Support multiple Python versions (3.10+)
-- Follow semantic versioning principles
-
-### Template Migration
-```python
-def migrate_template_config(old_config: Dict, version: str) -> Dict:
-    """Migrate template configuration between versions."""
-    if version == "1.0.0":
-        # Migration logic for v1.0.0
-        new_config = old_config.copy()
-        if "old_field" in new_config:
-            new_config["new_field"] = new_config.pop("old_field")
-        return new_config
-    return old_config
-```
+**Project Evolution:**
+- **Previous**: "mcp-templates" → **Current**: "MCP Platform"
+- **Architecture**: Enhanced with gateway layer, improved backend abstraction
+- **Templates**: Expanded from basic examples to production-ready templates
 
 ## Summary
 
 When working on MCP Platform:
 
-1. **Follow the established architecture patterns** - use backend abstraction, centralized managers
-2. **Maintain high code quality** - formatting, linting, type hints, comprehensive tests
-3. **Use proper error handling** - custom exceptions, structured logging, graceful degradation
-4. **Test thoroughly** - unit tests, integration tests, template validation
-5. **Document comprehensively** - docstrings, examples, architecture decisions
-6. **Follow security best practices** - input validation, authentication, resource management
-7. **Consider performance** - async patterns, resource cleanup, caching strategies
+1. **Follow modern Python practices** - Use uv, Ruff, type hints, and async patterns
+2. **Use established architecture** - Backend abstraction, centralized managers, proper error handling
+3. **Maintain production quality** - Comprehensive testing, security validation, performance considerations
+4. **Leverage specialization** - Delegate to expert agents, use parallel execution for efficiency
+5. **Document thoroughly** - Google-style docstrings, architecture decisions, usage examples
+6. **Consider deployment scenarios** - Docker, Kubernetes compatibility, template ecosystem impact
 
-The codebase emphasizes production readiness, maintainability, and developer experience. Always consider the impact on deployment scenarios (Docker, Kubernetes) and template ecosystem when making changes.
+The codebase emphasizes production readiness, modern Python practices, and developer experience. Always consider the impact on template deployments and the broader MCP ecosystem when making changes.

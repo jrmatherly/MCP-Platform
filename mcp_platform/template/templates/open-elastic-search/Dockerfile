@@ -1,4 +1,23 @@
-FROM python:3.11-slim
+# Multi-stage build using official uv base image
+FROM ghcr.io/astral-sh/uv:python3.11-bookworm as builder
+
+# Install system dependencies for building
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Clone the repository
+RUN git clone https://github.com/Data-Everything/elasticsearch-mcp-server.git .
+
+# Install dependencies using uv with caching
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev
+
+# Runtime stage - using same base as builder for consistency
+FROM python:3.11-bookworm-slim as runtime
 
 LABEL maintainer="Data Everything <tooling@dataeverything.com>"
 LABEL description="Open Elastic Search MCP Server - Custom implementation supporting both Elasticsearch and OpenSearch"
@@ -8,23 +27,19 @@ LABEL opensearch.version="1.x-2.x-3.x"
 LABEL origin="custom"
 LABEL experimental="true"
 
-# Install system dependencies
+# Install runtime dependencies only
 RUN apt-get update && apt-get install -y \
-    git \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install uv (ultrafast Python package installer and resolver)
-RUN pip install uv
+# Copy virtual environment from builder
+COPY --from=builder /app/.venv /app/.venv
+ENV PATH="/app/.venv/bin:$PATH"
 
-# Set working directory
 WORKDIR /app
 
-# Clone the elasticsearch-mcp-server repository
-RUN git clone https://github.com/Data-Everything/elasticsearch-mcp-server.git .
-
-# Install dependencies using uv
-RUN uv pip install --system -e .
+# Copy application code and entrypoint
+COPY --from=builder /app /app
 
 # Copy our custom entrypoint script
 COPY script.sh /usr/local/bin/open-elastic-search-entrypoint.sh
@@ -44,10 +59,10 @@ ENV OPENSEARCH_VERIFY_CERTS=false
 # Health check for HTTP-based transports
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD if [ "$MCP_TRANSPORT" = "sse" ] || [ "$MCP_TRANSPORT" = "streamable-http" ]; then \
-            curl -f "http://${MCP_HOST}:${MCP_PORT}${MCP_PATH}" || exit 1; \
-        else \
-            echo "${MCP_TRANSPORT} mode - health check skipped"; \
-        fi
+    curl -f "http://${MCP_HOST}:${MCP_PORT}${MCP_PATH}" || exit 1; \
+    else \
+    echo "${MCP_TRANSPORT} mode - health check skipped"; \
+    fi
 
 # Use our custom entrypoint
 ENTRYPOINT ["/usr/local/bin/open-elastic-search-entrypoint.sh"]

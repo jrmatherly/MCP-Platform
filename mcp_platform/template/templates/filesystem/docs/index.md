@@ -300,7 +300,7 @@ export ALLOWED_DIRS="/home/user/documents /home/user/projects"
         "-v", "/home/user/documents:/data/docs:ro",
         "-v", "/tmp:/data/tmp:rw",
         "-e", "ALLOWED_DIRS=/data/docs /data/tmp",
-        "dataeverything/mcp-filesystem"
+        "mcp-platform/mcp-filesystem"
       ]
     }
   }
@@ -332,7 +332,7 @@ docker run -i --rm \
   -v "/tmp:/data/tmp:rw" \
   -e ALLOWED_DIRS="/data/project /data/tmp" \
   -e LOG_LEVEL="DEBUG" \
-  dataeverything/mcp-filesystem
+  mcp-platform/mcp-filesystem
 
 # Production environment with read-only configs
 docker run -i --rm \
@@ -340,7 +340,7 @@ docker run -i --rm \
   -v "/var/log/app:/data/logs:ro" \
   -v "/tmp/app:/data/temp:rw" \
   -e ALLOWED_DIRS="/data/config /data/logs /data/temp" \
-  dataeverything/mcp-filesystem
+  mcp-platform/mcp-filesystem
 ```
 
 ## Development
@@ -459,10 +459,10 @@ pytest tests/ --cov=. --cov-report=html
 
 ```bash
 # Build the image
-docker build -t dataeverything/mcp-filesystem .
+docker build -t mcp-platform/mcp-filesystem .
 
 # Run the container
-docker run dataeverything/mcp-filesystem
+docker run mcp-platform/mcp-filesystem
 ```
 
 ## Troubleshooting

@@ -83,7 +83,7 @@ docker run -i --rm \
   -v "/home/user/documents:/data/documents:ro" \
   -v "/tmp:/data/tmp:rw" \
   -e ALLOWED_DIRS="/data/documents /data/tmp" \
-  dataeverything/mcp-filesystem
+  mcp-platform/mcp-filesystem
 ```
 
 ## Usage Examples
@@ -159,8 +159,8 @@ mcpp> call filesystem delete_file '{"path": "/tmp/unwanted.txt"}'
 
 ### Running Locally
 ```bash
-# Install dependencies
-pip install -r requirements.txt
+# Modern uv setup (recommended)
+uv sync                    # Install dependencies from pyproject.toml
 
 # Set environment
 export ALLOWED_DIRS="/tmp /home/user/documents"
@@ -168,16 +168,23 @@ export LOG_LEVEL="DEBUG"
 
 # Test tools directly via JSON-RPC
 echo '{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}' | \
-  python -m mcp_filesystem
+  uv run python -m mcp_filesystem
+
+# Legacy pip setup (if needed)
+pip install -r requirements.txt
+python -m mcp_filesystem
 ```
 
 ### Running Tests
 ```bash
-# Run filesystem-specific tests
-pytest mcp_platform/template/templates/filesystem/tests/ -v
+# Modern uv approach (recommended)
+uv run pytest mcp_platform/template/templates/filesystem/tests/ -v
 
 # Run integration tests
-pytest tests/test_volume_mount_command_args.py -v
+uv run pytest tests/test_volume_mount_command_args.py -v
+
+# Legacy approach (if needed)
+pytest mcp_platform/template/templates/filesystem/tests/ -v
 ```
 
 ### Building Custom Images
@@ -207,7 +214,7 @@ Add to your Claude Desktop configuration:
         "-v", "/home/user/documents:/data/docs:ro",
         "-v", "/tmp:/data/tmp:rw",
         "-e", "ALLOWED_DIRS=/data/docs /data/tmp",
-        "dataeverything/mcp-filesystem"
+        "mcp-platform/mcp-filesystem"
       ]
     }
   }
@@ -251,7 +258,7 @@ mcpp> call filesystem list_allowed_directories '{}'
 
 # Check actual mount points in container
 docker run --rm -v "/host/path:/container/path" \
-  dataeverything/mcp-filesystem ls -la /container/path
+  mcp-platform/mcp-filesystem ls -la /container/path
 ```
 
 **Tools Not Available**

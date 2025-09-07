@@ -118,13 +118,13 @@ class DockerDeploymentService(BaseDeploymentBackend):
             # If we can't list networks, fall back to creating a simple network later
             existing_subnets = set()
 
-        # Candidate /24 ranges to try (private address space, avoids common default 172.17/16)
+        # Candidate /24 ranges to try (10.x private address space to avoid production conflicts)
         candidates = [
-            ipaddress.ip_network("172.30.0.0/24"),
-            ipaddress.ip_network("172.31.0.0/24"),
-            ipaddress.ip_network("172.28.0.0/24"),
-            ipaddress.ip_network("172.29.0.0/24"),
-            ipaddress.ip_network("172.32.0.0/24"),
+            ipaddress.ip_network("10.100.0.0/24"),
+            ipaddress.ip_network("10.101.0.0/24"),
+            ipaddress.ip_network("10.102.0.0/24"),
+            ipaddress.ip_network("10.103.0.0/24"),
+            ipaddress.ip_network("10.104.0.0/24"),
         ]
 
         chosen = None

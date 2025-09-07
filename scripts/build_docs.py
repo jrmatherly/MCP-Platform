@@ -62,8 +62,8 @@ except ImportError as e:
 import importlib.util
 
 MCP_CLIENT_AVAILABLE = (
-    importlib.util.find_spec("mcp_platform.client") is not None and
-    importlib.util.find_spec("mcp_platform.core.tool_manager") is not None
+    importlib.util.find_spec("mcp_platform.client") is not None
+    and importlib.util.find_spec("mcp_platform.core.tool_manager") is not None
 )
 
 if not MCP_CLIENT_AVAILABLE:
@@ -1159,9 +1159,7 @@ def build_docs():
     print("🏗️  Building documentation with MkDocs...")
 
     try:
-        subprocess.run(
-            ["mkdocs", "build"], check=True, capture_output=True, text=True
-        )
+        subprocess.run(["mkdocs", "build"], check=True, capture_output=True, text=True)
         print("✅ Documentation built successfully")
         return True
     except subprocess.CalledProcessError as e:

@@ -354,7 +354,7 @@ docker run -i --rm \
   -e GOOGLE_CLOUD_PROJECT=my-project \
   -e GOOGLE_APPLICATION_CREDENTIALS=/creds/service-account.json \
   -v /path/to/service-account.json:/creds/service-account.json:ro \
-  dataeverything/mcp-bigquery:latest
+  mcp-platform/mcp-bigquery:latest
 ```
 
 ## Integration Examples
@@ -373,7 +373,7 @@ Add to your Claude Desktop configuration:
         "-e", "GOOGLE_CLOUD_PROJECT=my-project",
         "-e", "GOOGLE_APPLICATION_CREDENTIALS=/creds/service-account.json",
         "-v", "/path/to/service-account.json:/creds/service-account.json:ro",
-        "dataeverything/mcp-bigquery:latest"
+        "mcp-platform/mcp-bigquery:latest"
       ]
     }
   }
@@ -495,7 +495,7 @@ docker run -p 7090:7090 \
   -e GOOGLE_CLOUD_PROJECT=my-project \
   -e GOOGLE_APPLICATION_CREDENTIALS=/creds/service-account.json \
   -v /path/to/service-account.json:/creds/service-account.json:ro \
-  dataeverything/mcp-bigquery:latest
+  mcp-platform/mcp-bigquery:latest
 
 # With security controls
 docker run -p 7090:7090 \
@@ -505,7 +505,7 @@ docker run -p 7090:7090 \
   -e BIGQUERY_MAX_RESULTS=500 \
   -e GOOGLE_APPLICATION_CREDENTIALS=/creds/service-account.json \
   -v /path/to/service-account.json:/creds/service-account.json:ro \
-  dataeverything/mcp-bigquery:latest
+  mcp-platform/mcp-bigquery:latest
 ```
 
 ### Docker Compose
@@ -514,7 +514,7 @@ docker run -p 7090:7090 \
 version: '3.8'
 services:
   bigquery-mcp:
-    image: dataeverything/mcp-bigquery:latest
+    image: mcp-platform/mcp-bigquery:latest
     ports:
       - "7090:7090"
     environment:
@@ -557,7 +557,7 @@ spec:
     spec:
       containers:
       - name: bigquery-mcp
-        image: dataeverything/mcp-bigquery:latest
+        image: mcp-platform/mcp-bigquery:latest
         ports:
         - containerPort: 7090
         env:
@@ -688,7 +688,7 @@ Implement network-level security controls:
 
 ```bash
 # Bind to localhost only (for local deployment)
-docker run -p 127.0.0.1:7090:7090 dataeverything/mcp-bigquery
+docker run -p 127.0.0.1:7090:7090 mcp-platform/mcp-bigquery
 
 # Use reverse proxy with authentication
 # nginx, Traefik, or cloud load balancer with auth
@@ -785,10 +785,10 @@ SELECT * FROM table ORDER BY timestamp DESC LIMIT 1000
 docker logs container_id
 
 # Verify environment variables
-docker run --rm dataeverything/mcp-bigquery env | grep BIGQUERY
+docker run --rm mcp-platform/mcp-bigquery env | grep BIGQUERY
 
 # Test with minimal configuration
-docker run --rm -e GOOGLE_CLOUD_PROJECT=test dataeverything/mcp-bigquery
+docker run --rm -e GOOGLE_CLOUD_PROJECT=test mcp-platform/mcp-bigquery
 ```
 
 #### Health check failures

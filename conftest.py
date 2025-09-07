@@ -298,7 +298,6 @@ def mock_filesystem():
         patch("pathlib.Path.is_dir") as mock_is_dir,
         patch("builtins.open", create=True) as mock_open,
     ):
-
         mock_exists.return_value = True
         mock_is_file.return_value = True
         mock_is_dir.return_value = True

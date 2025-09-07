@@ -10,7 +10,7 @@ Standard configuration uses the `config_schema` in `template.json` and provides:
 - Environment variable mapping
 - Structured configuration management
 
-### Usage Examples:
+### Usage Examples
 ```bash
 # Via CLI config argument
 mcpp deploy demo --config hello_from="My Server"
@@ -20,7 +20,7 @@ mcpp deploy demo --config log_level=debug
 MCP_HELLO_FROM="My Server" mcpp deploy demo
 ```
 
-### In Server Code:
+### In Server Code
 ```python
 # Access via config_data
 hello_from = self.config_data.get('hello_from', 'Default')
@@ -35,7 +35,7 @@ Double underscore notation allows overriding ANY part of the template.json struc
 - Add custom fields
 - Override nested properties
 
-### Usage Examples:
+### Usage Examples
 ```bash
 # Override template-level properties
 mcpp deploy demo --name="Custom Server Name"
@@ -49,7 +49,7 @@ mcpp deploy demo --tools__0__custom_prefix="Hey there!"
 mcpp deploy demo --custom_field="any value"
 ```
 
-### In Server Code:
+### In Server Code
 ```python
 # Access via template_data (potentially modified by double underscore)
 server_name = self.template_data.get("name", "Default Server")
@@ -60,13 +60,13 @@ greeting_style = say_hello_tool.get('greeting_style', 'casual')
 
 ## When to Use Each Pattern
 
-### Use Standard Configuration (Pattern 1) for:
+### Use Standard Configuration (Pattern 1) for
 - Values that need validation
 - Configuration with clear defaults
 - Settings that map to environment variables
 - Core server functionality
 
-### Use Template Overrides (Pattern 2) for:
+### Use Template Overrides (Pattern 2) for
 - Customizing tool behavior
 - Adding metadata or custom fields
 - Modifying template structure

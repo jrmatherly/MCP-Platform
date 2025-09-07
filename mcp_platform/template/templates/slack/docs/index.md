@@ -175,7 +175,7 @@ python server.py --slack-token xoxb-your-token
 # Docker stdio
 docker run -i --rm \
   -e SLACK_TOKEN=xoxb-your-token \
-  dataeverything/mcp-slack
+  mcp-platform/mcp-slack
 ```
 
 ### Server-Sent Events (SSE)
@@ -206,7 +206,7 @@ Add to your Claude Desktop configuration:
       "args": [
         "run", "-i", "--rm",
         "-e", "SLACK_TOKEN=xoxb-your-token",
-        "dataeverything/mcp-slack:latest"
+        "mcp-platform/mcp-slack:latest"
       ]
     }
   }
@@ -247,7 +247,7 @@ asyncio.run(slack_integration())
 version: '3.8'
 services:
   slack-mcp:
-    image: dataeverything/mcp-slack:latest
+    image: mcp-platform/mcp-slack:latest
     ports:
       - "3003:3003"
     environment:
@@ -282,7 +282,7 @@ spec:
     spec:
       containers:
       - name: slack-mcp
-        image: dataeverything/mcp-slack:latest
+        image: mcp-platform/mcp-slack:latest
         ports:
         - containerPort: 3003
         env:

@@ -1,19 +1,25 @@
-FROM python:3.11-slim
+# Multi-stage build using official uv base image
+FROM ghcr.io/astral-sh/uv:python3.11-bookworm as builder
+
+WORKDIR /app
+COPY pyproject.toml uv.lock ./
+
+# Install dependencies with caching
+RUN --mount=type=cache,target=/root/.cache/uv \
+  uv sync --frozen --no-dev --no-install-project
+
+# Runtime stage - using same base as builder for consistency
+FROM python:3.11-bookworm-slim as runtime
+
+# Copy virtual environment from builder
+COPY --from=builder /app/.venv /app/.venv
+ENV PATH="/app/.venv/bin:$PATH"
 
 LABEL maintainer="Data Everything <tooling@dataeverything.com>"
 LABEL description="Demo MCP Server using FastMCP"
 LABEL version="1.0.0"
 
-# Set working directory
 WORKDIR /app
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy dependencies and install Python packages
-COPY pyproject.toml uv.lock ./
-RUN pip install uv && uv sync --frozen --no-dev
 
 # Copy demo template source code
 COPY . .

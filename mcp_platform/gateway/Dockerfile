@@ -1,8 +1,8 @@
 # Multi-stage build for production-ready MCP Platform Gateway
-# Using uv for efficient Python dependency management
+# Using official uv base image for efficient Python dependency management
 
-# Stage 1: Build environment with uv
-FROM python:3.11-slim as builder
+# Stage 1: Build environment with official uv base image
+FROM ghcr.io/astral-sh/uv:python3.11-bookworm as builder
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -11,20 +11,18 @@ RUN apt-get update && apt-get install -y \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-# Install uv
-RUN pip install uv
-
 # Set working directory
 WORKDIR /app
 
 # Copy dependency files
 COPY pyproject.toml uv.lock ./
 
-# Install dependencies using uv (creates virtual environment)
-RUN uv sync --frozen --no-dev
+# Install dependencies using uv with caching
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev
 
-# Stage 2: Production runtime
-FROM python:3.11-slim as runtime
+# Stage 2: Production runtime - using consistent base
+FROM python:3.11-bookworm-slim as runtime
 
 # Create non-root user for security
 RUN groupadd -r mcpgateway && useradd -r -g mcpgateway mcpgateway

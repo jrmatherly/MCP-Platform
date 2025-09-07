@@ -21,7 +21,6 @@ Local filesystem access with configurable allowed paths.
 
 - `LOG_LEVEL`: Logging level (DEBUG, INFO, WARNING, ERROR)
 
-
 ### Configuration File
 
 You can also use a configuration file in JSON format:

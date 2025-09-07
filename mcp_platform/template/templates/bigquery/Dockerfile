@@ -1,30 +1,39 @@
-# Use Python 3.11 slim image for smaller size
-FROM python:3.11-slim
+# Multi-stage build using official uv base image
+FROM ghcr.io/astral-sh/uv:python3.11-bookworm as builder
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
-ENV PIP_NO_CACHE_DIR=1
-ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# Create non-root user for security
-RUN groupadd -r mcpuser && useradd -r -g mcpuser mcpuser
-
-# Set working directory
-WORKDIR /app
-
-# Install system dependencies
+# Install system dependencies if needed for building
 #RUN apt-get update && apt-get install -y \
 #    --no-install-recommends \
 #    gcc \
 #    g++ \
 #    && rm -rf /var/lib/apt/lists/*
 
-# Copy dependencies for better caching
+WORKDIR /app
 COPY pyproject.toml uv.lock ./
 
-# Install Python dependencies
-RUN pip install uv && uv sync --frozen --no-dev
+# Install dependencies with caching
+RUN --mount=type=cache,target=/root/.cache/uv \
+  uv sync --frozen --no-dev --no-install-project
+
+# Runtime stage - using same base as builder for consistency
+FROM python:3.11-bookworm-slim as runtime
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# Create non-root user for security
+RUN groupadd -r mcpuser && useradd -r -g mcpuser mcpuser
+
+# Copy virtual environment from builder
+COPY --from=builder /app/.venv /app/.venv
+ENV PATH="/app/.venv/bin:$PATH"
+
+WORKDIR /app
 
 # Copy application code
 COPY . .

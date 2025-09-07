@@ -364,16 +364,20 @@ The server provides comprehensive error handling:
 Run the comprehensive test suite:
 
 ```bash
-# Install test dependencies
-pip install pytest pytest-asyncio
+# Modern uv approach (recommended)
+uv sync --extra dev        # Install test dependencies
 
 # Run all tests
-pytest tests/
+uv run pytest tests/
 
 # Run specific test files
-pytest tests/test_config.py
-pytest tests/test_zendesk_server.py
-pytest tests/test_integration.py
+uv run pytest tests/test_config.py
+uv run pytest tests/test_zendesk_server.py
+uv run pytest tests/test_integration.py
+
+# Legacy approach (if needed)
+pip install pytest pytest-asyncio
+pytest tests/
 
 # Run with coverage
 pytest --cov=. tests/
@@ -388,8 +392,8 @@ pytest --cov=. tests/
 git clone <repository>
 cd zendesk-mcp-server
 
-# Install dependencies
-pip install -r requirements.txt
+# Modern uv setup (recommended)
+uv sync                    # Install dependencies from pyproject.toml
 
 # Set environment variables
 export ZENDESK_SUBDOMAIN=your-test-subdomain
@@ -397,6 +401,10 @@ export ZENDESK_EMAIL=your-test-email
 export ZENDESK_API_TOKEN=your-test-token
 
 # Run the server
+uv run python server.py
+
+# Legacy pip setup (if needed)
+pip install -r requirements.txt
 python server.py
 ```
 
