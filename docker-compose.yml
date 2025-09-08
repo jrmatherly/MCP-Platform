@@ -207,8 +207,8 @@ services:
           cpus: "0.5"
           memory: 256M
     ports:
-      - "${NGINX_HTTP_PORT:-8080}:80"
-      - "${NGINX_HTTPS_PORT:-8443}:443"
+      - "${NGINX_HTTP_PORT:-18080}:80"
+      - "${NGINX_HTTPS_PORT:-18443}:443"
     environment:
       <<: *common-env
       DOMAIN_NAME: ${DOMAIN_NAME:-localhost}
@@ -484,7 +484,7 @@ networks:
     name: mcp_platform_network
     ipam:
       config:
-        - subnet: ${MCP_SUBNET:-172.20.0.0/16}
+        - subnet: ${MCP_SUBNET:-10.100.0.0/16}
 
 # =============================================================================
 # Volumes

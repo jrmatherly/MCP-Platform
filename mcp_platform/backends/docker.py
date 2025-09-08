@@ -65,10 +65,48 @@ class DockerDeploymentService(BaseDeploymentBackend):
 
         return False
 
+    def _validate_network_configuration(self) -> bool:
+        """
+        Validate network configuration and environment variables.
+        
+        Returns:
+            bool: True if configuration is valid, False otherwise
+        """
+        # Check if MCP_SUBNET is set and valid
+        mcp_subnet = os.getenv("MCP_SUBNET")
+        if mcp_subnet:
+            try:
+                network = ipaddress.ip_network(mcp_subnet, strict=False)
+                # Validate that it's a private network range
+                if not network.is_private:
+                    logger.warning(
+                        "MCP_SUBNET %s is not in a private IP range. "
+                        "Consider using 10.x.x.x, 172.16-31.x.x, or 192.168.x.x ranges.",
+                        mcp_subnet
+                    )
+                    return False
+                # Check if it's in the preferred 10.x range
+                if not str(network.network_address).startswith("10."):
+                    logger.info(
+                        "MCP_SUBNET %s is valid but not in preferred 10.x range. "
+                        "Consider using 10.100.0.0/16 for better compatibility.",
+                        mcp_subnet
+                    )
+                return True
+            except ipaddress.AddressValueError as e:
+                logger.error("Invalid MCP_SUBNET value '%s': %s", mcp_subnet, e)
+                return False
+        return True
+
     def create_network(self):
         """
         Create a Docker network if it doesn't already exist.
+        Validates network configuration before creating.
         """
+        # Validate network configuration first
+        if not self._validate_network_configuration():
+            logger.warning("Network configuration validation failed, proceeding with defaults")
+        
         # If the network already exists, nothing to do
         result = self._run_command(
             ["docker", "network", "inspect", MCP_PLATFORM_NETWORK_NAME], check=False
@@ -119,6 +157,9 @@ class DockerDeploymentService(BaseDeploymentBackend):
             existing_subnets = set()
 
         # Candidate /24 ranges to try (10.x private address space to avoid production conflicts)
+        # These ranges are chosen to avoid common corporate network ranges:
+        # - 10.0.0.0/8 is private but 10.0.x.x and 10.1.x.x are often used
+        # - 10.100.x.x+ ranges are less commonly used in corporate environments
         candidates = [
             ipaddress.ip_network("10.100.0.0/24"),
             ipaddress.ip_network("10.101.0.0/24"),
