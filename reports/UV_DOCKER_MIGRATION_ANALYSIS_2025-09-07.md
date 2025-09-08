@@ -12,7 +12,7 @@ Analysis of 11 Dockerfiles in the MCP Platform project reveals inconsistent uv u
 
 ### ✅ **Already Optimized (Reference Implementation)**
 - `mcp_platform/gateway/Dockerfile` - Excellent multi-stage build with proper uv usage
-- `mcp_platform/gateway/docker-compose.yml` - Production-ready configuration
+- `docker-compose.yml` - Centralized production-ready configuration at project root
 
 ### 🟡 **Partially Modernized (Needs Optimization)**
 1. `mcp_platform/template/templates/demo/Dockerfile`
@@ -292,7 +292,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 
 ENTRYPOINT ["/usr/local/bin/open-elastic-search-entrypoint.sh"]
 
-LABEL maintainer="Data Everything <tooling@dataeverything.com>"
+LABEL maintainer="Jason Matherly <jason@matherly.net>"
 LABEL description="Open Elastic Search MCP Server - Custom implementation supporting both Elasticsearch and OpenSearch"
 LABEL version="2.0.11"
 LABEL elasticsearch.version="7.x-8.x-9.x"

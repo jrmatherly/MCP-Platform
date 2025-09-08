@@ -58,7 +58,7 @@ HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD \
 CMD ["python", "server.py"]
 
 # Labels for metadata
-LABEL maintainer="Data Everything <tooling@dataeverything.com>"
+LABEL maintainer="Jason Matherly <jason@matherly.net>"
 LABEL description="Production-ready BigQuery MCP server with secure authentication and access controls"
 LABEL version="1.0.0"
 LABEL org.opencontainers.image.title="BigQuery MCP Server"

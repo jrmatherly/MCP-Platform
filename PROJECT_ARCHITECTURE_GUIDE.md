@@ -859,6 +859,27 @@ CMD ["python", "server.py"]
 - **Security hardening** with minimal runtime footprint
 - **Official base images** maintained by Astral team
 
+### Production Resource Management
+
+The platform now includes comprehensive resource limits for production workloads in docker-compose.yml:
+
+```yaml
+deploy:
+  resources:
+    limits:
+      cpus: '4.0'        # High performance for gateway
+      memory: 4G
+    reservations:
+      cpus: '1.0'        # Guaranteed minimum allocation
+      memory: 1G
+```
+
+**Resource Allocation by Service:**
+- **PostgreSQL**: 2 CPU / 2GB RAM (database workloads)
+- **Redis**: 1 CPU / 1GB RAM (caching and sessions)
+- **Gateway**: 4 CPU / 4GB RAM (high-performance API processing)
+- **Nginx**: 2 CPU / 1GB RAM (reverse proxy and SSL termination)
+
 ### Template Docker Status
 
 | Template | Builder Base | Runtime Base | Status |

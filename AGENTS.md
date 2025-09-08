@@ -44,6 +44,17 @@ make ci-full         # Complete CI pipeline simulation
 make pre-release     # Pre-release validation
 ```
 
+**Docker & Deployment:**
+```bash
+make docker-build          # Build all containers
+make docker-up             # Start production stack
+make docker-up-dev         # Start development mode
+make docker-up-monitoring  # Start with monitoring
+make docker-down           # Stop all services
+make docker-logs           # Follow logs
+make docker-clean          # Clean resources
+```
+
 **Documentation & Build:**
 ```bash
 make docs            # Build documentation
@@ -68,6 +79,33 @@ mcpp logs demo --follow           # View logs
 mcpp create my-template            # Create new template
 mcpp deploy my-template --backend mock  # Test with mock backend
 ```
+
+### Centralized Docker Deployment
+
+**Docker Compose Setup (Root Level):**
+```bash
+# Copy and configure environment
+cp .env.example .env
+# Edit .env with your configuration
+
+# Build and deploy with profiles
+docker compose build                           # Build all containers
+docker compose --profile production up -d     # Full production stack
+docker compose --profile gateway up -d        # Gateway only
+docker compose --profile monitoring up -d     # With monitoring
+docker compose --profile templates up -d      # Template examples
+
+# Or use automation script
+./scripts/docker-compose-up.sh production     # Automated deployment with validation
+```
+
+**Available Profiles:**
+- `platform`: Core MCP Platform CLI container
+- `gateway`: Production gateway (postgres + redis + gateway + nginx)
+- `monitoring`: Prometheus + Grafana observability
+- `production`: Full stack (gateway + monitoring)
+- `templates`: Example deployments (demo + filesystem)
+- `all`: Complete deployment (all services)
 
 ### Script Command Consistency
 **Important**: The project has migrated from npm to Python/uv tooling. All commands are now make-based or mcpp CLI commands, not npm scripts.

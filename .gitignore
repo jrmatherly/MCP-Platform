@@ -238,5 +238,5 @@ docs/server-templates/*/
 secrets/
 
 # Certificates
-mcp_platform/gateway/nginx/ssl/fullchain.pem
-mcp_platform/gateway/nginx/ssl/privkey.pem
+fullchain.pem
+privkey.pem

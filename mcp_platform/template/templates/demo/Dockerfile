@@ -15,7 +15,7 @@ FROM python:3.11-bookworm-slim as runtime
 COPY --from=builder /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
 
-LABEL maintainer="Data Everything <tooling@dataeverything.com>"
+LABEL maintainer="Jason Matherly <jason@matherly.net>"
 LABEL description="Demo MCP Server using FastMCP"
 LABEL version="1.0.0"
 

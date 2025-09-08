@@ -19,7 +19,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # Runtime stage - using same base as builder for consistency
 FROM python:3.11-bookworm-slim as runtime
 
-LABEL maintainer="Data Everything <tooling@dataeverything.com>"
+LABEL maintainer="Jason Matherly <jason@matherly.net>"
 LABEL description="Open Elastic Search MCP Server - Custom implementation supporting both Elasticsearch and OpenSearch"
 LABEL version="2.0.11"
 LABEL elasticsearch.version="7.x-8.x-9.x"

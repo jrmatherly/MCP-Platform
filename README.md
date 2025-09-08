@@ -19,27 +19,6 @@ Zero-configuration deployment of production-ready MCP servers with Docker contai
 
 ---
 
-# MCP Server Templates (Legacy)
-
-> **⚠️ This version is in maintenance mode. Please migrate to [MCP Platform](https://github.com/jrmatherly/MCP-Platform) for latest features and updates.**
-
-[![Version](https://img.shields.io/pypi/v/mcp-templates.svg)](https://pypi.org/project/mcp-templates/)
-[![Python Versions](https://img.shields.io/pypi/pyversions/mcp-templates.svg)](https://pypi.org/project/mcp-templates/)
-[![License](https://img.shields.io/badge/License-Elastic%202.0-blue.svg)](LICENSE)
-[![Discord](https://img.shields.io/discord/XXXXX?color=7289da&logo=discord&logoColor=white)](https://discord.gg/55Cfxe9gnr)
-
-<div align="center">
-
-**� [Migrate to MCP Platform](https://github.com/jrmatherly/MCP-Platform)** • **[💬 Discord Community](https://discord.gg/55Cfxe9gnr)** • **[� Legacy Docs](#-quick-start)**
-
-</div>
-
-> **Deploy Model Context Protocol (MCP) servers in seconds, not hours.**
-
-Zero-configuration deployment of production-ready MCP servers with Docker containers, comprehensive CLI tools, and intelligent caching. Focus on AI integration, not infrastructure setup.
-
----
-
 ## 🚀 Quick Start
 
 ```bash
@@ -63,9 +42,9 @@ mcpp logs demo
 
 ---
 
-## ⚡ Why MCP Templates?
+## ⚡ Why MCP Platform?
 
-| Traditional MCP Setup | With MCP Templates |
+| Traditional MCP Setup | With MCP Platform |
 |----------------------|-------------------|
 | ❌ Complex configuration | ✅ One-command deployment |
 | ❌ Docker expertise required | ✅ Zero configuration needed |
@@ -112,7 +91,7 @@ uv tool install mcp-platform
 
 ### Docker
 ```bash
-docker run --privileged -it dataeverything/mcp-server-templates:latest deploy demo
+docker run --privileged -it mcp-platform/mcp-server-templates:latest deploy demo
 ```
 
 ### From Source
@@ -187,7 +166,7 @@ mcpp deploy my-template --backend mock
 | **github** | GitHub API integration | stdio | Development workflows |
 | **zendesk** | Customer support tools | HTTP, stdio | Support automation |
 
-[View all templates →](https://data-everything.github.io/mcp-server-templates/server-templates/)
+[View all templates →](docs/templates/)
 
 ---
 
@@ -262,73 +241,26 @@ mcpp deploy filesystem --config-file myconfig.json
    mcpp deploy my-template --backend mock
    ```
 
-[Full template development guide →](https://data-everything.github.io/mcp-server-templates/templates/creating/)
+[Full template development guide →](docs/templates/creating.md)
 
 ---
 
-## � Migration to MCP Platform
+## 📖 Documentation
 
-**This repository has evolved into MCP Platform with enhanced features and better architecture.**
-
-### Why We Moved
-
-1. **Better Naming**: "MCP Platform" better reflects the comprehensive nature of the project
-2. **Enhanced Architecture**: Improved codebase structure and performance
-3. **Expanded Features**: More deployment options, better tooling, enhanced templates
-4. **Future Growth**: Better positioned for upcoming MCP ecosystem developments
-
-### What Stays the Same
-
-- ✅ All your existing configurations work unchanged
-- ✅ Same Docker images and templates
-- ✅ Same deployment workflows
-- ✅ Full backward compatibility during transition
-
-### Migration Steps
-
-1. **Install new package:**
-   ```bash
-   pip uninstall mcp-templates
-   uv add mcp-platform
-   ```
-
-2. **Update commands:**
-   ```bash
-   # Old command
-   mcpp deploy demo
-
-   # New command (everything else identical)
-   mcpp deploy demo
-   ```
-
-3. **Update documentation bookmarks:**
-   - New docs: https://data-everything.github.io/MCP-Platform/
-   - New repository: https://github.com/jrmatherly/MCP-Platform
-
-### Support Timeline
-
-- **Current (Legacy) Package**: Security updates only through 2025
-- **New Platform**: Active development, new features, full support
-- **Migration Support**: Available through Discord and GitHub issues
-
-**🚀 [Start your migration now →](https://github.com/jrmatherly/MCP-Platform)**
-
----
-
-## �📖 Documentation (Legacy)
-
-- **[Getting Started](https://data-everything.github.io/mcp-server-templates/getting-started/)** - Installation and first deployment
-- **[CLI Reference](https://data-everything.github.io/mcp-server-templates/cli/)** - Complete command documentation
-- **[Template Guide](https://data-everything.github.io/mcp-server-templates/templates/)** - Creating and configuring templates
-- **[User Guide](https://data-everything.github.io/mcp-server-templates/user-guide/)** - Advanced usage and best practices
+- **[Getting Started](GETTING_STARTED.md)** - Installation and first deployment
+- **[Quick Start Guide](QUICKSTART.md)** - 2-minute deployment guide
+- **[CLI Reference](docs/user-guide/cli-reference.md)** - Complete command documentation
+- **[Template Guide](docs/templates/creating.md)** - Creating and configuring templates
+- **[Gateway Documentation](mcp_platform/gateway/README.md)** - Enterprise gateway deployment
+- **[Docker Setup Guide](docker/README.md)** - Production deployment with Docker Compose
 
 ---
 
 ## 🤝 Community
 
 - **[Discord Server](https://discord.gg/55Cfxe9gnr)** - Get help and discuss features
-- **[GitHub Issues](https://github.com/DataEverything/mcp-server-templates/issues)** - Report bugs and request features
-- **[Discussions](https://github.com/DataEverything/mcp-server-templates/discussions)** - Share templates and use cases
+- **[GitHub Issues](https://github.com/jrmatherly/MCP-Platform/issues)** - Report bugs and request features
+- **[Discussions](https://github.com/jrmatherly/MCP-Platform/discussions)** - Share templates and use cases
 
 ---
 

@@ -205,6 +205,36 @@ docker-check:
 	docker --version
 	docker ps
 
+# Docker Compose helpers  
+docker-build:
+	@echo "🔨 Building Docker containers..."
+	docker compose build
+
+docker-up:
+	@echo "🚀 Starting MCP Platform with Docker Compose..."
+	./scripts/docker-compose-up.sh production
+
+docker-up-dev:
+	@echo "🛠️ Starting MCP Platform in development mode..."
+	./scripts/docker-compose-up.sh dev
+
+docker-up-monitoring:
+	@echo "📊 Starting MCP Platform with monitoring..."
+	./scripts/docker-compose-up.sh monitoring
+
+docker-down:
+	@echo "⏹️ Stopping MCP Platform services..."
+	docker compose down
+
+docker-logs:
+	@echo "📋 Showing Docker Compose logs..."
+	docker compose logs -f
+
+docker-clean:
+	@echo "🧹 Cleaning Docker resources..."
+	docker compose down -v --remove-orphans
+	docker system prune -f
+
 # Template development
 validate-templates:
 	@echo "✅ Validating all templates..."

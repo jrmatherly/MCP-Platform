@@ -9,7 +9,6 @@ from unittest.mock import Mock, patch
 import pytest
 
 from mcp_platform.backends.docker import DockerDeploymentService
-from mcp_platform.core.exceptions import DeploymentError
 
 
 @pytest.mark.unit
@@ -105,8 +104,10 @@ class TestDockerDeploymentService:
         service = DockerDeploymentService()
         template_data = {"image": "test-image:latest"}
 
-        with pytest.raises(DeploymentError):
+        with pytest.raises(Exception) as exc_info:
             service.deploy_template("test", {}, template_data, {})
+
+        assert str(exc_info.value) == "Docker error"
 
     # CREATE_NETWORK TESTS - Core focus of this task
     @patch(

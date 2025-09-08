@@ -1,0 +1,532 @@
+# MCP Platform - Production Docker Compose
+# Complete production-ready stack with gateway, database, caching, and monitoring
+#
+# Quick Start:
+#   1. cp .env.example .env (and configure required values)
+#   2. docker compose build
+#   3. docker compose up -d
+#   4. Access gateway at http://localhost:8080
+
+version: "3.8"
+
+x-common-variables: &common-env # Common environment variables
+  TZ: ${TZ:-UTC}
+  MCP_NETWORK: ${MCP_NETWORK:-mcp_platform_network}
+
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  # =============================================================================
+  # Core MCP Platform Services
+  # =============================================================================
+
+  # Main MCP Platform CLI - for template deployment and management
+  mcp-platform:
+    build:
+      context: .
+      dockerfile: docker/mcp-platform.dockerfile
+      cache_from:
+        - ghcr.io/astral-sh/uv:python3.11-alpine
+    image: mcp-platform:latest
+    container_name: mcp_platform_cli
+    environment:
+      <<: *common-env
+      MCP_BACKEND_TYPE: ${MCP_BACKEND_TYPE:-docker}
+      MCP_LOG_LEVEL: ${MCP_LOG_LEVEL:-INFO}
+      MCP_DATA_DIR: /data
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - mcp_platform_data:/data
+      - mcp_platform_config:/config
+    networks:
+      - mcp_network
+    logging: *default-logging
+    restart: unless-stopped
+    profiles: ["platform"]
+
+  # =============================================================================
+  # Production Gateway Stack
+  # =============================================================================
+
+  # PostgreSQL Database for production gateway
+  postgres:
+    image: postgres:17-alpine
+    container_name: mcp_gateway_db
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-mcp_gateway}
+      POSTGRES_USER: ${POSTGRES_USER:-mcpuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Please set POSTGRES_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-scripts:/docker-entrypoint-initdb.d:ro
+    networks:
+      - mcp_network
+    logging: *default-logging
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-mcpuser} -d ${POSTGRES_DB:-mcp_gateway}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    profiles: ["gateway", "production"]
+
+  # Redis for caching and session storage
+  redis:
+    image: redis:8-alpine
+    container_name: mcp_gateway_redis
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+    command: >
+      redis-server 
+      --requirepass ${REDIS_PASSWORD:?Please set REDIS_PASSWORD}
+      --appendonly yes 
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+    volumes:
+      - redis_data:/data
+    networks:
+      - mcp_network
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    profiles: ["gateway", "production"]
+
+  # MCP Platform Gateway - Production API Gateway
+  mcp-gateway:
+    build:
+      context: .
+      dockerfile: docker/gateway.dockerfile
+      cache_from:
+        - ghcr.io/astral-sh/uv:python3.11-bookworm
+    image: mcp-gateway:latest
+    container_name: mcp_gateway_app
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "4.0"
+          memory: 4G
+        reservations:
+          cpus: "1.0"
+          memory: 1G
+    environment:
+      <<: *common-env
+      # Database configuration
+      GATEWAY_DATABASE_URL: postgresql://${POSTGRES_USER:-mcpuser}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-mcp_gateway}
+
+      # Gateway configuration
+      GATEWAY_HOST: 0.0.0.0
+      GATEWAY_PORT: 8080
+      GATEWAY_SECRET_KEY: ${GATEWAY_SECRET_KEY:?Please set GATEWAY_SECRET_KEY}
+      GATEWAY_LOG_LEVEL: ${GATEWAY_LOG_LEVEL:-INFO}
+      GATEWAY_WORKERS: ${GATEWAY_WORKERS:-2}
+
+      # Admin user configuration
+      GATEWAY_ADMIN_PASSWORD: ${GATEWAY_ADMIN_PASSWORD:?Please set GATEWAY_ADMIN_PASSWORD}
+
+      # CORS configuration
+      GATEWAY_CORS_ORIGINS: ${GATEWAY_CORS_ORIGINS:-*}
+
+      # Registry configuration
+      GATEWAY_REGISTRY_FILE: /app/registry/registry.json
+
+      # Redis configuration
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+
+      # Docker socket access for template management
+      DOCKER_HOST: unix:///var/run/docker.sock
+    volumes:
+      - gateway_data:/app/data
+      - gateway_registry:/app/registry
+      - gateway_logs:/app/logs
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - mcp_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/gateway/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging: *default-logging
+    profiles: ["gateway", "production"]
+
+  # =============================================================================
+  # Reverse Proxy and Load Balancer
+  # =============================================================================
+
+  # Nginx reverse proxy for SSL termination and load balancing
+  nginx:
+    build:
+      context: docker/nginx
+      dockerfile: Dockerfile
+    image: mcp-nginx:latest
+    container_name: mcp_gateway_nginx
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1G
+        reservations:
+          cpus: "0.5"
+          memory: 256M
+    ports:
+      - "${NGINX_HTTP_PORT:-8080}:80"
+      - "${NGINX_HTTPS_PORT:-8443}:443"
+    environment:
+      <<: *common-env
+      DOMAIN_NAME: ${DOMAIN_NAME:-localhost}
+      GATEWAY_UPSTREAM: ${GATEWAY_UPSTREAM:-mcp-gateway:8080}
+      SSL_CERTIFICATE_MODE: ${SSL_CERTIFICATE_MODE:-manual}
+      SSL_CERT_PATH: ${SSL_CERT_PATH:-/etc/nginx/ssl/fullchain.pem}
+      SSL_KEY_PATH: ${SSL_KEY_PATH:-/etc/nginx/ssl/privkey.pem}
+      LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL:-}
+      LETSENCRYPT_DOMAINS: ${LETSENCRYPT_DOMAINS:-${DOMAIN_NAME:-localhost}}
+      CERT_EXPIRY_WARNING_DAYS: ${CERT_EXPIRY_WARNING_DAYS:-30}
+    volumes:
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d
+      - ./docker/nginx/templates:/etc/nginx/templates:ro
+      - ./docker/nginx/ssl:/etc/nginx/ssl:ro
+      - letsencrypt_certs:/etc/letsencrypt:ro
+      - letsencrypt_www:/var/www/certbot
+      - nginx_logs:/var/log/nginx
+    networks:
+      - mcp_network
+    depends_on:
+      - mcp-gateway
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "sh",
+          "-c",
+          "wget --quiet --tries=1 --spider https://localhost/health --no-check-certificate || wget --quiet --tries=1 --spider http://localhost/health",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging: *default-logging
+    profiles: ["gateway", "production"]
+
+  # Certbot for Let's Encrypt certificate automation
+  certbot:
+    image: certbot/certbot:latest
+    container_name: mcp_gateway_certbot
+    restart: "no"
+    environment:
+      <<: *common-env
+    volumes:
+      - letsencrypt_certs:/etc/letsencrypt
+      - letsencrypt_www:/var/www/certbot
+      - ./scripts:/scripts:ro
+    command: >
+      sh -c 'if [ "${SSL_CERTIFICATE_MODE}" = "letsencrypt" ] && [ -n "${LETSENCRYPT_EMAIL}" ]; then
+        echo "Starting Let'"'"'s Encrypt certificate generation...";
+        certbot certonly 
+          --webroot 
+          --webroot-path=/var/www/certbot 
+          --email ${LETSENCRYPT_EMAIL} 
+          --agree-tos 
+          --no-eff-email 
+          --non-interactive
+          --expand
+          --domains ${LETSENCRYPT_DOMAINS}
+          ${LETSENCRYPT_STAGING:+--staging}
+          && echo "Certificate generation completed successfully";
+      else
+        echo "Let'"'"'s Encrypt disabled (mode=${SSL_CERTIFICATE_MODE})";
+      fi;
+      echo "Certbot container finished - check logs above";'
+    networks:
+      - mcp_network
+    profiles: ["gateway", "production"]
+
+  # Certificate monitoring and health check service
+  cert-monitor:
+    image: alpine:latest
+    container_name: mcp_gateway_cert_monitor
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+      SSL_CERTIFICATE_MODE: ${SSL_CERTIFICATE_MODE:-manual}
+      DOMAIN_NAME: ${DOMAIN_NAME:-localhost}
+      CERT_EXPIRY_WARNING_DAYS: ${CERT_EXPIRY_WARNING_DAYS:-30}
+    volumes:
+      - ./docker/nginx/ssl:/etc/nginx/ssl:ro
+      - letsencrypt_certs:/etc/letsencrypt:ro
+      - cert_monitor_logs:/var/log/cert-monitor
+    command: >
+      sh -c 'apk add --no-cache openssl curl &&
+      echo "=== Certificate Monitor Started ===" &&
+      while true; do
+        echo "[$(date)] Certificate monitoring check..." &&
+        
+        # Determine certificate path based on mode
+        if [ "${SSL_CERTIFICATE_MODE}" = "letsencrypt" ] && [ -f "/etc/letsencrypt/live/${DOMAIN_NAME}/fullchain.pem" ]; then
+          CERT_PATH="/etc/letsencrypt/live/${DOMAIN_NAME}/fullchain.pem"
+        elif [ -f "/etc/nginx/ssl/fullchain.pem" ]; then
+          CERT_PATH="/etc/nginx/ssl/fullchain.pem"
+        else
+          CERT_PATH="/etc/nginx/ssl/default.crt"
+        fi &&
+        
+        echo "Checking certificate: $CERT_PATH" &&
+        
+        if [ -f "$CERT_PATH" ]; then
+          # Check certificate expiry
+          EXPIRY_DATE=$(openssl x509 -in "$CERT_PATH" -noout -enddate | cut -d= -f2) &&
+          EXPIRY_EPOCH=$(date -d "$EXPIRY_DATE" +%s 2>/dev/null || date -j -f "%b %d %T %Y %Z" "$EXPIRY_DATE" +%s) &&
+          CURRENT_EPOCH=$(date +%s) &&
+          WARNING_EPOCH=$((CURRENT_EPOCH + ${CERT_EXPIRY_WARNING_DAYS} * 86400)) &&
+          DAYS_UNTIL_EXPIRY=$(( (EXPIRY_EPOCH - CURRENT_EPOCH) / 86400 )) &&
+          
+          echo "Certificate expires in $DAYS_UNTIL_EXPIRY days ($EXPIRY_DATE)" &&
+          
+          # Log status
+          if [ "$EXPIRY_EPOCH" -lt "$CURRENT_EPOCH" ]; then
+            echo "CRITICAL: Certificate has EXPIRED!" | tee -a /var/log/cert-monitor/alerts.log
+          elif [ "$EXPIRY_EPOCH" -lt "$WARNING_EPOCH" ]; then
+            echo "WARNING: Certificate expires within ${CERT_EXPIRY_WARNING_DAYS} days!" | tee -a /var/log/cert-monitor/alerts.log
+          else
+            echo "OK: Certificate is valid"
+          fi
+        else
+          echo "ERROR: Certificate file not found: $CERT_PATH" | tee -a /var/log/cert-monitor/errors.log
+        fi &&
+        
+        # Test SSL endpoint
+        if curl -k -s --connect-timeout 10 "https://nginx/health" >/dev/null 2>&1; then
+          echo "OK: SSL endpoint is responding"
+        else
+          echo "WARNING: SSL endpoint not responding" | tee -a /var/log/cert-monitor/alerts.log
+        fi &&
+        
+        # Sleep for 1 hour
+        sleep 3600
+      done'
+    networks:
+      - mcp_network
+    depends_on:
+      - nginx
+    logging: *default-logging
+    profiles: ["monitoring", "production"]
+
+  # =============================================================================
+  # Monitoring and Observability
+  # =============================================================================
+
+  # Prometheus metrics collection
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: mcp_gateway_prometheus
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/etc/prometheus/console_libraries"
+      - "--web.console.templates=/etc/prometheus/consoles"
+      - "--storage.tsdb.retention.time=200h"
+      - "--web.enable-lifecycle"
+      - "--web.enable-admin-api"
+    volumes:
+      - ./docker/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./docker/monitoring/alerts:/etc/prometheus/alerts:ro
+      - prometheus_data:/prometheus
+    networks:
+      - mcp_network
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    logging: *default-logging
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:9090/-/healthy",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    profiles: ["monitoring", "production"]
+
+  # Grafana monitoring dashboards
+  grafana:
+    image: grafana/grafana:latest
+    container_name: mcp_gateway_grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: false
+      GF_SECURITY_ALLOW_EMBEDDING: true
+      GF_AUTH_ANONYMOUS_ENABLED: false
+      GF_INSTALL_PLUGINS: ${GRAFANA_PLUGINS:-}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./docker/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./docker/monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    networks:
+      - mcp_network
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    depends_on:
+      - prometheus
+    logging: *default-logging
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3000/api/health",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    profiles: ["monitoring", "production"]
+
+  # =============================================================================
+  # Template Services (Example Deployments)
+  # =============================================================================
+
+  # Demo MCP Server for testing (uses existing template Dockerfile)
+  mcp-demo:
+    build:
+      context: mcp_platform/template/templates/demo
+      dockerfile: Dockerfile
+    image: mcp-demo:latest
+    container_name: mcp_demo_server
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+      MCP_HELLO_FROM: ${DEMO_HELLO_FROM:-Docker Compose}
+      MCP_LOG_LEVEL: ${DEMO_LOG_LEVEL:-INFO}
+      MCP_PORT: 7071
+    ports:
+      - "${DEMO_PORT:-7071}:7071"
+    networks:
+      - mcp_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7071/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging: *default-logging
+    profiles: ["templates", "demo"]
+
+  # Filesystem MCP Server for file operations (uses existing template Dockerfile)
+  mcp-filesystem:
+    build:
+      context: mcp_platform/template/templates/filesystem
+      dockerfile: Dockerfile
+    image: mcp-filesystem:latest
+    container_name: mcp_filesystem_server
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+      ALLOWED_DIRS: ${FILESYSTEM_ALLOWED_DIRS:-/data}
+      LOG_LEVEL: ${FILESYSTEM_LOG_LEVEL:-INFO}
+    volumes:
+      - filesystem_data:/data
+      - ${FILESYSTEM_HOST_DIR:-./data}:/host-data:ro
+    networks:
+      - mcp_network
+    profiles: ["templates", "filesystem"]
+
+# =============================================================================
+# Networks
+# =============================================================================
+
+networks:
+  mcp_network:
+    driver: bridge
+    name: mcp_platform_network
+    ipam:
+      config:
+        - subnet: ${MCP_SUBNET:-172.20.0.0/16}
+
+# =============================================================================
+# Volumes
+# =============================================================================
+
+volumes:
+  # Core platform volumes
+  mcp_platform_data:
+    name: mcp_platform_data
+  mcp_platform_config:
+    name: mcp_platform_config
+
+  # Gateway volumes
+  postgres_data:
+    name: mcp_gateway_postgres_data
+  redis_data:
+    name: mcp_gateway_redis_data
+  gateway_data:
+    name: mcp_gateway_app_data
+  gateway_registry:
+    name: mcp_gateway_registry
+  gateway_logs:
+    name: mcp_gateway_logs
+
+  # Proxy volumes
+  nginx_logs:
+    name: mcp_gateway_nginx_logs
+
+  # Certificate volumes
+  letsencrypt_certs:
+    name: mcp_gateway_letsencrypt_certs
+  letsencrypt_www:
+    name: mcp_gateway_letsencrypt_www
+  cert_monitor_logs:
+    name: mcp_gateway_cert_monitor_logs
+
+  # Monitoring volumes
+  prometheus_data:
+    name: mcp_gateway_prometheus_data
+  grafana_data:
+    name: mcp_gateway_grafana_data
+
+  # Template volumes
+  filesystem_data:
+    name: mcp_filesystem_data

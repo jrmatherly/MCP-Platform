@@ -496,7 +496,7 @@ docker run -p 8000:8000 {self.template_data.get("docker_image", f"dataeverything
         """Create Dockerfile for the template."""
         dockerfile_content = """FROM python:3.11-slim
 
-LABEL maintainer="Data Everything <tooling@dataeverything.com>"
+LABEL maintainer="Jason Matherly <jason@matherly.net>"
 LABEL description="Demo MCP Server using FastMCP"
 LABEL version="1.0.0"
 
