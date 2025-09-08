@@ -328,6 +328,34 @@ All temporary files, debugging scripts, and test artifacts should be organized i
 - **bandit**: Security scanning
 
 ### Configuration Management
+
+#### Network Configuration (Updated September 2025)
+**Important**: The project has migrated from 172.x network ranges to 10.x ranges to avoid corporate network conflicts.
+
+**Current Network Strategy:**
+- **MCP_SUBNET**: `10.100.0.0/16` (environment configuration)
+- **Runtime Networks**: `10.100-10.104.x.x/24` (dynamic subnet selection)
+- **Conflict Avoidance**: Automatically detects and avoids existing network overlaps
+- **Corporate Compatibility**: Avoids common enterprise network ranges (10.0.x.x, 10.1.x.x, 172.16-31.x.x)
+
+**Key Configuration Files:**
+- `.env.example`: Contains `MCP_SUBNET=10.100.0.0/16`
+- `docker-compose.yml`: Uses `${MCP_SUBNET:-10.100.0.0/16}` for network IPAM
+- `docker.py`: Implements intelligent subnet selection with validation
+
+**Network Validation:**
+The Docker backend includes `_validate_network_configuration()` which:
+- Validates MCP_SUBNET environment variable format
+- Ensures private IP range usage
+- Provides warnings for suboptimal configurations
+- Logs validation issues for debugging
+
+**Docker Daemon Configuration:**
+- **Not required** for basic MCP Platform operation
+- Optional `daemon.json` enhancements available for enterprise environments
+- Complete configuration guide: `/reports/DOCKER_DAEMON_NETWORK_CONFIGURATION.md`
+
+#### Template Configuration Patterns
 ```python
 # Template override pattern (double underscore notation)
 config_overrides = {
